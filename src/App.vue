@@ -1,26 +1,45 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="app-container">
+    <!-- Show sidebar only if not on login or register page -->
+    <Sidenav v-if="showSidebar" />
+    <div class="content">
+      <router-view />
+    </div>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import Sidenav from "./components/SideNav.vue";
+import { useRoute } from "vue-router";
+import { computed } from "vue";
 
 export default {
-  name: 'App',
   components: {
-    HelloWorld
-  }
-}
+    Sidenav,
+  },
+  setup() {
+    const route = useRoute();
+
+    // Define routes where sidebar should NOT be shown
+    const authRoutes = ["/"];
+
+    // Show sidebar if NOT on auth routes (login & register)
+    const showSidebar = computed(() => !authRoutes.includes(route.path));
+
+    return {
+      showSidebar,
+    };
+  },
+};
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+.app-container {
+  display: flex;
+}
+
+.content {
+  flex-grow: 1;
+  padding: 20px;
 }
 </style>
