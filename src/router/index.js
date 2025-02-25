@@ -8,6 +8,7 @@ import TeacherDashboard from "../components/teacher/TeacherDashboard.vue";
 import TeacherProfile from "../components/teacher/TeacherProfile.vue";
 import StudentProfile from "../components/student/StudentProfile.vue";
 import CreateExam from "../components/teacher/CreateExam.vue";
+import TakeExam from "../components/student/TakeExam.vue";
 
 
 const routes = [
@@ -20,7 +21,8 @@ const routes = [
   { path: '/teacher-profile', component: TeacherProfile},
   { path: '/student-profile', component: StudentProfile},
   { path: '/create-exam', component: CreateExam},
-  
+  { path: '/take-exam', component: TakeExam},
+
 ];
 
 const router = createRouter({

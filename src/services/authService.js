@@ -60,78 +60,70 @@ export const loginUser = async (email, lrn, password) => {
 };
 
 export const registerStudent = async (studentData) => {
-  try {
-    console.log('AuthService: Starting student registration', studentData);
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token provided");
 
-    const response = await fetch(`${BASE_URL}/register-student`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(studentData),
-    });
+  const response = await fetch(`${BASE_URL}/register-student`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(studentData),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('AuthService: Student registration failed', errorData);
-      throw new Error(errorData.error || "Student registration failed");
-    }
-
-    const result = await response.json();
-    console.log('AuthService: Student registration successful', result);
-    return result;
-  } catch (error) {
-    console.error("AuthService: Registration error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('AuthService: Student registration failed', errorData);
+    throw new Error(errorData.error || "Student registration failed");
   }
+
+  const result = await response.json();
+  return result;
 };
 
 export const registerTeacher = async (teacherData) => {
-  try {
-    console.log('AuthService: Starting teacher registration', teacherData);
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token provided");
 
-    const response = await fetch(`${BASE_URL}/register-teacher`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(teacherData),
-    });
+  const response = await fetch(`${BASE_URL}/register-teacher`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(teacherData),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('AuthService: Teacher registration failed', errorData);
-      throw new Error(errorData.error || "Teacher registration failed");
-    }
-
-    const result = await response.json();
-    console.log('AuthService: Teacher registration successful', result);
-    return result;
-  } catch (error) {
-    console.error("AuthService: Registration error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Teacher registration failed");
   }
+
+  const result = await response.json();
+  return result;
 };
 
 export const registerAdmin = async (adminData) => {
-  try {
-    console.log('AuthService: Starting admin registration', adminData);
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token provided");
 
-    const response = await fetch(`${BASE_URL}/register-admin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(adminData),
-    });
+  const response = await fetch(`${BASE_URL}/register-admin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(adminData),
+  });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('AuthService: Admin registration failed', errorData);
-      throw new Error(errorData.error || "Admin registration failed");
-    }
-
-    const result = await response.json();
-    console.log('AuthService: Admin registration successful', result);
-    return result;
-  } catch (error) {
-    console.error("AuthService: Registration error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Admin registration failed");
   }
+
+  const result = await response.json();
+  return result;
 };
 
 // Profile management with token-based auth
@@ -210,65 +202,45 @@ export const createExam = async (examData) => {
 };
 
 export const fetchExamQuestions = async (testCode) => {
-  try {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) throw new Error("No token found");
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token found");
 
-    console.log('AuthService: Fetching exam questions', { testCode });
+  const response = await fetch(`${BASE_URL}/question`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify({ testCode }),
+  });
 
-    const response = await fetch(`${BASE_URL}/question`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify({ testCode }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('AuthService: Question fetch failed', errorData);
-      throw new Error(errorData.error || "Failed to fetch exam questions");
-    }
-
-    const result = await response.json();
-    console.log('AuthService: Question fetch successful', result);
-    return result;
-  } catch (error) {
-    console.error("AuthService: Question fetch error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to fetch exam questions");
   }
+
+  return await response.json();
 };
 
 export const submitExamAnswers = async (answerData) => {
-  try {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) throw new Error("No token found");
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token found");
 
-    console.log('AuthService: Submitting exam answers', answerData);
+  const response = await fetch(`${BASE_URL}/answer`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+    body: JSON.stringify(answerData),
+  });
 
-    const response = await fetch(`${BASE_URL}/answer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(answerData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('AuthService: Answer submission failed', errorData);
-      throw new Error(errorData.error || "Failed to submit answers");
-    }
-
-    const result = await response.json();
-    console.log('AuthService: Answer submission successful', result);
-    return result;
-  } catch (error) {
-    console.error("AuthService: Answer submission error:", error);
-    throw error;
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to submit answers");
   }
+
+  return await response.json();
 };
 
 // Exam control functions

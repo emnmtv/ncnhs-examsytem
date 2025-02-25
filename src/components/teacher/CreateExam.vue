@@ -17,35 +17,37 @@
 
       <div class="questions-container">
         <h2>Questions</h2>
-        <div v-for="(question, index) in questions" :key="index" class="question-card">
-          <div class="form-group">
-            <label>Question {{ index + 1 }}:</label>
-            <input v-model="question.text" type="text" placeholder="Enter question" required />
-          </div>
-          <div class="form-group">
-            <label>Type:</label>
-            <select v-model="question.type" @change="resetOptions(question)">
-              <option value="multipleChoice">Multiple Choice</option>
-              <option value="trueFalse">True/False</option>
-              <option value="enumeration">Enumeration</option>
-            </select>
-          </div>
-          <div v-if="question.type === 'multipleChoice'" class="options-container">
-            <h3>Options</h3>
-            <div v-for="(option, optIndex) in question.options" :key="optIndex" class="option-group">
-              <input type="radio" :value="option.text" v-model="question.correctAnswer" />
-              <input v-model="option.text" type="text" placeholder="Option" required />
-              <button type="button" @click="removeOption(question, optIndex)">Remove</button>
-              <button type="button" @click="setCorrectAnswer(question, option.text)">Set Correct Answer</button>
+        <transition-group name="fade" tag="div">
+          <div v-for="(question, index) in questions" :key="index" class="question-card">
+            <div class="form-group">
+              <label>Question {{ index + 1 }}:</label>
+              <input v-model="question.text" type="text" placeholder="Enter question" required />
             </div>
-            <button type="button" @click="addOption(question)">Add Option</button>
+            <div class="form-group">
+              <label>Type:</label>
+              <select v-model="question.type" @change="resetOptions(question)">
+                <option value="multipleChoice">Multiple Choice</option>
+                <option value="trueFalse">True/False</option>
+                <option value="enumeration">Enumeration</option>
+              </select>
+            </div>
+            <div v-if="question.type === 'multipleChoice'" class="options-container">
+              <h3>Options</h3>
+              <div v-for="(option, optIndex) in question.options" :key="optIndex" class="option-group">
+                <input type="radio" :value="option.text" v-model="question.correctAnswer" />
+                <input v-model="option.text" type="text" placeholder="Option" required />
+                <button type="button" @click="removeOption(question, optIndex)">Remove</button>
+                <button type="button" @click="setCorrectAnswer(question, option.text)">Set Correct Answer</button>
+              </div>
+              <button type="button" @click="addOption(question)">Add Option</button>
+            </div>
+            <div v-if="question.type === 'enumeration'" class="enumeration-container">
+              <h3>Correct Answer:</h3>
+              <input v-model="question.correctAnswer" type="text" placeholder="Enter correct answer" required />
+            </div>
+            <button type="button" @click="removeQuestion(index)">Remove Question</button>
           </div>
-          <div v-if="question.type === 'enumeration'" class="enumeration-container">
-            <h3>Correct Answer:</h3>
-            <input v-model="question.correctAnswer" type="text" placeholder="Enter correct answer" required />
-          </div>
-          <button type="button" @click="removeQuestion(index)">Remove Question</button>
-        </div>
+        </transition-group>
         <button type="button" @click="addQuestion">Add Question</button>
       </div>
 
@@ -74,7 +76,7 @@ const addQuestion = () => {
     text: '',
     type: 'multipleChoice',
     options: [{ text: '' }],
-    correctAnswer: ''
+    correctAnswer: null
   });
 };
 
@@ -91,7 +93,9 @@ const removeOption = (question, index) => {
 };
 
 const setCorrectAnswer = (question, answer) => {
-  question.correctAnswer = answer; // Set the correct answer
+  if (question.options.some(option => option.text === answer)) {
+    question.correctAnswer = answer; // Set the correct answer only if it exists in options
+  }
 };
 
 const resetOptions = (question) => {
@@ -130,59 +134,70 @@ const exportExam = () => {
 
 <style scoped>
 .create-exam {
-  max-width: 800px;
+  max-width: 900px; /* Increased width */
   margin: 0 auto;
-  padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px; /* Increased padding */
+  background-color: #ffffff; /* White background for better contrast */
+  border-radius: 12px; /* More rounded corners */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Deeper shadow for depth */
 }
 
 h1 {
   text-align: center;
   color: #333;
+  margin-bottom: 20px; /* Spacing below the title */
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 20px; /* Increased spacing */
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px; /* Spacing below labels */
   font-weight: bold;
 }
 
 input[type="text"],
-input[type="email"],
 select {
   width: 100%;
-  padding: 10px;
+  padding: 12px; /* Increased padding */
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 6px; /* More rounded corners */
   font-size: 16px;
+  transition: border-color 0.3s; /* Smooth transition */
+}
+
+input[type="text"]:focus,
+select:focus {
+  border-color: #4CAF50; /* Highlight border on focus */
 }
 
 .questions-container {
-  margin-top: 20px;
+  margin-top: 30px; /* Increased spacing */
   border: 1px solid #ddd;
-  padding: 10px;
-  border-radius: 4px;
-  background-color: #fff;
+  padding: 15px; /* Increased padding */
+  border-radius: 6px; /* More rounded corners */
+  background-color: #f9f9f9; /* Light background for questions */
 }
 
 .question-card {
-  margin-bottom: 15px;
-  padding: 10px;
+  margin-bottom: 20px; /* Increased spacing */
+  padding: 15px; /* Increased padding */
   border: 1px solid #eee;
-  border-radius: 4px;
-  background-color: #f7f7f7;
+  border-radius: 6px; /* More rounded corners */
+  background-color: #ffffff; /* White background for question cards */
+  transition: box-shadow 0.3s; /* Smooth transition */
+}
+
+.question-card:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Shadow on hover */
 }
 
 .option-group {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px; /* Increased spacing */
 }
 
 .option-group input[type="text"] {
@@ -197,22 +212,31 @@ select {
 .form-actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 30px; /* Increased spacing */
 }
 
 .publish-button,
 .export-button {
-  padding: 10px 15px;
+  padding: 12px 20px; /* Increased padding */
   background-color: #4CAF50;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px; /* More rounded corners */
   cursor: pointer;
   font-size: 16px;
+  transition: background-color 0.3s; /* Smooth transition */
 }
 
 .publish-button:hover,
 .export-button:hover {
-  background-color: #45a049;
+  background-color: #45a049; /* Darker green on hover */
+}
+
+/* Animation styles */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter, .fade-leave-to /* .fade-leave-active in <2.1.8 */ {
+  opacity: 0;
 }
 </style>
