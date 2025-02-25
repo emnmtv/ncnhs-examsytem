@@ -43,6 +43,8 @@ const navigationItems = {
     { name: 'Manage Users', path: '/manage-users', icon: 'fa-users' },
     { name: 'Settings', path: '/settings', icon: 'fa-cog' },
     { name: 'Profile', path: '/profile', icon: 'fa-user' },
+    { name: 'Student Scores', path: '/scores', icon: 'fa-chart-line' },
+    { name: 'Users List', path: '/users-list', icon: 'fa-list' },
   ],
   teacher: [
     { name: 'Dashboard', path: '/teacher-dashboard', icon: 'fa-home' },
@@ -50,6 +52,7 @@ const navigationItems = {
     { name: 'View Results', path: '/view-results', icon: 'fa-chart-bar' },
     { name: 'Settings', path: '/settings', icon: 'fa-cog' },
     { name: 'Profile', path: '/teacher-profile', icon: 'fa-user' },
+    {name: 'Student Scores', path: '/scores', icon: 'fa-chart-line'}
   ],
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'fa-home' },
@@ -57,6 +60,7 @@ const navigationItems = {
     { name: 'View Grades', path: '/grades', icon: 'fa-chart-line' },
     { name: 'Settings', path: '/settings', icon: 'fa-cog' },
     { name: 'Profile', path: '/student-profile', icon: 'fa-user' },
+
   ]
 };
 

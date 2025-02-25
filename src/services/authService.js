@@ -223,24 +223,25 @@ export const fetchExamQuestions = async (testCode) => {
 };
 
 export const submitExamAnswers = async (answerData) => {
-  const token = localStorage.getItem("jwtToken");
-  if (!token) throw new Error("No token found");
+  try {
+    const response = await fetch(`${BASE_URL}/answer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify(answerData),
+    });
 
-  const response = await fetch(`${BASE_URL}/answer`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`
-    },
-    body: JSON.stringify(answerData),
-  });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to submit answers");
+    }
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || "Failed to submit answers");
+    return await response.json();
+  } catch (error) {
+    throw new Error(error.response?.data?.error || 'Failed to submit answers');
   }
-
-  return await response.json();
 };
 
 // Exam control functions
@@ -375,6 +376,144 @@ export const fetchUserProfile = async () => {
     return userProfile;
   } catch (error) {
     console.error("AuthService: Profile fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all students
+ */
+export const fetchStudents = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching students list');
+
+    const response = await fetch(`${BASE_URL}/students`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch students");
+    }
+
+    const { students } = await response.json();
+    console.log('AuthService: Students fetch successful', students);
+    return students;
+  } catch (error) {
+    console.error("AuthService: Students fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all teachers
+ */
+export const fetchTeachers = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching teachers list');
+
+    const response = await fetch(`${BASE_URL}/teachers`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch teachers");
+    }
+
+    const { teachers } = await response.json();
+    console.log('AuthService: Teachers fetch successful', teachers);
+    return teachers;
+  } catch (error) {
+    console.error("AuthService: Teachers fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all admins
+ */
+export const fetchAdmins = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching admins list');
+
+    const response = await fetch(`${BASE_URL}/admins`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch admins");
+    }
+
+    const { admins } = await response.json();
+    console.log('AuthService: Admins fetch successful', admins);
+    return admins;
+  } catch (error) {
+    console.error("AuthService: Admins fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch student scores with associated student and exam details
+ * @param {number} studentId - Optional filter by student ID
+ * @param {number} examId - Optional filter by exam ID
+ */
+export const fetchStudentScores = async (studentId, examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching student scores');
+    
+    // Build query string based on provided filters
+    let queryParams = new URLSearchParams();
+    if (studentId) queryParams.append('studentId', studentId);
+    if (examId) queryParams.append('examId', examId);
+    
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/scores${queryString ? '?' + queryString : ''}`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch student scores");
+    }
+
+    const { scores } = await response.json();
+    console.log('AuthService: Student scores fetch successful', scores);
+    return scores;
+  } catch (error) {
+    console.error("AuthService: Student scores fetch error:", error);
     throw error;
   }
 };

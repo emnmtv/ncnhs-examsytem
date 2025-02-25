@@ -9,8 +9,8 @@ import TeacherProfile from "../components/teacher/TeacherProfile.vue";
 import StudentProfile from "../components/student/StudentProfile.vue";
 import CreateExam from "../components/teacher/CreateExam.vue";
 import TakeExam from "../components/student/TakeExam.vue";
-
-
+import UsersList from "../components/admin/UsersList.vue";
+import StudentScores from "../components/admin/StudentScores.vue";
 const routes = [
   { path: "/", component: LoginPage },
   { path: "/dashboard", component: Dashboard },
@@ -22,6 +22,8 @@ const routes = [
   { path: '/student-profile', component: StudentProfile},
   { path: '/create-exam', component: CreateExam},
   { path: '/take-exam', component: TakeExam},
+  { path: '/users-list', component: UsersList},
+  { path: '/scores', component: StudentScores},
 
 ];
 
