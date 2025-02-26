@@ -11,6 +11,8 @@ import CreateExam from "../components/teacher/CreateExam.vue";
 import TakeExam from "../components/student/TakeExam.vue";
 import UsersList from "../components/admin/UsersList.vue";
 import StudentScores from "../components/admin/StudentScores.vue";
+import ManageExam from "../components/teacher/ManageExam.vue";
+
 const routes = [
   { path: "/", component: LoginPage },
   { path: "/dashboard", component: Dashboard },
@@ -24,6 +26,7 @@ const routes = [
   { path: '/take-exam', component: TakeExam},
   { path: '/users-list', component: UsersList},
   { path: '/scores', component: StudentScores},
+  { path: '/manage-exam', component: ManageExam},
 
 ];
 

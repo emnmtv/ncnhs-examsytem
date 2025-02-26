@@ -52,7 +52,9 @@ const navigationItems = {
     { name: 'View Results', path: '/view-results', icon: 'fa-chart-bar' },
     { name: 'Settings', path: '/settings', icon: 'fa-cog' },
     { name: 'Profile', path: '/teacher-profile', icon: 'fa-user' },
-    {name: 'Student Scores', path: '/scores', icon: 'fa-chart-line'}
+    {name: 'Student Scores', path: '/scores', icon: 'fa-chart-line'},
+    {name: 'Manage Exam', path: '/manage-exam', icon: 'fa-chart-line'}
+    
   ],
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'fa-home' },
