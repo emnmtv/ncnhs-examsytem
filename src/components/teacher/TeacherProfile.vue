@@ -1,80 +1,89 @@
 <template>
-  <div class="teacher-profile">
-    <div v-if="loading" class="loading">Loading profile...</div>
-    <div v-else-if="error" class="error">{{ error }}</div>
-    <div v-else class="profile-container">
-      <h2>Teacher Profile</h2>
-      <div class="profile-details">
+  <div class="profile-page">
+    <div v-if="loading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading your profile...</p>
+    </div>
+    
+    <div v-else class="profile-container" :class="{ 'editing': isEditing }">
+      <div class="profile-header">
+        <div class="avatar">
+          {{ profile.firstName?.[0]?.toUpperCase() }}{{ profile.lastName?.[0]?.toUpperCase() }}
+        </div>
+        <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
+        <span class="role-badge">{{ profile.role }}</span>
+      </div>
+
+      <div class="profile-content">
         <div class="profile-section">
-          <h3>Personal Information</h3>
-          <div class="info-group">
-            <label>Name:</label>
-            <span>{{ profile.firstName }} {{ profile.lastName }}</span>
-          </div>
-          <div class="info-group">
-            <label>Email:</label>
-            <span>{{ profile.email }}</span>
-          </div>
-          <div class="info-group">
-            <label>Address:</label>
-            <span>{{ profile.address || 'Not set' }}</span>
-          </div>
-          <div class="info-group">
-            <label>Domain:</label>
-            <span>{{ profile.domain || 'Not set' }}</span>
-          </div>
-          <div class="info-group">
-            <label>Department:</label>
-            <span>{{ profile.department || 'Not set' }}</span>
+          <h3><i class="fas fa-user"></i> Personal Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>First Name</label>
+              <input v-if="isEditing" v-model="profile.firstName" type="text" />
+              <span v-else>{{ profile.firstName }}</span>
+            </div>
+            <div class="info-item">
+              <label>Last Name</label>
+              <input v-if="isEditing" v-model="profile.lastName" type="text" />
+              <span v-else>{{ profile.lastName }}</span>
+            </div>
+            <div class="info-item">
+              <label>Email</label>
+              <input v-if="isEditing" v-model="profile.email" type="email" />
+              <span v-else>{{ profile.email }}</span>
+            </div>
+            <div class="info-item">
+              <label>Address</label>
+              <input v-if="isEditing" v-model="profile.address" type="text" />
+              <span v-else>{{ profile.address || 'Not set' }}</span>
+            </div>
           </div>
         </div>
 
         <div class="profile-section">
-          <h3>Account Information</h3>
-          <div class="info-group">
-            <label>Role:</label>
-            <span>{{ profile.role }}</span>
+          <h3><i class="fas fa-chalkboard-teacher"></i> Teaching Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Department</label>
+              <input v-if="isEditing" v-model="profile.department" type="text" />
+              <span v-else>{{ profile.department || 'Not set' }}</span>
+            </div>
+            <div class="info-item">
+              <label>Domain</label>
+              <input v-if="isEditing" v-model="profile.domain" type="text" />
+              <span v-else>{{ profile.domain || 'Not set' }}</span>
+            </div>
           </div>
-          <div class="info-group">
-            <label>Member Since:</label>
-            <span>{{ formatDate(profile.createdAt) }}</span>
+        </div>
+
+        <div class="profile-section">
+          <h3><i class="fas fa-clock"></i> Account Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Member Since</label>
+              <span>{{ formatDate(profile.createdAt) }}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="actions">
-        <button @click="toggleEditMode" class="edit-button">
+      <div class="profile-actions">
+        <button 
+          @click="toggleEditMode" 
+          :class="['action-button', isEditing ? 'cancel' : 'edit']"
+        >
+          <i :class="['fas', isEditing ? 'fa-times' : 'fa-edit']"></i>
           {{ isEditing ? 'Cancel' : 'Edit Profile' }}
         </button>
-        <button v-if="isEditing" @click="handleUpdate" class="save-button">Save Changes</button>
-      </div>
-
-      <!-- Edit Form -->
-      <div v-if="isEditing" class="edit-form">
-        <div class="form-group">
-          <label>First Name:</label>
-          <input v-model="profile.firstName" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Last Name:</label>
-          <input v-model="profile.lastName" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Email:</label>
-          <input v-model="profile.email" type="email" />
-        </div>
-        <div class="form-group">
-          <label>Address:</label>
-          <input v-model="profile.address" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Domain:</label>
-          <input v-model="profile.domain" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Department:</label>
-          <input v-model="profile.department" type="text" />
-        </div>
+        <button 
+          v-if="isEditing" 
+          @click="handleUpdate" 
+          class="action-button save"
+        >
+          <i class="fas fa-save"></i>
+          Save Changes
+        </button>
       </div>
     </div>
   </div>
@@ -82,7 +91,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { fetchUserProfile, updateProfile } from '../../services/authService';
+import { fetchUserProfile, updateProfile } from '@/services/authService';
+import Swal from 'sweetalert2';
 
 const profile = ref({
   firstName: '',
@@ -90,141 +100,295 @@ const profile = ref({
   email: '',
   address: '',
   domain: '',
-  department: ''
+  department: '',
+  role: '',
+  createdAt: ''
 });
 
-const isEditing = ref(false);
-const error = ref('');
-const message = ref('');
 const loading = ref(true);
+const isEditing = ref(false);
 
 onMounted(async () => {
+  await loadProfile();
+});
+
+const loadProfile = async () => {
   try {
+    loading.value = true;
     const data = await fetchUserProfile();
     profile.value = data;
   } catch (err) {
-    error.value = 'Failed to load profile';
-    console.error('Profile loading error:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to Load Profile',
+      text: 'There was an error loading your profile data.',
+      confirmButtonColor: '#2196F3'
+    });
   } finally {
     loading.value = false;
   }
-});
+};
 
 const handleUpdate = async () => {
   try {
-    error.value = '';
-    message.value = '';
+    Swal.fire({
+      title: 'Updating Profile',
+      text: 'Please wait...',
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      willOpen: () => {
+        Swal.showLoading();
+      }
+    });
     
-    console.log('Updating profile with:', profile.value);
     await updateProfile(profile.value);
     
-    message.value = 'Profile updated successfully';
+    await Swal.fire({
+      icon: 'success',
+      title: 'Profile Updated!',
+      text: 'Your profile has been updated successfully.',
+      confirmButtonColor: '#2196F3'
+    });
+    
     isEditing.value = false;
   } catch (err) {
-    error.value = err.message || 'Failed to update profile';
-    console.error('Profile update error:', err);
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: err.message || 'Failed to update profile',
+      confirmButtonColor: '#2196F3'
+    });
   }
 };
 
 const toggleEditMode = () => {
-  isEditing.value = !isEditing.value;
+  if (isEditing.value) {
+    Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#2196F3',
+      cancelButtonColor: '#f44336',
+      confirmButtonText: 'Yes, cancel',
+      cancelButtonText: 'Continue editing'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        isEditing.value = false;
+        loadProfile();
+      }
+    });
+  } else {
+    isEditing.value = true;
+  }
 };
-  
-// Format date function
+
 const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString();
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 };
 </script>
 
 <style scoped>
-.teacher-profile {
-  max-width: 800px;
+.profile-page {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 2rem;
 }
 
-.loading, .error {
-  text-align: center;
-  padding: 20px;
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
 }
 
-.error {
-  color: red;
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 3px solid #2196F3;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .profile-container {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.profile-section {
-  margin-bottom: 20px;
-  padding: 15px;
-  border-bottom: 1px solid #eee;
+.profile-container.editing {
+  box-shadow: 0 6px 30px rgba(33,150,243,0.15);
 }
 
-.info-group {
-  margin: 10px 0;
-  display: flex;
-  gap: 10px;
-}
-
-.info-group label {
-  font-weight: bold;
-  min-width: 120px;
-}
-
-.actions {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-}
-
-button {
-  padding: 8px 16px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-}
-
-.edit-button {
-  background: #4CAF50;
+.profile-header {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  padding: 2rem;
+  text-align: center;
   color: white;
 }
 
-.save-button {
+.avatar {
+  width: 100px;
+  height: 100px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2196F3;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.role-badge {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.2);
+  border-radius: 20px;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.profile-content {
+  padding: 2rem;
+}
+
+.profile-section {
+  margin-bottom: 2rem;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.profile-section h3 {
+  color: #333;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-item label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.info-item span {
+  color: #333;
+  font-size: 1rem;
+}
+
+.info-item input {
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.info-item input:focus {
+  border-color: #2196F3;
+  box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+  outline: none;
+}
+
+.profile-actions {
+  padding: 1.5rem 2rem;
+  background: #f9f9f9;
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.action-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.action-button.edit {
   background: #2196F3;
   color: white;
 }
 
-.edit-form {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f5f5f5;
-  border-radius: 4px;
+.action-button.edit:hover {
+  background: #1976D2;
+  transform: translateY(-2px);
 }
 
-.form-group {
-  margin: 10px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+.action-button.cancel {
+  background: #f44336;
+  color: white;
 }
 
-input {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+.action-button.cancel:hover {
+  background: #e53935;
+  transform: translateY(-2px);
 }
 
-input:focus {
-  outline: none;
-  border-color: #2196F3;
+.action-button.save {
+  background: #4CAF50;
+  color: white;
 }
 
-input[type="email"]:invalid {
-  border-color: #f44336;
+.action-button.save:hover {
+  background: #43A047;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 1rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .profile-actions {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

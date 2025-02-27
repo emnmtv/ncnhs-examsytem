@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import LoginPage from "../components/LoginPage.vue";
 import Dashboard from "../components/student/Dashboard.vue"; // New Dashboard Page
-import Profile from "../components/Profile.vue";
 import Settings from "../components/Settings.vue";
 import AdminDashboard from "../components/admin/AdminDashboard.vue";
 import TeacherDashboard from "../components/teacher/TeacherDashboard.vue";
@@ -12,11 +11,11 @@ import TakeExam from "../components/student/TakeExam.vue";
 import UsersList from "../components/admin/UsersList.vue";
 import StudentScores from "../components/admin/StudentScores.vue";
 import ManageExam from "../components/teacher/ManageExam.vue";
+import ManageUsers from "../components/admin/ManageUsers.vue";
 
 const routes = [
   { path: "/", component: LoginPage },
-  { path: "/dashboard", component: Dashboard },
-  { path: "/profile", component: Profile },
+  { path: "/dashboard", component: Dashboard },  
   { path: "/settings", component: Settings },
   { path: '/admin-dashboard', component: AdminDashboard },
   { path: '/teacher-dashboard', component: TeacherDashboard },
@@ -27,6 +26,7 @@ const routes = [
   { path: '/users-list', component: UsersList},
   { path: '/scores', component: StudentScores},
   { path: '/manage-exam', component: ManageExam},
+  {path:'/manage-users', component: ManageUsers}
 
 ];
 

@@ -41,6 +41,13 @@
         </div>
       </div>
   
+      <div v-if="showExamControls" class="progress-section">
+        <ExamProgressModal 
+          :test-code="testCode"
+          ref="progressModal"
+        />
+      </div>
+  
       <div class="action-buttons" v-if="showExamControls">
         <button 
           @click="startExam"
@@ -68,8 +75,12 @@
   import { startExam, stopExam } from '@/services/authService';
   import { io } from 'socket.io-client';
   import Swal from 'sweetalert2';
+  import ExamProgressModal from './ExamProgressModal.vue';
   
   export default {
+    components: {
+      ExamProgressModal
+    },
     data() {
       return {
         testCode: localStorage.getItem("testCode") || '',
@@ -98,6 +109,11 @@
         this.socket.on('studentLeft', (students) => {
           this.students = students;
         });
+        this.socket.on('examProgressUpdate', (progressData) => {
+          if (this.$refs.progressModal) {
+            this.$refs.progressModal.updateStudentProgress(progressData);
+          }
+        });
       },
       async joinExam() {
         if (!this.testCode.trim()) {
@@ -119,6 +135,12 @@
       async startExam() {
         try {
           await startExam(this.testCode);
+          // Emit socket event for real-time update
+          this.socket.emit('examStatusChanged', { 
+            testCode: this.testCode, 
+            status: 'started' 
+          });
+          
           Swal.fire({
             title: 'Success!',
             text: 'Exam started successfully.',
@@ -131,7 +153,30 @@
       },
       async stopExam() {
         try {
+          console.log('Stopping exam:', this.testCode);
+          
+          // First update the backend
           await stopExam(this.testCode);
+          
+          // Make sure socket is connected
+          if (!this.socket.connected) {
+            await new Promise(resolve => this.socket.connect(resolve));
+          }
+          
+          // Join the exam room before emitting
+          this.socket.emit('joinExam', {
+            testCode: this.testCode,
+            userId: localStorage.getItem('userId')
+          });
+          
+          // Emit the stop event
+          this.socket.emit('examStatusChanged', { 
+            testCode: this.testCode, 
+            status: 'stopped' 
+          });
+          
+          console.log('Stop exam signal emitted');
+          
           Swal.fire({
             title: 'Success!',
             text: 'Exam stopped successfully.',
@@ -139,7 +184,14 @@
             confirmButtonText: 'OK'
           });
         } catch (error) {
+          console.error('Error stopping exam:', error);
           this.error = error.message;
+          Swal.fire({
+            title: 'Error',
+            text: error.message || 'Failed to stop exam',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
       },
       async quitExam() {
@@ -189,54 +241,70 @@
   
   <style scoped>
   .manage-exam-container {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 40px 20px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
   
   .header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 40px;
+  }
+  
+  .header h1 {
+    font-size: 2.5rem;
+    color: #2c3e50;
+    margin-bottom: 10px;
+  }
+  
+  .subtitle {
+    color: #666;
+    font-size: 1.1rem;
   }
   
   .test-code-section {
-    background-color: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
+    margin-bottom: 30px;
   }
   
   .test-code-section.with-exam {
-    background-color: #e8f5e9;
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
   }
   
   .input-group {
     display: flex;
-    gap: 10px;
+    gap: 15px;
+    max-width: 600px;
+    margin: 0 auto;
   }
   
   .test-code-input {
     flex: 1;
-    padding: 12px 15px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    font-size: 1rem;
+    padding: 15px 20px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 1.1rem;
     outline: none;
-    transition: border-color 0.3s;
+    transition: all 0.3s;
   }
   
   .test-code-input:focus {
-    border-color: #4CAF50;
-    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
   
   .primary-btn, .danger-btn {
-    padding: 12px 20px;
+    padding: 15px 30px;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     font-weight: 600;
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
@@ -246,64 +314,106 @@
   }
   
   .primary-btn {
-    background-color: #4CAF50;
+    background-color: #3b82f6;
     color: white;
   }
   
   .primary-btn:hover {
-    background-color: #45a049;
+    background-color: #2563eb;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
   }
   
   .danger-btn {
-    background-color: #f44336;
+    background-color: #ef4444;
     color: white;
   }
   
   .danger-btn:hover {
-    background-color: #d32f2f;
+    background-color: #dc2626;
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
   }
   
   .students-container {
-    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+  }
+  
+  .students-container h3 {
+    color: #2c3e50;
+    font-size: 1.5rem;
+    margin-bottom: 20px;
   }
   
   .students-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
   }
   
   .student-card {
-    background-color: white;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background-color: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     text-align: center;
+    transition: all 0.2s;
+  }
+  
+  .student-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
   .avatar {
-    width: 50px;
-    height: 50px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
     font-weight: bold;
-    margin: 0 auto 10px;
+    margin: 0 auto 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
   .student-name {
-    font-size: 0.9rem;
+    font-size: 1rem;
     font-weight: 500;
-    color: #333;
+    color: #334155;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+  }
+  
+  .error-container {
+    background-color: #fee2e2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin: 20px 0;
+  }
+  
+  .error-message {
+    color: #dc2626;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  
+  .progress-section {
+    margin-top: 30px;
   }
   </style>

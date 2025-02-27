@@ -1,7 +1,14 @@
 <template>
   <div class="sidenav" :class="{ 'collapsed': isCollapsed }">
+    <div class="logo-section">
+      <img src="../assets/logo.png" alt="Logo" class="logo" />
+      <span v-show="!isCollapsed" class="logo-text">NCNHS</span>
+    </div>
+
     <div class="toggle-btn" @click="toggleNav">
-      <i :class="isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
+      <span class="material-icons">
+        {{ isCollapsed ? 'chevron_right' : 'chevron_left' }}
+      </span>
     </div>
 
     <div class="nav-links">
@@ -11,58 +18,76 @@
           :key="item.path"
           :to="item.path"
           class="nav-link"
+          :title="isCollapsed ? item.name : ''"
         >
-          <i class="fas" :class="item.icon"></i>
-          <span v-show="!isCollapsed">{{ item.name }}</span>
+          <div class="icon-container">
+            <span class="material-icons">{{ item.icon }}</span>
+          </div>
+          <span class="link-text">{{ item.name }}</span>
         </router-link>
       </template>
     </div>
 
-    <button @click="handleLogout" class="logout-btn">
-      <i class="fas fa-sign-out-alt"></i>
-      <span v-show="!isCollapsed">Logout</span>
+    <button @click="handleLogout" class="logout-btn" :title="isCollapsed ? 'Logout' : ''">
+      <div class="icon-container">
+        <span class="material-icons">logout</span>
+      </div>
+      <span class="link-text">Logout</span>
     </button>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, defineEmits } from 'vue';
 import { useRouter } from 'vue-router';
 import { getUserRole, logout } from '../services/authService';
 
 const router = useRouter();
 const userRole = ref('');
+const isCollapsed = ref(window.innerWidth <= 768);
+
+const emit = defineEmits(['nav-toggle']);
 
 onMounted(() => {
   userRole.value = getUserRole();
+  
+  // Handle responsive collapse on window resize
+  window.addEventListener('resize', () => {
+    if (window.innerWidth <= 768) {
+      isCollapsed.value = true;
+    }
+  });
 });
+
+const toggleNav = () => {
+  isCollapsed.value = !isCollapsed.value;
+  emit('nav-toggle', isCollapsed.value);
+};
 
 const navigationItems = {
   admin: [
-    { name: 'Dashboard', path: '/admin-dashboard', icon: 'fa-home' },
-    { name: 'Manage Users', path: '/manage-users', icon: 'fa-users' },
-    { name: 'Settings', path: '/settings', icon: 'fa-cog' },
-    { name: 'Profile', path: '/profile', icon: 'fa-user' },
-    { name: 'Student Scores', path: '/scores', icon: 'fa-chart-line' },
-    { name: 'Users List', path: '/users-list', icon: 'fa-list' },
+    { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
+    { name: 'Manage Users', path: '/manage-users', icon: 'group' },
+    { name: 'Student Scores', path: '/scores', icon: 'analytics' },
+    { name: 'Users List', path: '/users-list', icon: 'list' },
+    { name: 'Profile', path: '/profile', icon: 'person' },
+    { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
   teacher: [
-    { name: 'Dashboard', path: '/teacher-dashboard', icon: 'fa-home' },
-    { name: 'Create Exam', path: '/create-exam', icon: 'fa-file-alt' },
-    { name: 'View Results', path: '/view-results', icon: 'fa-chart-bar' },
-    { name: 'Settings', path: '/settings', icon: 'fa-cog' },
-    { name: 'Profile', path: '/teacher-profile', icon: 'fa-user' },
-    {name: 'Student Scores', path: '/scores', icon: 'fa-chart-line'},
-    {name: 'Manage Exam', path: '/manage-exam', icon: 'fa-chart-line'}
-    
+    { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },
+    { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
+    { name: 'Manage Exam', path: '/manage-exam', icon: 'assignment' },
+    { name: 'View Results', path: '/view-results', icon: 'bar_chart' },
+    { name: 'Student Scores', path: '/scores', icon: 'analytics' },
+    { name: 'Profile', path: '/teacher-profile', icon: 'person' },
+    { name: 'Settings', path: '/settings', icon: 'settings' }
   ],
   student: [
-    { name: 'Dashboard', path: '/dashboard', icon: 'fa-home' },
-    { name: 'Take Exam', path: '/take-exam', icon: 'fa-pen' },
-    { name: 'View Grades', path: '/grades', icon: 'fa-chart-line' },
-    { name: 'Settings', path: '/settings', icon: 'fa-cog' },
-    { name: 'Profile', path: '/student-profile', icon: 'fa-user' },
-
+    { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
+    { name: 'View Grades', path: '/grades', icon: 'analytics' },
+    { name: 'Profile', path: '/student-profile', icon: 'person' },
+    { name: 'Settings', path: '/settings', icon: 'settings' }
   ]
 };
 
@@ -74,27 +99,57 @@ const handleLogout = () => {
 
 <style scoped>
 .sidenav {
-  width: 250px;
+  width: 280px;
   height: 100vh;
-  background: #333;
-  color: white;
+  background: #1e1e2d;
+  color: #9899ac;
   display: flex;
   flex-direction: column;
-  padding: 20px;
-  position: relative;
-  transition: all 0.3s ease;
+  position: fixed;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  top: 0;
+  left: 0;
+  z-index: 100;
 }
 
 .sidenav.collapsed {
-  width: 70px;
-  padding: 20px 10px;
+  width: 80px;
+}
+
+.logo-section {
+  padding: 24px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+}
+
+.logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.logo-text {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: white;
+  transition: opacity 0.3s ease;
+}
+
+.sidenav.collapsed .logo-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
 }
 
 .toggle-btn {
   position: absolute;
   right: -12px;
-  top: 20px;
-  background: #4CAF50;
+  top: 32px;
+  background: #009ef7;
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -103,94 +158,143 @@ const handleLogout = () => {
   justify-content: center;
   cursor: pointer;
   z-index: 1;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(0, 158, 247, 0.3);
 }
 
 .toggle-btn:hover {
   transform: scale(1.1);
+  background: #0095e8;
+}
+
+.toggle-btn .material-icons {
+  font-size: 18px;
+  color: white;
 }
 
 .nav-links {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
+  padding: 0 12px;
+  overflow-y: auto;
+  height: calc(100vh - 180px);
 }
 
-.sidenav a {
-  color: white;
+.nav-link {
+  color: #9899ac;
   text-decoration: none;
-  padding: 12px 15px;
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
+  padding: 12px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 10px;
-  white-space: nowrap;
-}
-
-.sidenav.collapsed a {
-  padding: 12px;
-  justify-content: center;
-}
-
-.sidenav a:hover {
-  background: #555;
-}
-
-.sidenav a.router-link-active {
-  background: #444;
-  border-left: 4px solid #4CAF50;
-}
-
-.sidenav i {
-  width: 20px;
-  text-align: center;
-}
-
-.logout-btn {
-  margin-top: auto;
-  padding: 12px;
-  border: none;
-  background: #dc3545;
-  color: white;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background-color 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.sidenav.collapsed .logout-btn {
-  justify-content: center;
-}
-
-.logout-btn:hover {
-  background: #c82333;
-}
-
-/* Add tooltip for collapsed state */
-.sidenav.collapsed a, 
-.sidenav.collapsed .logout-btn {
+  gap: 12px;
   position: relative;
 }
 
-.sidenav.collapsed a:hover::after,
-.sidenav.collapsed .logout-btn:hover::after {
-  content: attr(to);
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  background: #555;
-  padding: 5px 10px;
-  border-radius: 4px;
-  margin-left: 10px;
-  font-size: 14px;
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.nav-link.router-link-active {
+  background: rgba(0, 158, 247, 0.1);
+  color: #009ef7;
+}
+
+.nav-link.router-link-active .material-icons {
+  color: #009ef7;
+}
+
+.icon-container {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-container .material-icons {
+  font-size: 22px;
+}
+
+.link-text {
+  transition: opacity 0.3s ease;
   white-space: nowrap;
-  z-index: 1000;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.sidenav.collapsed .link-text {
+  opacity: 0;
+  width: 0;
+  overflow: hidden;
+}
+
+.logout-btn {
+  margin: 16px 12px;
+  padding: 12px 16px;
+  border: none;
+  background: #f1416c;
+  color: white;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: calc(100% - 24px);
+}
+
+.logout-btn:hover {
+  background: #e41146;
+  transform: translateY(-1px);
+}
+
+/* Scrollbar Styling */
+.nav-links::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav-links::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav-links::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .sidenav {
+    transform: translateX(0);
+  }
+
+  .sidenav.collapsed {
+    transform: translateX(-100%);
+    width: 280px;
+  }
+
+  .toggle-btn {
+    right: -32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 0 6px 6px 0;
+  }
+
+  .sidenav.collapsed .toggle-btn {
+    right: -32px;
+  }
+
+  .sidenav.collapsed .link-text,
+  .sidenav.collapsed .logo-text {
+    opacity: 1;
+    width: auto;
+  }
 }
 </style>
   

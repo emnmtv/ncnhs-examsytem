@@ -49,7 +49,7 @@
       <!-- Exam Details Section -->
       <div v-if="exam" class="exam-details-container">
         <div class="exam-header">
-      <h2>{{ exam.examTitle }}</h2>
+          <h2>{{ exam.examTitle }}</h2>
           <div class="exam-meta">
             <span class="exam-meta-item">
               <i class="fas fa-chalkboard"></i> {{ exam.classCode }}
@@ -68,7 +68,8 @@
             @click="startExamSession" 
             class="primary-btn large"
           >
-            <i class="fas fa-play-circle"></i> Start Exam Session
+            <i class="fas" :class="hasExamInProgress ? 'fa-redo' : 'fa-play-circle'"></i>
+            {{ hasExamInProgress ? 'Continue Exam' : 'Start Exam Session' }}
           </button>
         </div>
         
@@ -123,7 +124,8 @@ export default {
       colors: [
         '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
         '#9C27B0', '#009688', '#673AB7', '#F44336'
-      ]
+      ],
+      hasExamInProgress: false
     };
   },
   mounted() {
@@ -144,22 +146,53 @@ export default {
       document.head.appendChild(link);
     }
   },
+  created() {
+    // Check for exam in progress when component is created
+    this.checkExamInProgress();
+  },
   methods: {
     initializeSocket() {
       if (!this.socket) {
         this.socket = io('http://localhost:3300');
-        console.log('Connected to WebSocket server');
+        
+        // Add exam status update listener
+        this.socket.on('examStatusUpdate', ({ status }) => {
+          if (this.exam) {
+            this.exam.status = status;
+            
+            // Update UI based on status
+            if (status === 'started') {
+              Swal.fire({
+                title: 'Exam Started',
+                text: 'The exam has begun. Good luck!',
+                icon: 'info',
+                timer: 2000,
+                showConfirmButton: false
+              });
+            }
+          }
+        });
+
+        this.socket.on('studentJoined', (students) => {
+          console.log('Students joined:', students);
+          this.students = students;
+        });
+
+        this.socket.on('studentLeft', (students) => {
+          console.log('Students left:', students);
+          this.students = students;
+        });
       }
-
-      this.socket.on('studentJoined', (students) => {
-        console.log('Students joined:', students);
-        this.students = students;
-      });
-
-      this.socket.on('studentLeft', (students) => {
-        console.log('Students left:', students);
-        this.students = students;
-      });
+    },
+    
+    checkExamInProgress() {
+      const examState = localStorage.getItem('examState');
+      if (examState) {
+        const state = JSON.parse(examState);
+        if (state.testCode === this.testCode) {
+          this.hasExamInProgress = true;
+        }
+      }
     },
     
     async fetchExamQuestions() {
@@ -172,6 +205,9 @@ export default {
         this.error = null;
         const response = await fetchExamQuestions(this.testCode);
         this.exam = response.exam;
+
+        // Check if there's an exam in progress
+        this.checkExamInProgress();
 
         console.log('Exam data received:', this.exam);
         
@@ -213,7 +249,7 @@ export default {
 
       console.log('Current exam status:', this.exam.status);
 
-      if (this.exam.status === "started") {
+      if (this.exam.status === "started" || this.hasExamInProgress) {
         this.showExamSession = true;
       } 
       else if (this.exam.status === "pending") {
@@ -245,24 +281,28 @@ export default {
     quitExam() {
       Swal.fire({
         title: 'Leave Exam?',
-        text: 'Are you sure you want to leave this exam?',
-        icon: 'question',
+        text: 'Are you sure you want to leave this exam? Any saved progress will be lost.',
+        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Yes, leave',
         cancelButtonText: 'No, stay'
       }).then((result) => {
         if (result.isConfirmed) {
-      if (this.socket) {
-        this.socket.emit('quitExam', { testCode: this.testCode });
-      }
+          // Clear exam state from localStorage
+          localStorage.removeItem('examState');
+          
+          if (this.socket) {
+            this.socket.emit('quitExam', { testCode: this.testCode });
+          }
 
-      localStorage.removeItem("testCode");
+          localStorage.removeItem("testCode");
           
           this.exam = null;
           this.students = [];
           this.showExamSession = false;
           this.testCode = '';
           this.currentTestCode = null;
+          this.hasExamInProgress = false;
           
           Swal.fire(
             'Left Exam',
@@ -587,5 +627,13 @@ export default {
     height: 40px;
     font-size: 1rem;
   }
+}
+
+.primary-btn i {
+  margin-right: 8px;
+}
+
+.primary-btn.large i {
+  font-size: 1.2rem;
 }
 </style> 

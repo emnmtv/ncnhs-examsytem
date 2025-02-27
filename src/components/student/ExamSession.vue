@@ -138,6 +138,7 @@
 
 <script>
 import { fetchExamQuestions, submitExamAnswers } from '@/services/authService';
+import { io } from 'socket.io-client';
 import Swal from 'sweetalert2';
 
 export default {
@@ -150,13 +151,14 @@ export default {
   data() {
     return {
       exam: null,
-      answers: {},
+      answers: this.loadAnswers() || {},
       error: null,
       loading: true,
       refreshInterval: null,
       scoreResult: null,
-      currentQuestionIndex: null,
-      shuffledQuestions: [],
+      currentQuestionIndex: this.loadCurrentIndex() || null,
+      shuffledQuestions: this.loadShuffledQuestions() || [],
+      socket: null,
     };
   },
   computed: {
@@ -177,6 +179,8 @@ export default {
   },
   created() {
     this.fetchExam();
+    this.setupPolling();
+    this.initializeSocket();
     
     // Only set up polling if exam is pending or questions aren't available yet
     this.setupPolling();
@@ -193,6 +197,9 @@ export default {
   beforeUnmount() {
     // Clean up the polling interval
     this.clearPolling();
+    if (this.socket) {
+      this.socket.disconnect();
+    }
   },
   watch: {
     'exam.questions': {
@@ -209,12 +216,9 @@ export default {
     
     'exam.status': {
       handler(newStatus) {
-        // If exam is no longer pending, adjust polling frequency or stop it
-        if (newStatus === 'started' && this.exam.questions && this.exam.questions.length > 0) {
-          // We have questions and exam is started, so stop polling
-          this.clearPolling();
-        } else if (newStatus === 'stopped') {
-          // Exam is stopped, no need to poll
+        if (newStatus === 'stopped') {
+          // Clear saved state if exam is stopped
+          this.clearExamState();
           this.clearPolling();
         }
       }
@@ -274,35 +278,50 @@ export default {
     
     initializeExam() {
       if (this.exam && this.exam.questions && this.exam.questions.length > 0) {
-        // Create a shuffled copy of the questions
-        this.shuffledQuestions = [...this.exam.questions].sort(() => Math.random() - 0.5);
-        this.currentQuestionIndex = 0;
+        const savedState = this.loadExamState();
         
-        // Initialize empty answers object
-        this.answers = {};
+        if (savedState && savedState.testCode === this.testCode) {
+          // Restore saved state
+          this.shuffledQuestions = savedState.shuffledQuestions;
+          this.currentQuestionIndex = savedState.currentQuestionIndex;
+          this.answers = savedState.answers;
+        } else {
+          // Create new shuffled questions if no saved state
+          this.shuffledQuestions = [...this.exam.questions].sort(() => Math.random() - 0.5);
+          this.currentQuestionIndex = 0;
+          this.answers = {};
+          // Save the initial state
+          this.saveExamState();
+        }
       }
     },
     
     nextQuestion() {
       if (this.currentQuestionIndex < this.shuffledQuestions.length - 1) {
         this.currentQuestionIndex++;
+        this.saveExamState();
+        this.emitProgress();
       }
     },
     
     prevQuestion() {
       if (this.currentQuestionIndex > 0) {
         this.currentQuestionIndex--;
+        this.saveExamState();
       }
     },
     
     goToQuestion(index) {
       if (index >= 0 && index < this.shuffledQuestions.length) {
         this.currentQuestionIndex = index;
+        this.saveExamState();
       }
     },
     
     selectOption(questionId, option) {
       this.answers[questionId] = option;
+      this.saveExamState();
+      this.emitProgress();
     },
     
     confirmSubmit() {
@@ -330,6 +349,7 @@ export default {
     
     async submitAnswers() {
       try {
+        // Remove the check for empty answers
         this.error = null;
         const answerData = {
           testCode: this.testCode,
@@ -339,20 +359,55 @@ export default {
           })),
         };
         
+        // Show submitting notification
+        Swal.fire({
+          title: 'Submitting...',
+          text: 'Please wait while your answers are being submitted',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
         const response = await submitExamAnswers(answerData);
         
         // Store the score result
         this.scoreResult = response.score;
         
+        // Clear saved exam state after successful submission
+        this.clearExamState();
+        
+        // Show success message before emitting event
+        await Swal.fire({
+          title: 'Answers Submitted!',
+          text: `Your score: ${response.score.percentage}%`,
+          icon: 'success',
+          confirmButtonText: 'OK',
+          allowOutsideClick: false
+        });
+        
         // Emit an event to notify parent component
         this.$emit('answers-submitted', this.scoreResult);
       } catch (err) {
         this.error = err.message;
+        
+        Swal.fire({
+          title: 'Error',
+          text: err.message || 'Failed to submit answers',
+          icon: 'error',
+          confirmButtonText: 'OK'
+        }).then(() => {
+          if (this.exam?.status === 'stopped') {
+            this.clearExamState();
+            this.$emit('quit-exam');
+          }
+        });
       }
     },
     
     quitExam() {
-      // Confirm before quitting if not on score screen
       if (!this.scoreResult) {
         Swal.fire({
           title: 'Are you sure?',
@@ -365,11 +420,12 @@ export default {
           cancelButtonText: 'Stay on exam'
         }).then((result) => {
           if (result.isConfirmed) {
-            console.log('Quitting exam from ExamSession');
+            this.clearExamState();
             this.$emit('quit-exam');
           }
         });
       } else {
+        this.clearExamState();
         this.$emit('quit-exam');
       }
     },
@@ -386,6 +442,161 @@ export default {
       if (percentage >= 75) return 'Good job!';
       if (percentage >= 60) return 'Not bad, keep practicing!';
       return 'You might need more review on this topic.';
+    },
+
+    // Add these new methods for persistence
+    saveExamState() {
+      const examState = {
+        answers: this.answers,
+        currentQuestionIndex: this.currentQuestionIndex,
+        shuffledQuestions: this.shuffledQuestions,
+        testCode: this.testCode
+      };
+      localStorage.setItem('examState', JSON.stringify(examState));
+    },
+
+    loadExamState() {
+      const savedState = localStorage.getItem('examState');
+      if (savedState) {
+        const state = JSON.parse(savedState);
+        // Only load if it's the same exam
+        if (state.testCode === this.testCode) {
+          return state;
+        }
+      }
+      return null;
+    },
+
+    loadAnswers() {
+      const state = this.loadExamState();
+      return state ? state.answers : {};
+    },
+
+    loadCurrentIndex() {
+      const state = this.loadExamState();
+      return state ? state.currentQuestionIndex : null;
+    },
+
+    loadShuffledQuestions() {
+      const state = this.loadExamState();
+      return state ? state.shuffledQuestions : [];
+    },
+
+    clearExamState() {
+      localStorage.removeItem('examState');
+    },
+
+    initializeSocket() {
+      if (!this.socket) {
+        this.socket = io('http://localhost:3300');
+        console.log('Socket connected in ExamSession');
+
+        // Join the exam room
+        this.socket.emit('joinExam', {
+          testCode: this.testCode,
+          userId: localStorage.getItem('userId')
+        });
+
+        // Handle exam status updates
+        this.socket.on('examStatusUpdate', ({ status }) => {
+          console.log('Received exam status update:', status);
+          if (this.exam) {
+            this.exam.status = status;
+            
+            if (status === 'started') {
+              this.fetchExam();
+            } else if (status === 'stopped') {
+              console.log('Exam stopped via status update');
+              this.handleExamStopped();
+            }
+          }
+        });
+
+        // Handle direct stop event
+        this.socket.on('examStopped', () => {
+          console.log('Received direct stop signal');
+          if (this.exam && !this.scoreResult) {  // Only show if exam is active
+            this.handleExamStopped();
+          }
+        });
+      }
+    },
+
+    handleExamStopped() {
+      // Prevent multiple popups
+      if (Swal.isVisible()) return;
+      
+      console.log('Showing exam stop dialog');
+      Swal.fire({
+        title: 'Exam Ended',
+        text: 'The teacher has ended the exam. Please submit your answers now.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#4CAF50',
+        cancelButtonColor: '#f44336',
+        confirmButtonText: 'Submit Answers',
+        cancelButtonText: 'Review Answers',
+        allowOutsideClick: false,
+        allowEscapeKey: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          this.submitAnswers();
+        } else {
+          // Show a timer notification that answers will be auto-submitted
+          let timeLeft = 60;
+          const timerInterval = setInterval(() => {
+            timeLeft -= 1;
+            if (Swal.isVisible()) {
+              Swal.update({
+                title: 'Final Review',
+                text: `Your answers will be automatically submitted in ${timeLeft} seconds`,
+                showConfirmButton: true,
+                confirmButtonText: 'Submit Now'
+              });
+            }
+
+            if (timeLeft <= 0) {
+              clearInterval(timerInterval);
+              this.submitAnswers(); // Will now submit even with no answers
+            }
+          }, 1000);
+
+          Swal.fire({
+            title: 'Final Review',
+            text: `You have ${timeLeft} seconds to review your answers`,
+            icon: 'info',
+            timer: timeLeft * 1000,
+            timerProgressBar: true,
+            showConfirmButton: true,
+            confirmButtonText: 'Submit Now',
+            allowOutsideClick: false,
+            allowEscapeKey: false
+          }).then((result) => {
+            clearInterval(timerInterval);
+            if (result.isConfirmed || result.dismiss === Swal.DismissReason.timer) {
+              this.submitAnswers(); // Will now submit even with no answers
+            }
+          });
+        }
+      });
+    },
+
+    emitProgress() {
+      if (!this.socket) {
+        this.initializeSocket();
+      }
+      
+      const answeredCount = Object.keys(this.answers).length;
+      const progress = {
+        answeredCount,
+        currentQuestion: this.currentQuestionIndex + 1
+      };
+      
+      this.socket.emit('updateExamProgress', {
+        testCode: this.testCode,
+        userId: localStorage.getItem('userId'),
+        progress
+      });
     },
   }
 };
