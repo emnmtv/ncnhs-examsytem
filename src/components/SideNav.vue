@@ -41,6 +41,7 @@
 import { ref, onMounted, defineEmits } from 'vue';
 import { useRouter } from 'vue-router';
 import { getUserRole, logout } from '../services/authService';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const userRole = ref('');
@@ -91,9 +92,53 @@ const navigationItems = {
   ]
 };
 
-const handleLogout = () => {
-  logout();
-  router.push('/');
+const handleLogout = async () => {
+  try {
+    const result = await Swal.fire({
+      title: 'Logout Confirmation',
+      text: 'Are you sure you want to logout?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#f1416c',
+      cancelButtonColor: '#b5b5c3',
+      confirmButtonText: 'Yes, logout',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+      // Show loading state
+      Swal.fire({
+        title: 'Logging out...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Perform logout
+      logout();
+
+      // Show success message
+      await Swal.fire({
+        icon: 'success',
+        title: 'Logged Out Successfully',
+        text: 'Thank you for using NCNHS Exam System',
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      // Redirect to login page
+      router.push('/');
+    }
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Logout Failed',
+      text: 'There was an error logging out. Please try again.',
+      confirmButtonColor: '#f1416c'
+    });
+  }
 };
 </script>
 

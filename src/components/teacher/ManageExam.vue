@@ -2,78 +2,136 @@
     <div class="manage-exam-container">
       <div class="header">
         <h1>Manage Exam</h1>
-        <p class="subtitle">Enter a test code to manage the exam session</p>
+        <p class="subtitle">Monitor and control your exam session</p>
       </div>
   
       <div class="test-code-section" :class="{ 'with-exam': showExamControls }">
-        <div class="input-group">
+        <div class="input-wrapper">
+          <label for="testCode">Test Code</label>
           <input 
+            id="testCode"
             v-model="testCode" 
-            placeholder="Enter Test Code" 
+            placeholder="Enter your exam code here" 
             class="test-code-input"
+            :disabled="showExamControls"
           />
           <button 
+            v-if="!showExamControls"
             @click="joinExam"
-            class="primary-btn"
+            class="join-btn"
+            :disabled="!testCode.trim()"
           >
-            Join Exam
+            <span class="material-icons-round">login</span>
+            Join Exam Session
           </button>
         </div>
       </div>
   
       <div v-if="error" class="error-container">
+        <i class="fas fa-exclamation-circle"></i>
         <div class="error-message">{{ error }}</div>
       </div>
   
-      <div v-if="students.length > 0" class="students-container">
-        <h3>Students in Exam</h3>
-        <div class="students-grid">
-          <div 
-            v-for="student in students" 
-            :key="student.userId" 
-            class="student-card"
-          >
-            <div class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
-              {{ getInitials(student.userName) }}
+      <div v-if="showExamControls" class="control-panel">
+        <div class="panel-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons-round">groups</span>
             </div>
-            <div class="student-name">{{ student.userName }}</div>
+            <div class="stat-info">
+              <h3>Students</h3>
+              <div class="stat-value">{{ students.length }}</div>
+              <p class="stat-label">Active Participants</p>
+            </div>
+          </div>
+  
+          <div class="stat-card">
+            <div class="stat-icon">
+              <span class="material-icons-round">schedule</span>
+            </div>
+            <div class="stat-info">
+              <h3>Status</h3>
+              <div class="stat-value status-badge" :class="exam?.status || 'pending'">
+                {{ formatStatus(exam?.status || 'pending') }}
+              </div>
+            </div>
+          </div>
+  
+          <div class="action-card">
+            <button 
+              @click="startExam"
+              class="control-btn start-btn"
+              :disabled="exam?.status === 'started'"
+            >
+              <span class="material-icons-round">play_arrow</span>
+              Start Exam
+            </button>
+            <button 
+              @click="stopExam"
+              class="control-btn stop-btn"
+              :disabled="exam?.status === 'stopped'"
+            >
+              <span class="material-icons-round">stop</span>
+              Stop Exam
+            </button>
+            <button 
+              @click="quitExam"
+              class="control-btn quit-btn"
+            >
+              <span class="material-icons-round">logout</span>
+              Exit Session
+            </button>
           </div>
         </div>
-      </div>
   
-      <div v-if="showExamControls" class="progress-section">
-        <ExamProgressModal 
-          :test-code="testCode"
-          ref="progressModal"
-        />
-      </div>
+        <div class="progress-section">
+          <div class="section-header">
+            <h2>
+              <span class="material-icons-round">analytics</span>
+              Student Progress
+            </h2>
+          </div>
+          <ExamProgressModal 
+            :test-code="testCode"
+            ref="progressModal"
+          />
+        </div>
   
-      <div class="action-buttons" v-if="showExamControls">
-        <button 
-          @click="startExam"
-          class="primary-btn"
-        >
-          Start Exam
-        </button>
-        <button 
-          @click="stopExam"
-          class="danger-btn"
-        >
-          Stop Exam
-        </button>
-        <button 
-          @click="quitExam"
-          class="danger-btn"
-        >
-          Quit Exam
-        </button>
+        <div v-if="students.length > 0" class="students-section">
+          <div class="section-header">
+            <h2>
+              <span class="material-icons-round">school</span>
+              Active Students
+            </h2>
+            <span class="student-count">{{ students.length }} Connected</span>
+          </div>
+          <div class="students-grid">
+            <div 
+              v-for="student in students" 
+              :key="student.userId" 
+              class="student-card"
+              :class="{ 'teacher': student.role === 'teacher' }"
+            >
+              <div class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
+                {{ getInitials(student.userName) }}
+              </div>
+              <div class="student-info">
+                <div class="student-name">{{ student.userName }}</div>
+                <div class="student-status">
+                  <span class="status-dot"></span>
+                  Active
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </template>
   
   <script>
   import { startExam, stopExam } from '@/services/authService';
-  import { io } from 'socket.io-client';
+  import socketManager from '@/utils/socketManager';
   import Swal from 'sweetalert2';
   import ExamProgressModal from './ExamProgressModal.vue';
   
@@ -88,6 +146,7 @@
         students: [],
         socket: null,
         showExamControls: false,
+        exam: null,
         colors: [
           '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
           '#9C27B0', '#009688', '#673AB7', '#F44336'
@@ -102,18 +161,32 @@
     },
     methods: {
       initializeSocket() {
-        this.socket = io('http://localhost:3300');
-        this.socket.on('studentJoined', (students) => {
-          this.students = students;
-        });
-        this.socket.on('studentLeft', (students) => {
-          this.students = students;
-        });
-        this.socket.on('examProgressUpdate', (progressData) => {
-          if (this.$refs.progressModal) {
-            this.$refs.progressModal.updateStudentProgress(progressData);
-          }
-        });
+        if (!this.socket) {
+          this.socket = socketManager.getSocket();
+          
+          // Set up socket event listeners
+          this.socket.on('studentJoined', (students) => {
+            // Filter out the teacher from the students list
+            this.students = students.filter(student => student.role !== 'teacher');
+          });
+          
+          this.socket.on('studentLeft', (students) => {
+            // Filter out the teacher from the students list
+            this.students = students.filter(student => student.role !== 'teacher');
+          });
+          
+          this.socket.on('examProgressUpdate', (progressData) => {
+            if (this.$refs.progressModal) {
+              this.$refs.progressModal.updateStudentProgress(progressData);
+            }
+          });
+
+          this.socket.on('examStatusUpdate', ({ status }) => {
+            if (this.exam) {
+              this.exam.status = status;
+            }
+          });
+        }
       },
       async joinExam() {
         if (!this.testCode.trim()) {
@@ -125,7 +198,11 @@
         const userId = localStorage.getItem("userId");
   
         if (userId) {
-          this.socket.emit('joinExam', { testCode: this.testCode, userId });
+          this.socket.emit('joinExam', { 
+            testCode: this.testCode, 
+            userId,
+            role: 'teacher' // Specify role as teacher
+          });
           this.showExamControls = true;
           localStorage.setItem("testCode", this.testCode);
         } else {
@@ -135,11 +212,12 @@
       async startExam() {
         try {
           await startExam(this.testCode);
-          // Emit socket event for real-time update
           this.socket.emit('examStatusChanged', { 
             testCode: this.testCode, 
             status: 'started' 
           });
+          
+          this.exam = { ...this.exam, status: 'started' };
           
           Swal.fire({
             title: 'Success!',
@@ -149,25 +227,17 @@
           });
         } catch (error) {
           this.error = error.message;
+          Swal.fire({
+            title: 'Error',
+            text: error.message || 'Failed to start exam',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
       },
       async stopExam() {
         try {
-          console.log('Stopping exam:', this.testCode);
-          
-          // First update the backend
           await stopExam(this.testCode);
-          
-          // Make sure socket is connected
-          if (!this.socket.connected) {
-            await new Promise(resolve => this.socket.connect(resolve));
-          }
-          
-          // Join the exam room before emitting
-          this.socket.emit('joinExam', {
-            testCode: this.testCode,
-            userId: localStorage.getItem('userId')
-          });
           
           // Emit the stop event
           this.socket.emit('examStatusChanged', { 
@@ -175,7 +245,7 @@
             status: 'stopped' 
           });
           
-          console.log('Stop exam signal emitted');
+          this.exam = { ...this.exam, status: 'stopped' };
           
           Swal.fire({
             title: 'Success!',
@@ -201,7 +271,15 @@
           this.showExamControls = false;
           this.students = [];
           this.testCode = '';
+          this.exam = null;
           localStorage.removeItem("testCode");
+          
+          // Remove socket listeners
+          this.socket.off('studentJoined');
+          this.socket.off('studentLeft');
+          this.socket.off('examProgressUpdate');
+          this.socket.off('examStatusUpdate');
+          
           Swal.fire({
             title: 'Success!',
             text: 'You have quit the exam.',
@@ -229,11 +307,25 @@
         }
         const index = Math.abs(hash) % this.colors.length;
         return this.colors[index];
+      },
+      formatStatus(status) {
+        switch (status) {
+          case 'started':
+            return 'Started';
+          case 'stopped':
+            return 'Stopped';
+          default:
+            return 'Pending';
+        }
       }
     },
     beforeUnmount() {
       if (this.socket) {
-        this.socket.disconnect();
+        // Remove all listeners before unmounting
+        this.socket.off('studentJoined');
+        this.socket.off('studentLeft');
+        this.socket.off('examProgressUpdate');
+        this.socket.off('examStatusUpdate');
       }
     }
   };
@@ -243,19 +335,20 @@
   .manage-exam-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 40px 20px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 2rem;
+    font-family: 'Inter', sans-serif;
   }
   
   .header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 2.5rem;
   }
   
   .header h1 {
     font-size: 2.5rem;
-    color: #2c3e50;
-    margin-bottom: 10px;
+    color: #1a1a1a;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
   }
   
   .subtitle {
@@ -264,156 +357,317 @@
   }
   
   .test-code-section {
-    background-color: #ffffff;
-    border-radius: 15px;
-    padding: 30px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 2rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
-    margin-bottom: 30px;
+    margin-bottom: 2rem;
   }
   
-  .test-code-section.with-exam {
-    background-color: #f0f9ff;
-    border: 1px solid #bae6fd;
-  }
-  
-  .input-group {
+  .input-wrapper {
     display: flex;
-    gap: 15px;
-    max-width: 600px;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 500px;
     margin: 0 auto;
   }
   
+  .input-wrapper label {
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+  }
+  
   .test-code-input {
-    flex: 1;
-    padding: 15px 20px;
+    width: 100%;
+    padding: 1rem;
     border: 2px solid #e2e8f0;
-    border-radius: 10px;
+    border-radius: 12px;
     font-size: 1.1rem;
-    outline: none;
-    transition: all 0.3s;
+    transition: all 0.3s ease;
   }
   
   .test-code-input:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    outline: none;
   }
   
-  .primary-btn, .danger-btn {
-    padding: 15px 30px;
+  .join-btn {
+    width: 100%;
+    padding: 1rem;
+    background: #4f46e5;
+    color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     font-weight: 600;
     font-size: 1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 0.5rem;
   }
   
-  .primary-btn {
-    background-color: #3b82f6;
-    color: white;
+  .join-btn:hover {
+    background: #4338ca;
+    transform: translateY(-1px);
   }
   
-  .primary-btn:hover {
-    background-color: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+  .join-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
   }
   
-  .danger-btn {
-    background-color: #ef4444;
-    color: white;
+  .control-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
   }
   
-  .danger-btn:hover {
-    background-color: #dc2626;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+  .panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
   }
   
-  .students-container {
-    background-color: #ffffff;
-    border-radius: 15px;
-    padding: 30px;
+  .stat-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin-bottom: 30px;
   }
   
-  .students-container h3 {
-    color: #2c3e50;
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #4f46e5;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 1.5rem;
-    margin-bottom: 20px;
+  }
+  
+  .stat-info {
+    flex: 1;
+  }
+  
+  .stat-info h3 {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+  }
+  
+  .stat-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 0.25rem;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  
+  .status-badge.pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .status-badge.started {
+    background: #dcfce7;
+    color: #166534;
+  }
+  
+  .status-badge.stopped {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .action-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  }
+  
+  .control-btn {
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .start-btn {
+    background: #4f46e5;
+    color: white;
+  }
+  
+  .start-btn:hover {
+    background: #4338ca;
+  }
+  
+  .stop-btn {
+    background: #ef4444;
+    color: white;
+  }
+  
+  .stop-btn:hover {
+    background: #dc2626;
+  }
+  
+  .quit-btn {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+  
+  .quit-btn:hover {
+    background: #e5e7eb;
+  }
+  
+  .control-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.25rem;
+    color: #1a1a1a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .student-count {
+    background: #4f46e5;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
   }
   
   .students-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
   }
   
   .student-card {
-    background-color: #f8fafc;
+    background: #fff;
     border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    text-align: center;
-    transition: all 0.2s;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
   }
   
   .student-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   }
   
   .avatar {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
-    font-weight: bold;
-    margin: 0 auto 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+  
+  .student-info {
+    flex: 1;
   }
   
   .student-name {
-    font-size: 1rem;
-    font-weight: 500;
-    color: #334155;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 0.25rem;
   }
   
-  .action-buttons {
+  .student-status {
     display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 30px;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #22c55e;
+  }
+  
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
   }
   
   .error-container {
-    background-color: #fee2e2;
-    border: 1px solid #fecaca;
-    border-radius: 10px;
-    padding: 15px 20px;
-    margin: 20px 0;
+    background: #fee2e2;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #991b1b;
   }
   
-  .error-message {
-    color: #dc2626;
-    font-size: 0.95rem;
-    text-align: center;
+  .error-container i {
+    font-size: 1.25rem;
   }
   
-  .progress-section {
-    margin-top: 30px;
+  @media (max-width: 768px) {
+    .manage-exam-container {
+      padding: 1rem;
+    }
+  
+    .header h1 {
+      font-size: 2rem;
+    }
+  
+    .panel-grid {
+      grid-template-columns: 1fr;
+    }
+  
+    .students-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
   }
   </style>

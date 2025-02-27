@@ -1,8 +1,8 @@
 <template>
-  <div class="app-container" :class="{ 'nav-collapsed': isNavCollapsed }">
+  <div class="app-container" :class="{ 'nav-collapsed': isNavCollapsed, 'no-nav': !showSidebar }">
     <!-- Show sidebar only if not on login or register page -->
     <Sidenav v-if="showSidebar" @nav-toggle="handleNavToggle" />
-    <div class="content">
+    <div class="content" :class="{ 'full-width': !showSidebar }">
       <router-view />
     </div>
   </div>
@@ -41,10 +41,31 @@ export default {
 </script>
 
 <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 .app-container {
   display: flex;
   min-height: 100vh;
   background: #f1f5f9;
+}
+
+.app-container.no-nav {
+  padding: 0;
+  margin: 0;
+  background: none;
 }
 
 .content {
@@ -56,22 +77,18 @@ export default {
   margin-left: 280px;
 }
 
+.content.full-width {
+  margin-left: 0;
+  padding: 0;
+}
+
 /* Add class to handle collapsed state */
 .app-container.nav-collapsed .content {
   margin-left: 80px;
 }
 
-/* Add some global styles */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.app-container.no-nav .content {
+  margin-left: 0;
 }
 
 /* Responsive adjustments */
@@ -83,6 +100,10 @@ body {
   
   .app-container.nav-collapsed .content {
     margin-left: 0;
+  }
+
+  .content.full-width {
+    padding: 0;
   }
 }
 </style>

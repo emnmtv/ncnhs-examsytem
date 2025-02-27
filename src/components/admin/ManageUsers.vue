@@ -65,15 +65,15 @@
             {{ domain }}
           </option>
         </select>
-      </div>
-    </div>
+          </div>
+          </div>
 
     <!-- Users List -->
     <div class="users-list" v-if="!loading">
       <div v-if="filteredUsers.length === 0" class="empty-state">
         <span class="material-icons">group_off</span>
         <p>No users found</p>
-      </div>
+          </div>
 
       <div v-else class="users-grid">
         <div v-for="user in filteredUsers" :key="user.id" class="user-card">
@@ -104,7 +104,7 @@
                   {{ user.domain || 'N/A' }}
                 </span>
               </template>
-            </div>
+          </div>
           </div>
           <div class="user-actions">
             <button class="action-btn edit">
@@ -114,7 +114,7 @@
               <span class="material-icons">delete</span>
             </button>
           </div>
-        </div>
+          </div>
       </div>
     </div>
 
@@ -122,8 +122,8 @@
     <div v-else class="loading-state">
       <div class="spinner"></div>
       <p>Loading users...</p>
-    </div>
-
+      </div>
+  
     <!-- Registration Modal -->
     <div v-if="showModal" class="modal-overlay" @click="showModal = false">
       <div class="modal-content" @click.stop>
@@ -132,15 +132,15 @@
           <button class="close-btn" @click="showModal = false">
             <span class="material-icons">close</span>
           </button>
-        </div>
+          </div>
 
         <form @submit.prevent="handleSubmit" class="registration-form">
           <div class="form-row">
-            <div class="form-group">
+          <div class="form-group">
               <label>First Name</label>
               <input v-model="formData.firstName" type="text" required />
-            </div>
-            <div class="form-group">
+          </div>
+          <div class="form-group">
               <label>Last Name</label>
               <input 
                 v-model="formData.lastName" 
@@ -148,7 +148,7 @@
                 required 
                 @input="updateCredentials"
               />
-            </div>
+          </div>
           </div>
 
           <div class="form-group">
@@ -175,16 +175,16 @@
           <div class="form-group">
             <label>Address</label>
             <input v-model="formData.address" type="text" />
-          </div>
-
+      </div>
+  
           <!-- Student-specific fields -->
           <template v-if="modalType === 'student'">
             <div class="form-row">
-              <div class="form-group">
+          <div class="form-group">
                 <label>LRN</label>
                 <input v-model.number="formData.lrn" type="number" />
-              </div>
-              <div class="form-group">
+          </div>
+          <div class="form-group">
                 <label>Grade Level</label>
                 <select v-model.number="formData.gradeLevel" required>
                   <option value="">Select Grade</option>
@@ -193,21 +193,21 @@
                   </option>
                 </select>
               </div>
-            </div>
-            <div class="form-group">
+          </div>
+          <div class="form-group">
               <label>Section</label>
               <input v-model="formData.section" type="text" />
-            </div>
+          </div>
           </template>
 
           <!-- Teacher-specific fields -->
           <template v-if="modalType === 'teacher'">
             <div class="form-row">
-              <div class="form-group">
+          <div class="form-group">
                 <label>Department</label>
                 <input v-model="formData.department" type="text" />
-              </div>
-              <div class="form-group">
+          </div>
+          <div class="form-group">
                 <label>Domain</label>
                 <input v-model="formData.domain" type="text" />
               </div>
@@ -225,9 +225,9 @@
         </form>
       </div>
     </div>
-  </div>
-</template>
-
+    </div>
+  </template>
+  
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { 
@@ -341,10 +341,10 @@ const openModal = (type) => {
 
 const getInitialFormData = (type) => {
   const baseData = {
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
     address: ''
   };
 
@@ -439,7 +439,7 @@ const handleSubmit = async () => {
         });
       }
     });
-  } catch (err) {
+        } catch (err) {
     Swal.fire({
       icon: 'error',
       title: 'Registration Failed',
@@ -492,13 +492,13 @@ const filteredUsers = computed(() => {
     return searchMatch && filterMatch;
   });
 });
-</script>
-
-<style scoped>
+  </script>
+  
+  <style scoped>
 .manage-users {
   padding: 2rem;
   max-width: 1200px;
-  margin: 0 auto;
+    margin: 0 auto;
 }
 
 .page-header {
@@ -597,7 +597,7 @@ const filteredUsers = computed(() => {
 .filter-group select {
   padding: 0.75rem;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+    border-radius: 8px;
   background: white;
   min-width: 150px;
   cursor: pointer;
@@ -758,9 +758,9 @@ const filteredUsers = computed(() => {
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
-}
-
-.form-group {
+  }
+  
+  .form-group {
   flex: 1;
   margin-bottom: 1rem;
 }
@@ -897,5 +897,5 @@ const filteredUsers = computed(() => {
 .generated-input:focus {
   outline: none;
   border-color: #e0e0e0;
-}
-</style> 
+  }
+  </style> 

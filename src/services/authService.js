@@ -1,5 +1,5 @@
-const BASE_URL = 'http://localhost:3300/auth';
-
+// const BASE_URL = 'http://localhost:3300/auth';
+const BASE_URL = 'http://192.168.0.102:3300/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
   try {
@@ -309,10 +309,20 @@ export const stopExam = async (testCode) => {
 
 // Auth helper functions
 export const logout = () => {
-  console.log('AuthService: Logging out user');
-  localStorage.removeItem("jwtToken");
-  localStorage.removeItem("userRole");
-  localStorage.removeItem("userId");
+  try {
+    // Clear all authentication-related items from localStorage
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('testCode');
+    // Clear any other app-specific storage items
+    localStorage.clear(); // This will clear everything
+    
+    console.log('AuthService: User logged out successfully');
+  } catch (error) {
+    console.error('AuthService: Error during logout:', error);
+    throw error;
+  }
 };
 
 export const isAuthenticated = () => {

@@ -104,7 +104,7 @@
 
 <script>
 import { fetchExamQuestions } from '@/services/authService';
-import { io } from 'socket.io-client';
+import socketManager from '@/utils/socketManager';
 import ExamSession from './ExamSession.vue';
 import Swal from 'sweetalert2';
 
@@ -153,7 +153,7 @@ export default {
   methods: {
     initializeSocket() {
       if (!this.socket) {
-        this.socket = io('http://localhost:3300');
+        this.socket = socketManager.getSocket();
         
         // Add exam status update listener
         this.socket.on('examStatusUpdate', ({ status }) => {
@@ -354,8 +354,11 @@ export default {
     }
   },
   beforeUnmount() {
+    // Remove only the listeners, don't disconnect the socket
     if (this.socket) {
-      this.socket.disconnect();
+      this.socket.off('examStatusUpdate');
+      this.socket.off('studentJoined');
+      this.socket.off('studentLeft');
     }
   }
 };

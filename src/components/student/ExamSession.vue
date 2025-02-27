@@ -138,7 +138,7 @@
 
 <script>
 import { fetchExamQuestions, submitExamAnswers } from '@/services/authService';
-import { io } from 'socket.io-client';
+import socketManager from '@/utils/socketManager';
 import Swal from 'sweetalert2';
 
 export default {
@@ -198,7 +198,8 @@ export default {
     // Clean up the polling interval
     this.clearPolling();
     if (this.socket) {
-      this.socket.disconnect();
+      this.socket.off('examStatusUpdate');
+      this.socket.off('examStopped');
     }
   },
   watch: {
@@ -488,7 +489,7 @@ export default {
 
     initializeSocket() {
       if (!this.socket) {
-        this.socket = io('http://localhost:3300');
+        this.socket = socketManager.getSocket();
         console.log('Socket connected in ExamSession');
 
         // Join the exam room
