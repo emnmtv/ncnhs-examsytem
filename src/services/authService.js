@@ -1,5 +1,5 @@
 // const BASE_URL = 'http://localhost:3300/auth';
-const BASE_URL = 'http://192.168.0.102:3300/auth';
+const BASE_URL = 'http://192.168.0.110:3300/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
   try {
@@ -175,7 +175,9 @@ export const createExam = async (examData) => {
       body: JSON.stringify({
         testCode: examData.testCode,
         classCode: examData.classCode,
-        examTitle: examData.title,
+        examTitle: examData.examTitle,
+        isDraft: examData.isDraft,
+        status: examData.status,
         questions: examData.questions.map(q => ({
           questionText: q.questionText,
           questionType: q.questionType,
@@ -188,13 +190,10 @@ export const createExam = async (examData) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('AuthService: Exam creation failed', errorData);
       throw new Error(errorData.error || "Failed to create exam");
     }
 
-    const result = await response.json();
-    console.log('AuthService: Exam creation successful', result);
-    return result;
+    return await response.json();
   } catch (error) {
     console.error("AuthService: Exam creation error:", error);
     throw error;
@@ -524,6 +523,134 @@ export const fetchStudentScores = async (studentId, examId) => {
     return scores;
   } catch (error) {
     console.error("AuthService: Student scores fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch all exams created by the logged-in teacher
+ */
+export const fetchTeacherExams = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/teacher-exams`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch teacher exams");
+    }
+
+    const { exams } = await response.json();
+    return exams;
+  } catch (error) {
+    console.error("AuthService: Teacher exams fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing exam
+ */
+export const updateExam = async (examId, examData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        testCode: examData.testCode,
+        classCode: examData.classCode,
+        examTitle: examData.examTitle,
+        isDraft: examData.isDraft,
+        status: examData.status,
+        questions: examData.questions.map(q => ({
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: q.questionType === 'enumeration' ? [] : (q.options || []),
+          correctAnswer: q.correctAnswer
+        }))
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update exam");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AuthService: Exam update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete an exam
+ */
+export const deleteExam = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to delete exam");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AuthService: Exam deletion error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch item analysis for an exam
+ * @param {number} examId - The ID of the exam to analyze
+ */
+export const fetchExamAnalysis = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/exam-analysis/${examId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch exam analysis");
+    }
+
+    const { analysis } = await response.json();
+    return analysis;
+  } catch (error) {
+    console.error("AuthService: Exam analysis fetch error:", error);
     throw error;
   }
 };

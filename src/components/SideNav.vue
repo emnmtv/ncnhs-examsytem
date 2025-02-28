@@ -81,7 +81,8 @@ const navigationItems = {
     { name: 'View Results', path: '/view-results', icon: 'bar_chart' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Profile', path: '/teacher-profile', icon: 'person' },
-    { name: 'Settings', path: '/settings', icon: 'settings' }
+    { name: 'Settings', path: '/settings', icon: 'settings' },
+    { name: 'Manage Exams', path: '/manage-exams', icon: 'assignment' },
   ],
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },

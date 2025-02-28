@@ -12,6 +12,9 @@ import UsersList from "../components/admin/UsersList.vue";
 import StudentScores from "../components/admin/StudentScores.vue";
 import ManageExam from "../components/teacher/ManageExam.vue";
 import ManageUsers from "../components/admin/ManageUsers.vue";
+import ManageExams from "../components/teacher/ManageExams.vue";
+import PreviewExam from "../components/teacher/PreviewExam.vue";
+import ExamResults from "../components/teacher/ExamResults.vue";
 
 const routes = [
   { path: "/", component: LoginPage },
@@ -26,8 +29,10 @@ const routes = [
   { path: '/users-list', component: UsersList},
   { path: '/scores', component: StudentScores},
   { path: '/manage-exam', component: ManageExam},
-  {path:'/manage-users', component: ManageUsers}
-
+  {path:'/manage-users', component: ManageUsers},
+  { path: '/manage-exams', component: ManageExams },
+  { path: '/preview-exam/:examId', component: PreviewExam },
+  { path: '/exam-results/:examId', component: ExamResults },
 ];
 
 const router = createRouter({

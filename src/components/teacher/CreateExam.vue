@@ -1,11 +1,11 @@
 <template>
   <div class="create-exam-container">
     <div class="create-exam-header">
-      <h1>Create New Exam</h1>
+      <h1>{{ isEditing ? 'Edit Exam' : 'Create New Exam' }}</h1>
       <p class="subtitle">Design your exam with various question types</p>
-      </div>
+    </div>
 
-    <form @submit.prevent="submitExam" class="exam-form">
+    <form @submit.prevent="handleSubmit" class="exam-form">
       <!-- Exam Details Card -->
       <div class="card exam-details-card">
         <div class="card-header">
@@ -125,8 +125,8 @@
                       <button 
                         type="button" 
                         class="type-button" 
-                        :class="{ active: question.type === 'trueFalse' }"
-                        @click="setQuestionType(question, 'trueFalse')"
+                        :class="{ active: question.type === 'true_false' }"
+                        @click="setQuestionType(question, 'true_false')"
                       >
                         <i class="fas fa-toggle-on"></i> True/False
                       </button>
@@ -160,14 +160,14 @@
                       v-for="(option, optIndex) in question.options" 
                       :key="optIndex" 
                       class="option-item"
-                      :class="{ 'correct-answer': option.text === question.correctAnswer }"
+                      :class="{ 'correct-answer': option === question.correctAnswer }"
                     >
                       <div class="option-radio">
                         <input 
                           type="radio" 
                           :name="`question-${index}-correct`" 
                           :id="`question-${index}-option-${optIndex}`"
-                          :value="option.text" 
+                          :value="option" 
                           v-model="question.correctAnswer"
                         />
                         <label :for="`question-${index}-option-${optIndex}`">
@@ -177,9 +177,9 @@
                       
                       <div class="option-input">
                         <input 
-                          v-model="option.text" 
+                          v-model="question.options[optIndex]"
                           type="text" 
-                          :placeholder="`Option ${optIndex + 1}`" 
+                          :placeholder="`Option ${optIndex + 1}`"
                           required
                         />
                       </div>
@@ -197,14 +197,14 @@
                 </div>
                 
                 <!-- True/False Options -->
-                <div v-if="question.type === 'trueFalse'" class="true-false-section">
+                <div v-if="question.type === 'true_false'" class="true-false-section">
                   <h4>Correct Answer</h4>
                   <div class="true-false-options">
                     <div class="true-false-option">
                       <input 
                         type="radio" 
                         :id="`question-${index}-true`" 
-                        value="True" 
+                        value="true" 
                         v-model="question.correctAnswer"
                       />
                       <label :for="`question-${index}-true`">True</label>
@@ -213,7 +213,7 @@
                       <input 
                         type="radio" 
                         :id="`question-${index}-false`" 
-                        value="False" 
+                        value="false" 
                         v-model="question.correctAnswer"
                       />
                       <label :for="`question-${index}-false`">False</label>
@@ -245,40 +245,35 @@
           >
             <i class="fas fa-plus-circle"></i> Add New Question
           </button>
-          </div>
+        </div>
       </div>
 
       <!-- Form Actions -->
       <div class="form-actions">
-        <button 
-          type="button" 
-          class="reset-button"
-          @click="confirmResetForm"
-          v-if="questions.length > 0"
-        >
-          <i class="fas fa-undo"></i> Reset Form
-        </button>
-        
         <div class="action-buttons">
           <button 
             type="button" 
-            class="draft-button"
-            @click="saveDraft"
+            class="reset-button" 
+            @click="resetForm"
           >
-            <i class="fas fa-save"></i> Save Draft
+            <i class="fas fa-undo"></i> Reset
+          </button>
+          
+          <button 
+            type="button" 
+            class="draft-button" 
+            @click="saveAsDraft"
+          >
+            <i class="fas fa-save"></i> Save as Draft
           </button>
           
           <button 
             type="submit" 
             class="publish-button"
-            :disabled="isSubmitting || !isFormValid"
+            :disabled="!questions.length"
           >
-            <span v-if="isSubmitting">
-              <i class="fas fa-spinner fa-spin"></i> Publishing...
-            </span>
-            <span v-else>
-              <i class="fas fa-paper-plane"></i> Publish Exam
-            </span>
+            <i class="fas fa-paper-plane"></i> 
+            {{ isEditing ? 'Update' : 'Publish' }} Exam
           </button>
         </div>
       </div>
@@ -287,20 +282,64 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
-import { createExam } from '../../services/authService';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { createExam, fetchTeacherExams, updateExam } from '../../services/authService';
 import Swal from 'sweetalert2';
 
 export default {
+  name: 'CreateExam',
+  
   setup() {
-const examData = ref({
-  testCode: '',
-  classCode: '',
-  title: ''
-});
+    const route = useRoute();
+    const router = useRouter();
+    const isEditing = ref(false);
+    const examData = ref({
+      testCode: '',
+      classCode: '',
+      title: '',
+      isDraft: false,
+      userId: localStorage.getItem('userId')
+    });
+    const questions = ref([]);
 
-const questions = ref([]);
-    const isSubmitting = ref(false);
+    // Load exam data if editing
+    onMounted(async () => {
+      const examId = route.query.examId;
+      if (examId) {
+        isEditing.value = true;
+        try {
+          const exams = await fetchTeacherExams();
+          const exam = exams.find(e => e.id === parseInt(examId));
+          if (exam) {
+            examData.value = {
+              testCode: exam.testCode,
+              classCode: exam.classCode,
+              title: exam.examTitle,
+              isDraft: exam.isDraft,
+              userId: exam.userId
+            };
+            questions.value = exam.questions.map(q => ({
+              text: q.questionText,
+              type: q.questionType,
+              options: Array.isArray(q.options) ? q.options : [],
+              correctAnswer: q.correctAnswer
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading exam:', error);
+          Swal.fire('Error', 'Failed to load exam data', 'error');
+        }
+      }
+    });
+
+    const handleSubmit = async () => {
+      await submitExam(false);
+    };
+
+    const saveAsDraft = async () => {
+      await submitExam(true);
+    };
 
     const isFormValid = computed(() => {
       if (!examData.value.testCode || !examData.value.classCode || !examData.value.title) {
@@ -319,13 +358,13 @@ const questions = ref([]);
       );
     });
 
-const addQuestion = () => {
-  questions.value.push({
-    text: '',
-    type: 'multipleChoice',
+    const addQuestion = () => {
+      questions.value.push({
+        text: '',
+        type: 'multipleChoice',
         options: [
-          { text: '' },
-          { text: '' }
+          'Option 1',
+          'Option 2'
         ],
         correctAnswer: ''
       });
@@ -380,18 +419,18 @@ const addQuestion = () => {
         if (result.isConfirmed) {
           removeQuestion(index);
         }
-  });
-};
+      });
+    };
 
-const removeQuestion = (index) => {
-  questions.value.splice(index, 1);
-};
+    const removeQuestion = (index) => {
+      questions.value.splice(index, 1);
+    };
 
-const addOption = (question) => {
-  question.options.push({ text: '' });
-};
+    const addOption = (question) => {
+      question.options.push('');
+    };
 
-const removeOption = (question, index) => {
+    const removeOption = (question, index) => {
       // Don't allow removing if there are only 2 options left
       if (question.options.length <= 2) {
         Swal.fire({
@@ -404,172 +443,122 @@ const removeOption = (question, index) => {
       }
       
       // If we're removing the option that was set as correct, reset correctAnswer
-      if (question.options[index].text === question.correctAnswer) {
+      if (question.options[index] === question.correctAnswer) {
         question.correctAnswer = '';
       }
       
-  question.options.splice(index, 1);
-};
+      question.options.splice(index, 1);
+    };
 
     const setQuestionType = (question, type) => {
-      // If changing to the same type, do nothing
       if (question.type === type) return;
       
       question.type = type;
-      
-      // Reset correct answer
       question.correctAnswer = '';
       
       // Initialize options based on type
       if (type === 'multipleChoice') {
-        question.options = [{ text: '' }, { text: '' }];
-      } else if (type === 'trueFalse') {
-        question.correctAnswer = 'True'; // Default to True
+        question.options = ['Option 1', 'Option 2'];
+      } else if (type === 'true_false') {
+        question.correctAnswer = 'True';
       } else {
-        // For enumeration, clear options
         question.options = [];
       }
-    };
-    
-    const confirmResetForm = () => {
-      Swal.fire({
-        title: 'Reset Form?',
-        text: "This will clear all questions and exam details. This cannot be undone.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#f44336',
-        cancelButtonColor: '#9e9e9e',
-        confirmButtonText: 'Yes, reset it',
-        cancelButtonText: 'Cancel'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          resetForm();
-        }
-      });
     };
     
     const resetForm = () => {
       examData.value = {
         testCode: '',
         classCode: '',
-        title: ''
+        title: '',
+        isDraft: false,
+        userId: localStorage.getItem('userId')
       };
       questions.value = [];
     };
-    
-    const saveDraft = () => {
+
+    const submitExam = async (isDraft) => {
       try {
-        const draftData = {
-          examData: examData.value,
-          questions: questions.value
-        };
-        
-        localStorage.setItem('examDraft', JSON.stringify(draftData));
-        
-        const Toast = Swal.mixin({
-          toast: true,
-          position: 'top',
-          showConfirmButton: false,
-          timer: 3000,
-          timerProgressBar: true,
-        });
-        
-        Toast.fire({
-          icon: 'success',
-          title: 'Draft saved successfully'
-        });
-      } catch (error) {
-        console.error('Error saving draft:', error);
-        Swal.fire({
-          title: 'Save Failed',
-          text: 'Could not save draft to local storage.',
-          icon: 'error'
-        });
-      }
-    };
-    
-    const loadDraft = () => {
-      try {
-        const draftData = localStorage.getItem('examDraft');
-        if (draftData) {
-          const parsed = JSON.parse(draftData);
-          examData.value = parsed.examData;
-          questions.value = parsed.questions;
-          
-          Swal.fire({
-            title: 'Draft Loaded',
-            text: 'Your previously saved draft has been restored.',
-            icon: 'info'
-          });
+        if (!questions.value.length) {
+          Swal.fire('Error', 'Please add at least one question', 'error');
+          return;
         }
-      } catch (error) {
-        console.error('Error loading draft:', error);
-  }
-};
 
-const submitExam = async () => {
-  try {
-        isSubmitting.value = true;
+        // Validate test code format (optional)
+        const testCodeRegex = /^[A-Za-z0-9-_]+$/;
+        if (!testCodeRegex.test(examData.value.testCode)) {
+          await Swal.fire({
+            icon: 'error',
+            title: 'Invalid Test Code',
+            text: 'Test code can only contain letters, numbers, hyphens, and underscores.',
+            confirmButtonColor: '#3085d6'
+          });
+          return;
+        }
+
+        const examPayload = {
+          testCode: examData.value.testCode,
+          classCode: examData.value.classCode,
+          examTitle: examData.value.title,
+          isDraft: isDraft,
+          status: isDraft ? 'draft' : 'pending',
+          questions: questions.value.map(q => ({
+            questionText: q.text,
+            questionType: q.type,
+            options: q.type === 'multipleChoice' ? q.options : 
+                     q.type === 'true_false' ? ['true', 'false'] : [],
+            correctAnswer: q.correctAnswer
+          })),
+          userId: examData.value.userId
+        };
+
+        if (isEditing.value) {
+          await updateExam(route.query.examId, examPayload);
+        } else {
+          await createExam(examPayload);
+        }
         
-    const examPayload = {
-      ...examData.value,
-      questions: questions.value.map(q => ({
-        questionText: q.text,
-            questionType: q.type === 'trueFalse' ? 'true_false' : 
-                          q.type === 'multipleChoice' ? 'multiple_choice' : 'short_answer',
-            options: q.type === 'enumeration' ? [] : 
-                    q.options.map(o => o.text),
-        correctAnswer: q.correctAnswer
-      }))
-    };
-        
-    await createExam(examPayload);
-        
-        Swal.fire({
-          title: 'Success!',
-          text: 'Your exam has been published successfully.',
-          icon: 'success',
-          confirmButtonColor: '#4CAF50'
-        });
-        
-        // Clear localStorage draft
-        localStorage.removeItem('examDraft');
-        
-        // Reset form after successful submission
-        resetForm();
-  } catch (error) {
-    console.error('Error creating exam:', error);
-        
-        Swal.fire({
-          title: 'Error',
-          text: error.message || 'Failed to create exam. Please try again.',
+        await Swal.fire(
+          'Success!',
+          isDraft ? 'Exam saved as draft.' : 'Exam has been published.',
+          'success'
+        );
+
+        router.push('/manage-exams');
+      } catch (error) {
+        console.error('Error creating/updating exam:', error);
+        await Swal.fire({
           icon: 'error',
-          confirmButtonColor: '#f44336'
+          title: 'Error',
+          text: error.message === 'Test code already exists. Please choose a different one.' 
+            ? 'This test code is already in use. Please choose a different one.'
+            : (error.message || 'Failed to save exam'),
+          confirmButtonColor: '#3085d6',
+          showCancelButton: false
         });
-      } finally {
-        isSubmitting.value = false;
+        
+        // Focus on test code input if it's a duplicate error
+        if (error.message === 'Test code already exists. Please choose a different one.') {
+          document.getElementById('testCode')?.focus();
+        }
       }
     };
-
-    // Check for saved draft on component creation
-    loadDraft();
 
     return {
       examData,
       questions,
-      isSubmitting,
+      isEditing,
       isFormValid,
       addQuestion,
-      duplicateQuestion,
       removeQuestion,
+      duplicateQuestion,
       confirmRemoveQuestion,
       addOption,
       removeOption,
       setQuestionType,
-      submitExam,
-      confirmResetForm,
-      resetForm,
-      saveDraft
+      handleSubmit,
+      saveAsDraft,
+      resetForm
     };
   }
 };
