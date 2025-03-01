@@ -5,6 +5,11 @@
       <p class="subtitle">Design your exam with various question types</p>
     </div>
 
+    <!-- Add validation feedback -->
+    <div v-if="error" class="error-message">
+      {{ error }}
+    </div>
+
     <form @submit.prevent="handleSubmit" class="exam-form">
       <!-- Exam Details Card -->
       <div class="card exam-details-card">
@@ -14,15 +19,17 @@
         <div class="card-body">
           <div class="form-row">
             <div class="form-group">
-              <label for="testCode">Test Code</label>
+              <label for="testCode">Test Code *</label>
               <input 
                 v-model="examData.testCode" 
                 type="text" 
                 id="testCode" 
-                placeholder="e.g., MATH101" 
-                required 
+                required
+                :class="{ 'error': error && !examData.testCode }"
               />
-              <small>Unique code students will use to access this exam</small>
+              <small v-if="error && !examData.testCode" class="error-text">
+                Test code is required
+              </small>
             </div>
             
             <div class="form-group">
@@ -33,8 +40,9 @@
                 id="classCode" 
                 placeholder="e.g., 10A-MATH" 
                 required 
+                class="uppercase-input"
               />
-              <small>Identifier for the class taking this exam</small>
+              <small>Identifier for the class taking this exam (automatically uppercase)</small>
             </div>
           </div>
           
@@ -44,10 +52,11 @@
               v-model="examData.title" 
               type="text" 
               id="examTitle" 
-              placeholder="e.g., Midterm Examination in Mathematics" 
+              placeholder="e.g., MIDTERM EXAMINATION IN MATHEMATICS" 
               required 
+              class="uppercase-input"
             />
-            <small>Descriptive title that appears on the exam</small>
+            <small>Descriptive title that appears on the exam (automatically uppercase)</small>
           </div>
         </div>
       </div>
@@ -78,23 +87,23 @@
               class="question-item"
             >
               <div class="question-header">
-                <h3>Question {{ index + 1 }}</h3>
+                <span class="question-number">Question {{ index + 1 }}</span>
                 <div class="question-actions">
                   <button 
                     type="button" 
-                    class="icon-button duplicate-btn" 
-                    @click="duplicateQuestion(index)" 
-                    title="Duplicate this question"
+                    class="action-btn duplicate-btn" 
+                    @click="duplicateQuestion(index)"
+                    title="Duplicate question"
                   >
-                    <i class="fas fa-copy"></i>
+                    <span class="material-icons-round">content_copy</span>
                   </button>
                   <button 
                     type="button" 
-                    class="icon-button delete-btn" 
-                    @click="confirmRemoveQuestion(index)" 
-                    title="Remove this question"
+                    class="action-btn remove-btn" 
+                    @click="confirmRemoveQuestion(index)"
+                    title="Remove question"
                   >
-                    <i class="fas fa-trash"></i>
+                    <span class="material-icons-round">delete</span>
                   </button>
                 </div>
               </div>
@@ -104,41 +113,43 @@
                   <label>Question Text</label>
                   <textarea 
                     v-model="question.text" 
-                    placeholder="Enter your question here..." 
-                    rows="2"
-                    required
+                    required 
+                    placeholder="Enter your question here"
                   ></textarea>
                 </div>
                 
-                <div class="form-row">
-                  <div class="form-group question-type-selector">
-                    <label>Question Type</label>
-                    <div class="type-selector">
-                      <button 
-                        type="button" 
-                        class="type-button" 
-                        :class="{ active: question.type === 'multipleChoice' }"
-                        @click="setQuestionType(question, 'multipleChoice')"
-                      >
-                        <i class="fas fa-list-ul"></i> Multiple Choice
-                      </button>
-                      <button 
-                        type="button" 
-                        class="type-button" 
-                        :class="{ active: question.type === 'true_false' }"
-                        @click="setQuestionType(question, 'true_false')"
-                      >
-                        <i class="fas fa-toggle-on"></i> True/False
-                      </button>
-                      <button 
-                        type="button" 
-                        class="type-button" 
-                        :class="{ active: question.type === 'enumeration' }"
-                        @click="setQuestionType(question, 'enumeration')"
-                      >
-                        <i class="fas fa-font"></i> Short Answer
-                      </button>
-                    </div>
+                <div class="question-type-selector">
+                  <label>Question Type</label>
+                  <div class="type-buttons">
+                    <button 
+                      type="button"
+                      class="type-button"
+                      :class="{ active: question.type === 'multipleChoice' }"
+                      @click="setQuestionType(question, 'multipleChoice')"
+                    >
+                      <span class="material-icons-round">radio_button_checked</span>
+                      Multiple Choice
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      class="type-button"
+                      :class="{ active: question.type === 'true_false' }"
+                      @click="setQuestionType(question, 'true_false')"
+                    >
+                      <span class="material-icons-round">rule</span>
+                      True/False
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      class="type-button"
+                      :class="{ active: question.type === 'enumeration' }"
+                      @click="setQuestionType(question, 'enumeration')"
+                    >
+                      <span class="material-icons-round">format_list_numbered</span>
+                      Enumeration
+                    </button>
                   </div>
                 </div>
                 
@@ -148,62 +159,55 @@
                     <h4>Answer Options</h4>
                     <button 
                       type="button" 
-                      class="add-option-button"
+                      class="add-option-btn"
                       @click="addOption(question)"
                     >
-                      <i class="fas fa-plus"></i> Add Option
+                      <span class="material-icons-round">add</span>
+                      Add Option
                     </button>
                   </div>
                   
-                  <transition-group name="option-transition" tag="div" class="options-list">
+                  <div class="options-list">
                     <div 
                       v-for="(option, optIndex) in question.options" 
                       :key="optIndex" 
                       class="option-item"
-                      :class="{ 'correct-answer': option === question.correctAnswer }"
                     >
-                      <div class="option-radio">
-                        <input 
-                          type="radio" 
-                          :name="`question-${index}-correct`" 
-                          :id="`question-${index}-option-${optIndex}`"
-                          :value="option" 
-                          v-model="question.correctAnswer"
-                        />
-                        <label :for="`question-${index}-option-${optIndex}`">
-                          Correct
-                        </label>
-                      </div>
-                      
-                      <div class="option-input">
-                        <input 
-                          v-model="question.options[optIndex]"
-                          type="text" 
-                          :placeholder="`Option ${optIndex + 1}`"
-                          required
-                        />
-                      </div>
-                      
+                      <input 
+                        type="radio" 
+                        :name="`question-${index}-correct`" 
+                        :id="`question-${index}-option-${optIndex}`"
+                        :value="option" 
+                        v-model="question.correctAnswer"
+                        :disabled="!option.trim()"
+                      />
+                      <input 
+                        v-model="question.options[optIndex]"
+                        type="text" 
+                        :placeholder="`Option ${optIndex + 1}`"
+                        required
+                      />
                       <button 
                         type="button" 
-                        class="remove-option-button"
+                        class="remove-option-btn"
                         @click="removeOption(question, optIndex)"
-                        title="Remove this option"
+                        title="Remove option"
+                        :disabled="question.options.length <= 2"
                       >
-                        <i class="fas fa-times"></i>
+                        <span class="material-icons-round">close</span>
                       </button>
                     </div>
-                  </transition-group>
+                  </div>
                 </div>
                 
                 <!-- True/False Options -->
                 <div v-if="question.type === 'true_false'" class="true-false-section">
-                  <h4>Correct Answer</h4>
                   <div class="true-false-options">
                     <div class="true-false-option">
                       <input 
                         type="radio" 
                         :id="`question-${index}-true`" 
+                        :name="`question-${index}-answer`"
                         value="true" 
                         v-model="question.correctAnswer"
                       />
@@ -213,6 +217,7 @@
                       <input 
                         type="radio" 
                         :id="`question-${index}-false`" 
+                        :name="`question-${index}-answer`"
                         value="false" 
                         v-model="question.correctAnswer"
                       />
@@ -243,7 +248,8 @@
             class="add-question-button"
             @click="addQuestion"
           >
-            <i class="fas fa-plus-circle"></i> Add New Question
+            <span class="material-icons-round">add_circle</span>
+            Add New Question
           </button>
         </div>
       </div>
@@ -256,7 +262,8 @@
             class="reset-button" 
             @click="resetForm"
           >
-            <i class="fas fa-undo"></i> Reset
+            <span class="material-icons-round">refresh</span>
+            Reset
           </button>
           
           <button 
@@ -264,7 +271,8 @@
             class="draft-button" 
             @click="saveAsDraft"
           >
-            <i class="fas fa-save"></i> Save as Draft
+            <span class="material-icons-round">save</span>
+            Save as Draft
           </button>
           
           <button 
@@ -272,7 +280,7 @@
             class="publish-button"
             :disabled="!questions.length"
           >
-            <i class="fas fa-paper-plane"></i> 
+            <span class="material-icons-round">publish</span>
             {{ isEditing ? 'Update' : 'Publish' }} Exam
           </button>
         </div>
@@ -282,7 +290,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createExam, fetchTeacherExams, updateExam } from '../../services/authService';
 import Swal from 'sweetalert2';
@@ -302,6 +310,27 @@ export default {
       userId: localStorage.getItem('userId')
     });
     const questions = ref([]);
+    const loading = ref(false);
+    const error = ref(null);
+
+    // Add watchers to convert inputs to uppercase
+    watch(() => examData.value.testCode, (newValue) => {
+      if (newValue) {
+        examData.value.testCode = newValue.toUpperCase();
+      }
+    });
+
+    watch(() => examData.value.classCode, (newValue) => {
+      if (newValue) {
+        examData.value.classCode = newValue.toUpperCase();
+      }
+    });
+
+    watch(() => examData.value.title, (newValue) => {
+      if (newValue) {
+        examData.value.title = newValue.toUpperCase();
+      }
+    });
 
     // Load exam data if editing
     onMounted(async () => {
@@ -341,43 +370,158 @@ export default {
       await submitExam(true);
     };
 
-    const isFormValid = computed(() => {
+    const submitExam = async (isDraft = false) => {
+      try {
+        loading.value = true;
+        error.value = null;
+
+        // Validate required fields
+        if (!examData.value.testCode || !examData.value.classCode || !examData.value.title) {
+          throw new Error('Please fill in all required fields');
+        }
+
+        // Validate questions
+        if (!questions.value.length) {
+          throw new Error('Please add at least one question');
+        }
+
+        // Format questions
+        const formattedQuestions = questions.value.map(q => ({
+          questionText: q.text,
+          questionType: q.type,
+          options: q.type === 'true_false' ? ['true', 'false'] : 
+                   q.type === 'enumeration' ? [] : 
+                   q.options,
+          correctAnswer: q.correctAnswer
+        }));
+
+        if (isEditing.value) {
+          await updateExam(route.query.examId, {
+            testCode: examData.value.testCode,
+            classCode: examData.value.classCode,
+            examTitle: examData.value.title,
+            questions: formattedQuestions,
+            isDraft: isDraft,
+            status: isDraft ? 'draft' : 'pending'
+          });
+        } else {
+          await createExam(
+            examData.value.testCode,
+            examData.value.classCode,
+            examData.value.title,
+            formattedQuestions,
+            localStorage.getItem('userId'),
+            isDraft
+          );
+        }
+
+        // Show success message
+        Swal.fire({
+          title: 'Success!',
+          text: `Exam ${isEditing.value ? 'updated' : 'created'} successfully`,
+          icon: 'success',
+          confirmButtonColor: '#4CAF50'
+        });
+
+        // Redirect to manage exams page
+        router.push('/manage-exams');
+      } catch (err) {
+        console.error('Error creating/updating exam:', err);
+        error.value = err.message;
+        Swal.fire({
+          title: 'Error',
+          text: err.message || 'Failed to create/update exam',
+          icon: 'error',
+          confirmButtonColor: '#f44336'
+        });
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const validateExam = () => {
       if (!examData.value.testCode || !examData.value.classCode || !examData.value.title) {
         return false;
       }
-      
-      if (questions.value.length === 0) {
+      if (!questions.value.length) {
         return false;
       }
-      
-      // Check if all questions have text and correct answers
-      return questions.value.every(q => 
-        q.text && 
-        q.correctAnswer && 
-        (q.type !== 'multipleChoice' || (q.options && q.options.length >= 2))
-      );
+      return questions.value.every(validateQuestion);
+    };
+
+    const validateQuestion = (question) => {
+      if (!question.text || !question.type || !question.correctAnswer) {
+        return false;
+      }
+      if (question.type === 'multipleChoice' && (!question.options || question.options.length < 2)) {
+        return false;
+      }
+      return true;
+    };
+
+    const isFormValid = computed(() => {
+      return validateExam();
     });
 
+    const handleQuestionTypeChange = (question) => {
+      if (!question) return;
+
+      // Only reset options if the type has actually changed
+      if (question.type === 'true_false') {
+        question.options = ['true', 'false'];
+        question.correctAnswer = '';
+      } else if (question.type === 'enumeration') {
+        question.options = [];
+        question.correctAnswer = '';
+      } else if (question.type === 'multipleChoice' && 
+                 (!Array.isArray(question.options) || question.options.join(',') === 'true,false')) {
+        // Only reset multiple choice options if coming from true/false or if options are invalid
+        question.options = ['', '', '', ''];
+        question.correctAnswer = '';
+      }
+    };
+
     const addQuestion = () => {
-      questions.value.push({
+      const newQuestion = {
         text: '',
         type: 'multipleChoice',
-        options: [
-          'Option 1',
-          'Option 2'
-        ],
+        options: ['', '', '', ''], // Initialize with empty options
         correctAnswer: ''
-      });
-      
-      // Scroll to the newly added question after a short delay
-      setTimeout(() => {
-        const lastQuestion = document.querySelector('.questions-list .question-item:last-child');
-        if (lastQuestion) {
-          lastQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
+      };
+      questions.value.push(newQuestion);
     };
-    
+
+    // Remove the watchQuestionTypes function and the watch for questions.length
+    // Instead, add a watch for each question's type directly
+
+    watch(questions, (newQuestions) => {
+      newQuestions.forEach(question => {
+        if (!question._watched) {
+          // Add a flag to prevent multiple watchers
+          question._watched = true;
+          
+          // Watch this specific question's type
+          watch(() => question.type, (newType, oldType) => {
+            if (newType !== oldType) {
+              handleQuestionTypeChange(question);
+            }
+          });
+        }
+      });
+    }, { deep: true });
+
+    const setQuestionType = (question, type) => {
+      if (question.type === type) return;
+      
+      const oldType = question.type;
+      question.type = type;
+      
+      // Only handle options reset if type actually changed
+      if (oldType !== type) {
+        handleQuestionTypeChange(question);
+      }
+    };
+
     const duplicateQuestion = (index) => {
       const original = questions.value[index];
       
@@ -408,13 +552,12 @@ export default {
     const confirmRemoveQuestion = (index) => {
       Swal.fire({
         title: 'Remove Question?',
-        text: "This action cannot be undone.",
+        text: 'This action cannot be undone',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#f44336',
         cancelButtonColor: '#9e9e9e',
-        confirmButtonText: 'Yes, remove it',
-        cancelButtonText: 'Cancel'
+        confirmButtonText: 'Yes, remove it'
       }).then((result) => {
         if (result.isConfirmed) {
           removeQuestion(index);
@@ -427,45 +570,19 @@ export default {
     };
 
     const addOption = (question) => {
+      if (!Array.isArray(question.options)) {
+        question.options = [];
+      }
       question.options.push('');
     };
 
-    const removeOption = (question, index) => {
-      // Don't allow removing if there are only 2 options left
-      if (question.options.length <= 2) {
-        Swal.fire({
-          title: 'Cannot Remove',
-          text: 'Multiple choice questions must have at least two options.',
-          icon: 'info',
-          confirmButtonColor: '#4CAF50'
-        });
-        return;
-      }
-      
-      // If we're removing the option that was set as correct, reset correctAnswer
-      if (question.options[index] === question.correctAnswer) {
+    const removeOption = (question, optionIndex) => {
+      question.options.splice(optionIndex, 1);
+      if (question.correctAnswer === question.options[optionIndex]) {
         question.correctAnswer = '';
       }
-      
-      question.options.splice(index, 1);
     };
 
-    const setQuestionType = (question, type) => {
-      if (question.type === type) return;
-      
-      question.type = type;
-      question.correctAnswer = '';
-      
-      // Initialize options based on type
-      if (type === 'multipleChoice') {
-        question.options = ['Option 1', 'Option 2'];
-      } else if (type === 'true_false') {
-        question.correctAnswer = 'True';
-      } else {
-        question.options = [];
-      }
-    };
-    
     const resetForm = () => {
       examData.value = {
         testCode: '',
@@ -475,73 +592,6 @@ export default {
         userId: localStorage.getItem('userId')
       };
       questions.value = [];
-    };
-
-    const submitExam = async (isDraft) => {
-      try {
-        if (!questions.value.length) {
-          Swal.fire('Error', 'Please add at least one question', 'error');
-          return;
-        }
-
-        // Validate test code format (optional)
-        const testCodeRegex = /^[A-Za-z0-9-_]+$/;
-        if (!testCodeRegex.test(examData.value.testCode)) {
-          await Swal.fire({
-            icon: 'error',
-            title: 'Invalid Test Code',
-            text: 'Test code can only contain letters, numbers, hyphens, and underscores.',
-            confirmButtonColor: '#3085d6'
-          });
-          return;
-        }
-
-        const examPayload = {
-          testCode: examData.value.testCode,
-          classCode: examData.value.classCode,
-          examTitle: examData.value.title,
-          isDraft: isDraft,
-          status: isDraft ? 'draft' : 'pending',
-          questions: questions.value.map(q => ({
-            questionText: q.text,
-            questionType: q.type,
-            options: q.type === 'multipleChoice' ? q.options : 
-                     q.type === 'true_false' ? ['true', 'false'] : [],
-            correctAnswer: q.correctAnswer
-          })),
-          userId: examData.value.userId
-        };
-
-        if (isEditing.value) {
-          await updateExam(route.query.examId, examPayload);
-        } else {
-          await createExam(examPayload);
-        }
-        
-        await Swal.fire(
-          'Success!',
-          isDraft ? 'Exam saved as draft.' : 'Exam has been published.',
-          'success'
-        );
-
-        router.push('/manage-exams');
-      } catch (error) {
-        console.error('Error creating/updating exam:', error);
-        await Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: error.message === 'Test code already exists. Please choose a different one.' 
-            ? 'This test code is already in use. Please choose a different one.'
-            : (error.message || 'Failed to save exam'),
-          confirmButtonColor: '#3085d6',
-          showCancelButton: false
-        });
-        
-        // Focus on test code input if it's a duplicate error
-        if (error.message === 'Test code already exists. Please choose a different one.') {
-          document.getElementById('testCode')?.focus();
-        }
-      }
     };
 
     return {
@@ -558,7 +608,8 @@ export default {
       setQuestionType,
       handleSubmit,
       saveAsDraft,
-      resetForm
+      resetForm,
+      handleQuestionTypeChange
     };
   }
 };
@@ -760,39 +811,45 @@ small {
 
 /* Question Type Selector */
 .question-type-selector {
-  margin-bottom: 20px;
+  margin: 20px 0;
 }
 
-.type-selector {
+.type-buttons {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 8px;
 }
 
 .type-button {
   flex: 1;
-  padding: 10px 15px;
-  background-color: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s;
-  color: #555;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  color: #666;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .type-button:hover {
-  background-color: #e8e8e8;
+  background-color: #e8f5e9;
+  border-color: #81c784;
+  color: #2e7d32;
 }
 
 .type-button.active {
   background-color: #e8f5e9;
-  border-color: #4CAF50;
-  color: #2E7D32;
+  border-color: #4caf50;
+  color: #2e7d32;
+}
+
+.type-button .material-icons-round {
+  font-size: 20px;
 }
 
 /* Options Styling */
@@ -1069,8 +1126,12 @@ small {
     gap: 15px;
   }
   
-  .type-selector {
+  .type-buttons {
     flex-direction: column;
+  }
+  
+  .type-button {
+    width: 100%;
   }
   
   .form-actions {
@@ -1106,5 +1167,143 @@ small {
     flex-direction: column;
     gap: 10px;
   }
+}
+
+/* Add this to your existing styles */
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.uppercase-input::placeholder {
+  text-transform: none;
+}
+
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.error {
+  border-color: #f44336;
+}
+
+.error-text {
+  color: #f44336;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+/* Add to your existing styles */
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.question-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-btn {
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn .material-icons-round {
+  font-size: 20px;
+}
+
+.add-question-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  color: #666;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.add-question-button .material-icons-round {
+  font-size: 24px;
+}
+
+.add-question-button:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+.add-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.add-option-btn .material-icons-round {
+  font-size: 20px;
+}
+
+.remove-option-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background-color: #ffebee;
+  color: #c62828;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.remove-option-btn .material-icons-round {
+  font-size: 18px;
+}
+
+.action-buttons button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.action-buttons .material-icons-round {
+  font-size: 20px;
+}
+
+/* Make sure icons are vertically aligned */
+.material-icons-round {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

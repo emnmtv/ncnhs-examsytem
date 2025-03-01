@@ -2,9 +2,23 @@
   <div class="manage-exams">
     <div class="header">
       <h1>Manage Exams</h1>
-      <router-link to="/create-exam" class="create-btn">
-        <i class="fas fa-plus"></i> Create New Exam
-      </router-link>
+      <div class="header-actions">
+        <button class="template-btn" @click="downloadTemplate">
+          <i class="fas fa-file-download"></i> Download Template
+        </button>
+        <label class="import-btn">
+          <i class="fas fa-file-upload"></i> Import Exam
+          <input 
+            type="file" 
+            accept=".xlsx" 
+            @change="handleImport" 
+            style="display: none"
+          >
+        </label>
+        <router-link to="/create-exam" class="create-btn">
+          <i class="fas fa-plus"></i> Create New Exam
+        </router-link>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -70,6 +84,7 @@
 
         <div class="exam-actions">
           <button 
+            v-if="!exam.scores.length"
             @click="editExam(exam)" 
             class="edit-btn"
             title="Edit exam"
@@ -120,6 +135,14 @@
           >
             <i class="fas fa-chart-bar"></i> Results
           </button>
+
+          <button 
+            @click="exportExam(exam)" 
+            class="export-btn"
+            title="Export exam"
+          >
+            <i class="fas fa-file-export"></i> Export
+          </button>
         </div>
       </div>
     </div>
@@ -127,10 +150,18 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchTeacherExams, deleteExam, startExam as startExamApi, stopExam as stopExamApi } from '../../services/authService';
+import { 
+  fetchTeacherExams, 
+  deleteExam, 
+  startExam as startExamApi, 
+  stopExam as stopExamApi,
+  createExam
+} from '../../services/authService';
 import Swal from 'sweetalert2';
+import socketManager from '@/utils/socketManager';
+import { generateExamTemplate, exportExamToExcel, parseExcelFile } from '@/utils/excelTemplates';
 
 export default {
   name: 'ManageExams',
@@ -140,6 +171,13 @@ export default {
     const exams = ref([]);
     const loading = ref(true);
     const error = ref(null);
+    const socket = ref(null);
+
+    // Initialize socket connection
+    onMounted(() => {
+      socket.value = socketManager.getSocket();
+      loadExams();
+    });
 
     const loadExams = async () => {
       try {
@@ -202,6 +240,13 @@ export default {
     const startExam = async (testCode) => {
       try {
         await startExamApi(testCode);
+        
+        // Emit socket event for exam start
+        socket.value.emit('examStatusChanged', { 
+          testCode: testCode, 
+          status: 'started' 
+        });
+        
         await loadExams(); // Refresh the list
         Swal.fire('Success!', 'Exam has been started.', 'success');
       } catch (error) {
@@ -212,6 +257,13 @@ export default {
     const stopExam = async (testCode) => {
       try {
         await stopExamApi(testCode);
+        
+        // Emit socket event for exam stop
+        socket.value.emit('examStatusChanged', { 
+          testCode: testCode, 
+          status: 'stopped' 
+        });
+        
         await loadExams(); // Refresh the list
         Swal.fire('Success!', 'Exam has been stopped.', 'success');
       } catch (error) {
@@ -233,7 +285,93 @@ export default {
       router.push(`/preview-exam/${exam.id}`);
     };
 
-    onMounted(loadExams);
+    const downloadTemplate = () => {
+      generateExamTemplate();
+    };
+
+    const handleImport = async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const examData = await parseExcelFile(file);
+        
+        // Validate questions format
+        if (!examData.questions || !Array.isArray(examData.questions)) {
+          throw new Error('Invalid questions format');
+        }
+
+        // Validate that we have at least one question
+        if (examData.questions.length === 0) {
+          throw new Error('No questions found in the Excel file');
+        }
+
+        // Ensure all values are strings and convert to uppercase where needed
+        const testCode = String(examData.testCode || '').toUpperCase();
+        const classCode = String(examData.classCode || '').toUpperCase();
+        const examTitle = String(examData.examTitle || '').toUpperCase();
+
+        // Validate required fields
+        if (!testCode || !classCode || !examTitle) {
+          throw new Error('Test Code, Class Code, and Exam Title are required');
+        }
+
+        // Validate question structure
+        const validatedQuestions = examData.questions.map((q, index) => {
+          if (!q.questionText || !q.questionType || !q.correctAnswer) {
+            throw new Error(`Invalid question format at question ${index + 1}`);
+          }
+
+          return {
+            questionText: String(q.questionText).trim(),
+            questionType: String(q.questionType).trim(),
+            options: Array.isArray(q.options) ? q.options.map(opt => String(opt).trim()) : [],
+            correctAnswer: String(q.correctAnswer).trim()
+          };
+        });
+
+        // Create the exam with proper structure
+        await createExam(
+          testCode,
+          classCode,
+          examTitle,
+          validatedQuestions,
+          localStorage.getItem('userId'),
+          true // isDraft
+        );
+
+        await loadExams();
+        Swal.fire({
+          title: 'Success',
+          text: 'Exam imported successfully',
+          icon: 'success',
+          confirmButtonColor: '#4CAF50'
+        });
+      } catch (error) {
+        console.error('Import error:', error);
+        Swal.fire({
+          title: 'Error',
+          text: error.message || 'Failed to import exam',
+          icon: 'error',
+          confirmButtonColor: '#f44336'
+        });
+      } finally {
+        // Reset file input
+        event.target.value = '';
+      }
+    };
+
+    const exportExam = (exam) => {
+      exportExamToExcel(exam);
+    };
+
+    // Clean up socket listeners on component unmount
+    onUnmounted(() => {
+      if (socket.value) {
+        // No need to disconnect, just remove any listeners if needed
+        socket.value.off('examStatusUpdate');
+      }
+    });
 
     return {
       exams,
@@ -247,7 +385,10 @@ export default {
       startExam,
       stopExam,
       viewResults,
-      previewExam
+      previewExam,
+      downloadTemplate,
+      handleImport,
+      exportExam
     };
   }
 };
@@ -271,6 +412,44 @@ export default {
   font-size: 2rem;
   color: #333;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.template-btn,
+.import-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.template-btn {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+}
+
+.template-btn:hover {
+  background-color: #bbdefb;
+}
+
+.import-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.import-btn:hover {
+  background-color: #eeeeee;
 }
 
 .create-btn {
@@ -504,6 +683,25 @@ export default {
   background-color: #5e35b1;
 }
 
+.export-btn {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: none;
+  padding: 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.export-btn:hover {
+  background-color: #c8e6c9;
+}
+
 @media (max-width: 768px) {
   .manage-exams {
     padding: 1rem;
@@ -513,6 +711,18 @@ export default {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+  }
+
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .template-btn,
+  .import-btn,
+  .create-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .exam-actions {

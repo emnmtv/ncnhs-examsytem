@@ -12,7 +12,7 @@
             id="testCode"
             v-model="testCode" 
             placeholder="Enter your exam code here" 
-            class="test-code-input"
+            class="test-code-input uppercase-input"
             :disabled="showExamControls"
           />
           <button 
@@ -134,6 +134,7 @@
   import socketManager from '@/utils/socketManager';
   import Swal from 'sweetalert2';
   import ExamProgressModal from './ExamProgressModal.vue';
+
   
   export default {
     components: {
@@ -152,6 +153,13 @@
           '#9C27B0', '#009688', '#673AB7', '#F44336'
         ]
       };
+    },
+    watch: {
+      testCode(newValue) {
+        if (newValue) {
+          this.testCode = newValue.toUpperCase();
+        }
+      }
     },
     mounted() {
       this.initializeSocket();
@@ -669,5 +677,13 @@
     .students-grid {
       grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     }
+  }
+  
+  .uppercase-input {
+    text-transform: uppercase;
+  }
+  
+  .uppercase-input::placeholder {
+    text-transform: none;
   }
   </style>

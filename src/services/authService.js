@@ -159,32 +159,50 @@ export const updateProfile = async (profileData) => {
 };
 
 // Exam management functions with token-based auth
-export const createExam = async (examData) => {
+export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false) => {
   try {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) throw new Error("No token found");
+    console.log('AuthService: Creating exam', testCode);
+    
+    // Validate input parameters
+    if (!testCode || !classCode || !examTitle || !questions || !userId) {
+      throw new Error('Missing required parameters');
+    }
 
-    console.log('AuthService: Creating exam', examData);
+    // Ensure questions is an array and has valid structure
+    if (!Array.isArray(questions) || questions.length === 0) {
+      throw new Error('Questions must be a non-empty array');
+    }
+
+    // Validate each question
+    const validatedQuestions = questions.map(q => {
+      if (!q.questionText || !q.questionType || !q.correctAnswer) {
+        throw new Error('Each question must have questionText, questionType, and correctAnswer');
+      }
+
+      // Ensure options is always an array
+      const options = Array.isArray(q.options) ? q.options : [];
+
+      return {
+        questionText: q.questionText,
+        questionType: q.questionType,
+        options: options,
+        correctAnswer: q.correctAnswer
+      };
+    });
 
     const response = await fetch(`${BASE_URL}/exam`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
       },
       body: JSON.stringify({
-        testCode: examData.testCode,
-        classCode: examData.classCode,
-        examTitle: examData.examTitle,
-        isDraft: examData.isDraft,
-        status: examData.status,
-        questions: examData.questions.map(q => ({
-          questionText: q.questionText,
-          questionType: q.questionType,
-          options: q.questionType === 'enumeration' ? [] : (q.options || []),
-          correctAnswer: q.correctAnswer
-        })),
-        userId: examData.userId
+        testCode,
+        classCode,
+        examTitle,
+        questions: validatedQuestions,
+        userId,
+        isDraft
       }),
     });
 

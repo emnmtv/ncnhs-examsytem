@@ -22,7 +22,7 @@
             v-model="testCode" 
             placeholder="Enter Test Code" 
             :disabled="exam"
-            class="test-code-input"
+            class="test-code-input uppercase-input"
           />
           <button 
             v-if="!exam" 
@@ -103,6 +103,7 @@
 </template>
 
 <script>
+
 import { fetchExamQuestions } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import ExamSession from './ExamSession.vue';
@@ -127,6 +128,13 @@ export default {
       ],
       hasExamInProgress: false
     };
+  },
+  watch: {
+    testCode(newValue) {
+      if (newValue) {
+        this.testCode = newValue.toUpperCase();
+      }
+    }
   },
   mounted() {
     this.initializeSocket();
@@ -638,5 +646,13 @@ export default {
 
 .primary-btn.large i {
   font-size: 1.2rem;
+}
+
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.uppercase-input::placeholder {
+  text-transform: none;
 }
 </style> 
