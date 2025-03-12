@@ -143,6 +143,173 @@
           >
             <i class="fas fa-file-export"></i> Export
           </button>
+
+          <button class="action-btn access-btn" @click="openAccessModal(exam)">
+            <span class="material-icons-round">security</span>
+            Manage Access
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Access Modal -->
+    <div v-if="showAccessModal" class="modal-backdrop" @click.self="closeAccessModal">
+      <div class="access-modal" :class="{ 'modal-closing': isClosing }">
+        <div class="modal-handle"></div>
+        
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons-round">security</span>
+            Manage Exam Access
+          </h2>
+          <button @click="closeAccessModal" class="close-btn">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Exam Info Card -->
+          <div class="access-exam-info">
+            <h3>{{ selectedExam.examTitle }}</h3>
+            <div class="exam-meta">
+              <span class="meta-item">
+                <span class="material-icons-round">code</span>
+                Test Code: {{ selectedExam.testCode }}
+              </span>
+              <span class="meta-item">
+                <span class="material-icons-round">class</span>
+                Class: {{ selectedExam.classCode }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Access Control Toggle -->
+          <div class="access-control-section">
+            <div class="access-type-header">
+              <h4>Access Control Mode</h4>
+              <div class="toggle-wrapper">
+                <label class="switch">
+                  <input type="checkbox" v-model="restrictAccess" @change="toggleAccessRestriction">
+                  <span class="slider round"></span>
+                </label>
+                <span class="toggle-state">{{ restrictAccess ? 'Restricted Access' : 'Open Access' }}</span>
+              </div>
+            </div>
+            
+            <div class="access-description">
+              <div class="description-icon">
+                <span class="material-icons-round">{{ restrictAccess ? 'lock' : 'public' }}</span>
+              </div>
+              <div class="description-text">
+                <p>{{ restrictAccess ? 
+                  'Only students from selected grade sections will be able to access this exam.' : 
+                  'All students can access this exam regardless of their grade or section.' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grade Section Access (Only visible when restricted) -->
+          <div v-if="restrictAccess" class="section-access-container">
+            <div class="section-form-card">
+              <h4>
+                <span class="material-icons-round">add_circle</span>
+                Add Grade Section Access
+              </h4>
+              
+              <div class="section-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="gradeSelect">Grade Level</label>
+                    <select 
+                      id="gradeSelect"
+                      v-model="newAccessGrade" 
+                      @change="loadSectionsForGrade"
+                      class="form-select"
+                    >
+                      <option value="">Select Grade</option>
+                      <option 
+                        v-for="grade in availableGrades" 
+                        :key="grade" 
+                        :value="grade"
+                      >
+                        Grade {{ grade }}
+                      </option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label for="sectionSelect">Section</label>
+                    <select 
+                      id="sectionSelect"
+                      v-model="newAccessSection" 
+                      :disabled="!newAccessGrade"
+                      class="form-select"
+                    >
+                      <option value="">Select Section</option>
+                      <option 
+                        v-for="section in availableSectionsForGrade" 
+                        :key="section" 
+                        :value="section"
+                      >
+                        {{ section }}
+                      </option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-action">
+                    <button 
+                      @click="addAccessSection" 
+                      class="add-section-btn"
+                      :disabled="!newAccessGrade || !newAccessSection"
+                    >
+                      <span class="material-icons-round">add</span>
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section Access List -->
+            <div class="section-list-card">
+              <div class="list-header">
+                <h4>
+                  <span class="material-icons-round">list</span>
+                  Authorized Grade Sections
+                </h4>
+                <span class="section-count">{{ accessSections.length }} sections</span>
+              </div>
+              
+              <div v-if="accessSections.length === 0" class="empty-sections">
+                <span class="material-icons-round">info</span>
+                <p>No sections have been added</p>
+                <p class="empty-hint">Students won't be able to access this exam until you add at least one section.</p>
+              </div>
+              
+              <div v-else class="sections-list">
+                <div v-for="(section, index) in accessSections" :key="index" class="section-item">
+                  <div class="section-info">
+                    <span class="grade-badge">Grade {{ section.grade }}</span>
+                    <span class="section-name">{{ section.section }}</span>
+                  </div>
+                  <button @click="removeAccessSection(index)" class="remove-section-btn">
+                    <span class="material-icons-round">delete</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="closeAccessModal" class="cancel-btn">
+            <span class="material-icons-round">close</span>
+            Cancel
+          </button>
+          <button @click="saveAccessSettings" class="save-btn">
+            <span class="material-icons-round">save</span>
+            Save Access Settings
+          </button>
         </div>
       </div>
     </div>
@@ -150,14 +317,17 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
   fetchTeacherExams, 
   deleteExam, 
   startExam as startExamApi, 
   stopExam as stopExamApi,
-  createExam
+  createExam,
+  getAllGradeSections,
+  setExamAccess,
+  getExamAccess
 } from '../../services/authService';
 import Swal from 'sweetalert2';
 import socketManager from '@/utils/socketManager';
@@ -172,11 +342,21 @@ export default {
     const loading = ref(true);
     const error = ref(null);
     const socket = ref(null);
+    const showAccessModal = ref(false);
+    const selectedExam = ref(null);
+    const restrictAccess = ref(false);
+    const newAccessGrade = ref('');
+    const newAccessSection = ref('');
+    const accessSections = ref([]);
+    const availableGrades = ref([]);
+    const availableSections = ref([]);
+    const isClosing = ref(false);
 
     // Initialize socket connection
     onMounted(() => {
       socket.value = socketManager.getSocket();
       loadExams();
+      loadGradeSections();
     });
 
     const loadExams = async () => {
@@ -365,12 +545,204 @@ export default {
       exportExamToExcel(exam);
     };
 
+    const openAccessModal = async (exam) => {
+      selectedExam.value = exam;
+      showAccessModal.value = true;
+      
+      // Reset form values
+      newAccessGrade.value = '';
+      newAccessSection.value = '';
+      accessSections.value = [];
+      
+      // Load grade sections if not already loaded
+      if (availableGrades.value.length === 0) {
+        await loadGradeSections();
+      }
+      
+      // Load current access settings for this exam
+      await loadExamAccess(exam.id);
+    };
+
+    const closeAccessModal = () => {
+      isClosing.value = true;
+      setTimeout(() => {
+        showAccessModal.value = false;
+        isClosing.value = false;
+      }, 300); // Match this with your animation duration
+    };
+
+    const toggleAccessRestriction = () => {
+      if (!restrictAccess.value) {
+        // When switching to open access, clear the sections list
+        accessSections.value = [];
+      }
+    };
+
+    const loadSectionsForGrade = () => {
+      newAccessSection.value = '';
+    };
+
+    const addAccessSection = () => {
+      if (!newAccessGrade.value || !newAccessSection.value) return;
+
+      // Check if section already exists in access list
+      const exists = accessSections.value.some(
+        s => s.grade === newAccessGrade.value && s.section === newAccessSection.value
+      );
+
+      if (exists) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Section Already Added',
+          text: `Grade ${newAccessGrade.value} Section ${newAccessSection.value} is already in the list`
+        });
+        return;
+      }
+
+      // Add new section to access list
+      accessSections.value.push({
+        examId: selectedExam.value.id,
+        grade: newAccessGrade.value,
+        section: newAccessSection.value,
+        isEnabled: true
+      });
+
+      // Reset section input only, keep grade for adding multiple sections
+      newAccessSection.value = '';
+    };
+
+    const removeAccessSection = (index) => {
+      accessSections.value.splice(index, 1);
+    };
+
+    const saveAccessSettings = async () => {
+      try {
+        if (!restrictAccess.value) {
+          // If not restricting access, remove all access settings
+          await setExamAccess(selectedExam.value.id, []);
+          Swal.fire({
+            icon: 'success',
+            title: 'Access Updated',
+            text: 'Exam access is now open to all students'
+          });
+          closeAccessModal();
+          return;
+        }
+        
+        // If restricting but no sections added
+        if (accessSections.value.length === 0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'No Sections Added',
+            text: 'Please add at least one section or disable access restriction'
+          });
+          return;
+        }
+        
+        // Prepare data for the API
+        const gradeAccess = accessSections.value.map(section => ({
+          examId: selectedExam.value.id,
+          grade: section.grade,
+          section: section.section,
+          isEnabled: true
+        }));
+        
+        // Save access settings
+        await setExamAccess(selectedExam.value.id, gradeAccess);
+        
+        Swal.fire({
+          icon: 'success',
+          title: 'Access Updated',
+          text: 'Exam access settings have been updated'
+        });
+        
+        closeAccessModal();
+      } catch (error) {
+        console.error('Error saving exam access:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to save exam access settings'
+        });
+      }
+    };
+
+    const loadGradeSections = async () => {
+      try {
+        const { gradeSections } = await getAllGradeSections();
+        console.log('Fetched grade sections:', gradeSections);
+
+        if (gradeSections && gradeSections.length > 0) {
+          // Get unique grades
+          availableGrades.value = [...new Set(gradeSections.map(gs => gs.grade))]
+            .sort((a, b) => a - b);
+
+          // Store all sections with their grades
+          availableSections.value = gradeSections.map(gs => ({
+            id: gs.id,
+            grade: gs.grade,
+            section: gs.section
+          }));
+
+          console.log('Available grades:', availableGrades.value);
+          console.log('Available sections:', availableSections.value);
+        }
+      } catch (error) {
+        console.error('Error loading grade sections:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to load grade sections'
+        });
+      }
+    };
+
+    const loadExamAccess = async (examId) => {
+      try {
+        const response = await getExamAccess(examId);
+        
+        if (response && response.access) {
+          // If there are access settings, then the exam has restricted access
+          if (response.access.length > 0) {
+            restrictAccess.value = true;
+            accessSections.value = response.access.map(access => ({
+              examId: access.examId,
+              grade: access.grade,
+              section: access.section,
+              isEnabled: access.isEnabled
+            }));
+          } else {
+            // No access settings means open access
+            restrictAccess.value = false;
+            accessSections.value = [];
+          }
+        }
+      } catch (error) {
+        console.error('Error loading exam access settings:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to load exam access settings'
+        });
+      }
+    };
+
     // Clean up socket listeners on component unmount
     onUnmounted(() => {
       if (socket.value) {
         // No need to disconnect, just remove any listeners if needed
         socket.value.off('examStatusUpdate');
       }
+    });
+
+    // Computed property to filter sections based on selected grade
+    const availableSectionsForGrade = computed(() => {
+      if (!newAccessGrade.value) return [];
+      
+      // Filter sections for selected grade
+      return availableSections.value
+        .filter(gs => gs.grade === parseInt(newAccessGrade.value))
+        .map(gs => gs.section);
     });
 
     return {
@@ -388,7 +760,24 @@ export default {
       previewExam,
       downloadTemplate,
       handleImport,
-      exportExam
+      exportExam,
+      showAccessModal,
+      selectedExam,
+      restrictAccess,
+      newAccessGrade,
+      newAccessSection,
+      accessSections,
+      availableGrades,
+      availableSections,
+      availableSectionsForGrade,
+      openAccessModal,
+      closeAccessModal,
+      toggleAccessRestriction,
+      loadSectionsForGrade,
+      addAccessSection,
+      removeAccessSection,
+      saveAccessSettings,
+      isClosing
     };
   }
 };
@@ -702,6 +1091,534 @@ export default {
   background-color: #c8e6c9;
 }
 
+.action-btn {
+  background-color: #9c27b0;
+  color: white;
+}
+
+.action-btn:hover {
+  background-color: #7b1fa2;
+}
+
+.modal-backdrop {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  z-index: 100;
+  height: 100vh;
+}
+
+.access-modal {
+  width: 100%;
+  max-width: 800px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 20px 20px 0 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.modal-closing {
+  animation: slideDown 0.3s ease-in;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+.modal-header {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 1.25rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-radius: 20px 20px 0 0;
+  z-index: 1;
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-header .material-icons-round {
+  color: #5e35b1;
+}
+
+.close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f5f5f5;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.modal-handle {
+  width: 40px;
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin: 0.5rem auto;
+}
+
+.modal-body {
+  padding: 1.25rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  z-index: 1;
+}
+
+.access-exam-info {
+  background-color: #fff;
+  padding: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 1rem;
+}
+
+.access-exam-info h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.exam-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #616161;
+}
+
+.meta-item .material-icons-round {
+  font-size: 18px;
+  color: #673ab7;
+}
+
+.access-control-section {
+  background-color: #fff;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  padding: 1.25rem;
+}
+
+.access-type-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.access-type-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toggle-state {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #673ab7;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #673ab7;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #673ab7;
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.access-description {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background-color: #f5f5f5;
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.description-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.description-icon .material-icons-round {
+  color: #555;
+  font-size: 20px;
+}
+
+.description-text p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.section-access-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-form-card, .section-list-card {
+  background-color: #fff;
+  border-radius: 10px;
+  border: 1px solid #e0e0e0;
+  padding: 1.25rem;
+}
+
+.section-form-card h4, .section-list-card h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-form-card h4 .material-icons-round {
+  color: #4CAF50;
+}
+
+.section-list-card h4 .material-icons-round {
+  color: #2196F3;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  color: #555;
+  font-weight: 500;
+}
+
+.form-select {
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #333;
+  background-color: #fff;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  border-color: #673ab7;
+  outline: none;
+}
+
+.form-select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.form-action {
+  display: flex;
+  align-items: flex-end;
+}
+
+.add-section-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #4CAF50;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-section-btn:hover:not(:disabled) {
+  background-color: #3d8b40;
+  transform: translateY(-2px);
+}
+
+.add-section-btn:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-count {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.empty-sections {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.empty-sections .material-icons-round {
+  font-size: 40px;
+  color: #bdbdbd;
+  margin-bottom: 0.75rem;
+}
+
+.empty-sections p {
+  margin: 0;
+  color: #757575;
+}
+
+.empty-hint {
+  font-size: 0.85rem;
+  margin-top: 0.5rem !important;
+}
+
+.sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.section-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.section-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.grade-badge {
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.section-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.remove-section-btn {
+  background: none;
+  border: none;
+  color: #f44336;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-section-btn:hover {
+  background-color: #ffebee;
+}
+
+.cancel-btn, .save-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancel-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.cancel-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.save-btn {
+  background-color: #673ab7;
+  color: white;
+}
+
+.save-btn:hover {
+  background-color: #5e35b1;
+  transform: translateY(-2px);
+}
+
+.action-btn.access-btn {
+  background: #673ab7;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn.access-btn:hover {
+  background: #5e35b1;
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .manage-exams {
     padding: 1rem;
@@ -731,6 +1648,46 @@ export default {
 
   .exam-actions button {
     width: 100%;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .add-section-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .section-form-card, 
+  .section-list-card {
+    padding: 1rem;
+  }
+  
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .save-btn, 
+  .cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .access-type-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .access-modal {
+    max-height: 90vh;
+  }
+
+  .modal-footer {
+    padding: 1rem;
   }
 }
 </style> 

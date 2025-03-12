@@ -103,7 +103,6 @@
 </template>
 
 <script>
-
 import { fetchExamQuestions } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import ExamSession from './ExamSession.vue';
@@ -134,15 +133,28 @@ export default {
       if (newValue) {
         this.testCode = newValue.toUpperCase();
       }
+    },
+    '$route.query.testCode': {
+      immediate: true,
+      handler(newTestCode) {
+        if (newTestCode) {
+          console.log('Test code from route:', newTestCode);
+          this.testCode = newTestCode.toUpperCase();
+          this.fetchExamQuestions();
+        }
+      }
     }
   },
   mounted() {
     this.initializeSocket();
     
-    const savedTestCode = localStorage.getItem("testCode");
-    if (savedTestCode) {
-      this.testCode = savedTestCode;
-      this.fetchExamQuestions();
+    // Check for saved test code if none in URL
+    if (!this.$route.query.testCode) {
+      const savedTestCode = localStorage.getItem("testCode");
+      if (savedTestCode) {
+        this.testCode = savedTestCode;
+        this.fetchExamQuestions();
+      }
     }
     
     // Load FontAwesome if not already loaded

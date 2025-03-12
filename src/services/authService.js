@@ -827,3 +827,253 @@ export const fetchSurveyResults = async (code) => {
     throw error;
   }
 };
+
+// Create a new grade section
+export const createGradeSection = async (grade, section) => {
+  try {
+    const response = await fetch(`${BASE_URL}/grade-section`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ grade, section })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create grade section');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Create grade section error:', error);
+    throw error;
+  }
+};
+
+// Get all grade sections
+export const getAllGradeSections = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/grade-sections`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch grade sections');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get grade sections error:', error);
+    throw error;
+  }
+};
+
+// Update a grade section
+export const updateGradeSection = async (id, grade, section) => {
+  try {
+    const response = await fetch(`${BASE_URL}/grade-section/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ grade, section })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update grade section');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Update grade section error:', error);
+    throw error;
+  }
+};
+
+// Delete a grade section
+export const deleteGradeSection = async (id) => {
+  try {
+    const response = await fetch(`${BASE_URL}/grade-section/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete grade section');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Delete grade section error:', error);
+    throw error;
+  }
+};
+
+export const updateUser = async (userId, updateData) => {
+  try {
+    // Validate password length on client side
+    if (updateData.password && updateData.password.length < 8) {
+      throw new Error('Password must be at least 8 characters');
+    }
+
+    const response = await fetch(`${BASE_URL}/user/${userId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update user');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Update user error:', error);
+    throw error;
+  }
+};
+
+export const deleteUser = async (userId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/user/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete user');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Delete user error:', error);
+    throw error;
+  }
+};
+
+// Add this service function
+export const getUserDetails = async (userId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/user/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch user details');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get user details error:', error);
+    throw error;
+  }
+};
+
+// Add these service functions
+export const setExamAccess = async (examId, gradeAccess) => {
+  try {
+    const response = await fetch(`${BASE_URL}/exam/${examId}/access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ gradeAccess })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to set exam access');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Set exam access error:', error);
+    throw error;
+  }
+};
+
+export const getExamAccess = async (examId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/exam/${examId}/access`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get exam access');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get exam access error:', error);
+    throw error;
+  }
+};
+
+export const checkExamAccess = async (examId, grade, section) => {
+  try {
+    const response = await fetch(
+      `${BASE_URL}/exam/${examId}/check-access?grade=${grade}&section=${section}`, 
+      {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to check exam access');
+    }
+
+    const { hasAccess } = await response.json();
+    return hasAccess;
+  } catch (error) {
+    console.error('Check exam access error:', error);
+    throw error;
+  }
+};
+
+// Get all exams (for students to view available exams)
+export const getAllExams = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/exams`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch exams');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get all exams error:', error);
+    throw error;
+  }
+};

@@ -91,7 +91,8 @@ const navigationItems = {
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
     { name: 'View Grades', path: '/grades', icon: 'analytics' },
     { name: 'Profile', path: '/student-profile', icon: 'person' },
-    { name: 'Settings', path: '/settings', icon: 'settings' }
+    { name: 'Settings', path: '/settings', icon: 'settings' },
+    { name: 'Available Exams', path: '/student-exams', icon: 'assignment' },
   ]
 };
 

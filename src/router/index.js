@@ -20,49 +20,172 @@ import AnswerSurvey from "../components/survey/AnswerSurvey.vue";
 import SurveyList from '@/components/survey/SurveyList.vue'
 import SurveyResults from '@/components/survey/SurveyResults.vue'
 import SurveyPreview from '@/components/survey/SurveyPreview.vue'
+import StudentExams from '@/components/student/StudentExams.vue'
 
 const routes = [
-  { path: "/", component: LoginPage },
-  { path: "/dashboard", component: Dashboard },  
-  { path: "/settings", component: Settings },
-  { path: '/admin-dashboard', component: AdminDashboard },
-  { path: '/teacher-dashboard', component: TeacherDashboard },
-  { path: '/teacher-profile', component: TeacherProfile},
-  { path: '/student-profile', component: StudentProfile},
-  { path: '/create-exam', component: CreateExam},
-  { path: '/take-exam', component: TakeExam},
-  { path: '/users-list', component: UsersList},
-  { path: '/scores', component: StudentScores},
-  { path: '/manage-exam', component: ManageExam},
-  {path:'/manage-users', component: ManageUsers},
-  { path: '/manage-exams', component: ManageExams },
-  { path: '/preview-exam/:examId', component: PreviewExam },
-  { path: '/exam-results/:examId', component: ExamResults },
-  { path: '/create-survey', component: CreateSurvey },
-  { path: '/answer-survey', component: AnswerSurvey },
+  { 
+    path: "/", 
+    component: LoginPage,
+    meta: { requiresAuth: false }
+  },
+  { 
+    path: "/dashboard", 
+    component: Dashboard,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },  
+  { 
+    path: "/settings", 
+    component: Settings,
+    meta: { requiresAuth: true }
+  },
+  { 
+    path: '/admin-dashboard', 
+    component: AdminDashboard,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  { 
+    path: '/teacher-dashboard', 
+    component: TeacherDashboard,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/teacher-profile', 
+    component: TeacherProfile,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/student-profile', 
+    component: StudentProfile,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  { 
+    path: '/create-exam', 
+    component: CreateExam,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/take-exam', 
+    component: TakeExam,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  { 
+    path: '/users-list', 
+    component: UsersList,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  { 
+    path: '/scores', 
+    component: StudentScores,
+    meta: { requiresAuth: true, roles: ['admin', 'teacher'] }
+  },
+  { 
+    path: '/manage-exam', 
+    component: ManageExam,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/manage-users', 
+    component: ManageUsers,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  { 
+    path: '/manage-exams', 
+    component: ManageExams,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/preview-exam/:examId', 
+    component: PreviewExam,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/exam-results/:examId', 
+    component: ExamResults,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  { 
+    path: '/create-survey', 
+    component: CreateSurvey,
+    meta: { requiresAuth: true, roles: ['teacher', 'admin'] }
+  },
+  { 
+    path: '/answer-survey', 
+    component: AnswerSurvey,
+    meta: { requiresAuth: false } // Anyone can answer a survey with the code
+  },
   {
     path: '/my-surveys',
     name: 'MySurveys',
     component: SurveyList,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['teacher', 'admin'] }
   },
   {
     path: '/survey/:code/results',
     name: 'SurveyResults',
     component: SurveyResults,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['teacher', 'admin'] }
   },
   {
     path: '/survey/:code/preview',
     name: 'SurveyPreview',
     component: SurveyPreview,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['teacher', 'admin'] }
+  },
+  {
+    path: '/student-exams',
+    name: 'StudentExams',
+    component: StudentExams,
+    meta: { requiresAuth: true, roles: ['student'] }
   },
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+});
+
+// Navigation guard to check authentication and roles
+router.beforeEach((to, from, next) => {
+  const jwtToken = localStorage.getItem('jwtToken');
+  const userRole = localStorage.getItem('userRole');
+  
+  // If route requires auth and user is not authenticated
+  if (to.meta.requiresAuth && !jwtToken) {
+    next('/'); // Redirect to login page
+    return;
+  }
+  
+  // If route has role restrictions and user's role doesn't match
+  if (to.meta.roles && !to.meta.roles.includes(userRole)) {
+    // Redirect to appropriate dashboard based on role
+    if (userRole === 'admin') {
+      next('/admin-dashboard');
+    } else if (userRole === 'teacher') {
+      next('/teacher-dashboard');
+    } else if (userRole === 'student') {
+      next('/dashboard');
+    } else {
+      next('/'); // Fallback to login if role is unknown
+    }
+    return;
+  }
+  
+  // If trying to access login page while already logged in
+  if (to.path === '/' && jwtToken) {
+    // Redirect to appropriate dashboard based on role
+    if (userRole === 'admin') {
+      next('/admin-dashboard');
+    } else if (userRole === 'teacher') {
+      next('/teacher-dashboard');
+    } else if (userRole === 'student') {
+      next('/dashboard');
+    } else {
+      next('/'); // Stay on login if role is unknown
+    }
+    return;
+  }
+  
+  next(); // Continue to the route
 });
 
 export default router;
