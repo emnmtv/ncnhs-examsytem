@@ -77,12 +77,14 @@ const navigationItems = {
   teacher: [
     { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
-    { name: 'Manage Exam', path: '/manage-exam', icon: 'assignment' },
+    { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
     { name: 'View Results', path: '/view-results', icon: 'bar_chart' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Profile', path: '/teacher-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
     { name: 'Manage Exams', path: '/manage-exams', icon: 'assignment' },
+    { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
+    { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
   ],
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },

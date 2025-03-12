@@ -1,89 +1,108 @@
 <template>
   <div class="profile-page">
-    <div v-if="loading" class="loading-container">
+    <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
       <p>Loading your profile...</p>
     </div>
     
-    <div v-else class="profile-container" :class="{ 'editing': isEditing }">
-      <div class="profile-header">
-        <div class="avatar">
-          {{ profile.firstName?.[0]?.toUpperCase() }}{{ profile.lastName?.[0]?.toUpperCase() }}
+    <div v-else class="profile-content">
+      <!-- Profile Card -->
+      <ProfileCard :profile="profile" />
+      
+      <!-- Edit Profile Form -->
+      <div class="edit-section" :class="{ 'editing': isEditing }">
+        <div class="section-header">
+          <h2>
+            <span class="material-icons-round">person</span>
+            Profile Information
+          </h2>
+          <button 
+            @click="toggleEditMode" 
+            :class="['edit-btn', isEditing ? 'cancel' : '']"
+          >
+            <span class="material-icons-round">{{ isEditing ? 'close' : 'edit' }}</span>
+            {{ isEditing ? 'Cancel' : 'Edit Profile' }}
+          </button>
         </div>
-        <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
-        <span class="role-badge">{{ profile.role }}</span>
-      </div>
 
-      <div class="profile-content">
-        <div class="profile-section">
-          <h3><i class="fas fa-user"></i> Personal Information</h3>
-          <div class="info-grid">
-            <div class="info-item">
+        <form @submit.prevent="handleUpdate" class="profile-form">
+          <div class="form-grid">
+            <div class="form-group">
               <label>First Name</label>
-              <input v-if="isEditing" v-model="profile.firstName" type="text" />
-              <span v-else>{{ profile.firstName }}</span>
+              <div class="input-wrapper">
+                <span class="material-icons-round">badge</span>
+                <input 
+                  v-model="profile.firstName" 
+                  type="text" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                />
+              </div>
             </div>
-            <div class="info-item">
+
+            <div class="form-group">
               <label>Last Name</label>
-              <input v-if="isEditing" v-model="profile.lastName" type="text" />
-              <span v-else>{{ profile.lastName }}</span>
+              <div class="input-wrapper">
+                <span class="material-icons-round">badge</span>
+                <input 
+                  v-model="profile.lastName" 
+                  type="text" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                />
+              </div>
             </div>
-            <div class="info-item">
-              <label>Email</label>
-              <input v-if="isEditing" v-model="profile.email" type="email" />
-              <span v-else>{{ profile.email }}</span>
-            </div>
-            <div class="info-item">
-              <label>Address</label>
-              <input v-if="isEditing" v-model="profile.address" type="text" />
-              <span v-else>{{ profile.address || 'Not set' }}</span>
-            </div>
-          </div>
-        </div>
 
-        <div class="profile-section">
-          <h3><i class="fas fa-chalkboard-teacher"></i> Teaching Information</h3>
-          <div class="info-grid">
-            <div class="info-item">
+            <div class="form-group">
               <label>Department</label>
-              <input v-if="isEditing" v-model="profile.department" type="text" />
-              <span v-else>{{ profile.department || 'Not set' }}</span>
+              <div class="input-wrapper">
+                <span class="material-icons-round">business</span>
+                <input 
+                  v-model="profile.department" 
+                  type="text" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                  placeholder="Enter your department"
+                />
+              </div>
             </div>
-            <div class="info-item">
+
+            <div class="form-group">
               <label>Domain</label>
-              <input v-if="isEditing" v-model="profile.domain" type="text" />
-              <span v-else>{{ profile.domain || 'Not set' }}</span>
+              <div class="input-wrapper">
+                <span class="material-icons-round">school</span>
+                <input 
+                  v-model="profile.domain" 
+                  type="text" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                  placeholder="Enter your teaching domain"
+                />
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>Address</label>
+              <div class="input-wrapper">
+                <span class="material-icons-round">home</span>
+                <input 
+                  v-model="profile.address" 
+                  type="text" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                  placeholder="Enter your address"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="profile-section">
-          <h3><i class="fas fa-clock"></i> Account Information</h3>
-          <div class="info-grid">
-            <div class="info-item">
-              <label>Member Since</label>
-              <span>{{ formatDate(profile.createdAt) }}</span>
-            </div>
+          <div v-if="isEditing" class="form-actions">
+            <button type="submit" class="save-btn">
+              <span class="material-icons-round">save</span>
+              Save Changes
+            </button>
           </div>
-        </div>
-      </div>
-
-      <div class="profile-actions">
-        <button 
-          @click="toggleEditMode" 
-          :class="['action-button', isEditing ? 'cancel' : 'edit']"
-        >
-          <i :class="['fas', isEditing ? 'fa-times' : 'fa-edit']"></i>
-          {{ isEditing ? 'Cancel' : 'Edit Profile' }}
-        </button>
-        <button 
-          v-if="isEditing" 
-          @click="handleUpdate" 
-          class="action-button save"
-        >
-          <i class="fas fa-save"></i>
-          Save Changes
-        </button>
+        </form>
       </div>
     </div>
   </div>
@@ -92,6 +111,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { fetchUserProfile, updateProfile } from '@/services/authService';
+import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
 const profile = ref({
@@ -182,39 +202,170 @@ const toggleEditMode = () => {
     isEditing.value = true;
   }
 };
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
 </script>
 
 <style scoped>
 .profile-page {
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
 }
 
-.loading-container {
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.edit-section {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  padding: 2rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.section-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  color: #333;
+}
+
+.edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.edit-btn:hover {
+  background: #bbdefb;
+}
+
+.edit-btn.cancel {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.edit-btn.cancel:hover {
+  background: #ffcdd2;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrapper .material-icons-round {
+  position: absolute;
+  left: 1rem;
+  color: #666;
+}
+
+.input-wrapper input {
+  width: 100%;
+  padding: 0.75rem 1rem 0.75rem 3rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.input-wrapper input.editable {
+  background: white;
+  cursor: text;
+}
+
+.input-wrapper input:not(.editable) {
+  cursor: default;
+}
+
+.input-wrapper input.editable:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+  outline: none;
+}
+
+.form-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-btn:hover {
+  background: #43a047;
+  transform: translateY(-2px);
+}
+
+.loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 400px;
+  gap: 1rem;
 }
 
 .spinner {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   border: 3px solid #f3f3f3;
+  border-top: 3px solid #2196f3;
   border-radius: 50%;
-  border-top: 3px solid #2196F3;
   animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
 }
 
 @keyframes spin {
@@ -222,171 +373,31 @@ const formatDate = (dateString) => {
   100% { transform: rotate(360deg); }
 }
 
-.profile-container {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-.profile-container.editing {
-  box-shadow: 0 6px 30px rgba(33,150,243,0.15);
-}
-
-.profile-header {
-  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
-  padding: 2rem;
-  text-align: center;
-  color: white;
-}
-
-.avatar {
-  width: 100px;
-  height: 100px;
-  background: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #2196F3;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.role-badge {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: rgba(255,255,255,0.2);
-  border-radius: 20px;
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-.profile-content {
-  padding: 2rem;
-}
-
-.profile-section {
-  margin-bottom: 2rem;
-  animation: fadeIn 0.5s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.profile-section h3 {
-  color: #333;
-  margin-bottom: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.info-item label {
-  color: #666;
-  font-size: 0.9rem;
-}
-
-.info-item span {
-  color: #333;
-  font-size: 1rem;
-}
-
-.info-item input {
-  padding: 0.75rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.info-item input:focus {
-  border-color: #2196F3;
-  box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
-  outline: none;
-}
-
-.profile-actions {
-  padding: 1.5rem 2rem;
-  background: #f9f9f9;
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-.action-button {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-}
-
-.action-button.edit {
-  background: #2196F3;
-  color: white;
-}
-
-.action-button.edit:hover {
-  background: #1976D2;
-  transform: translateY(-2px);
-}
-
-.action-button.cancel {
-  background: #f44336;
-  color: white;
-}
-
-.action-button.cancel:hover {
-  background: #e53935;
-  transform: translateY(-2px);
-}
-
-.action-button.save {
-  background: #4CAF50;
-  color: white;
-}
-
-.action-button.save:hover {
-  background: #43A047;
-  transform: translateY(-2px);
-}
-
 @media (max-width: 768px) {
   .profile-page {
     padding: 1rem;
   }
-  
-  .info-grid {
+
+  .edit-section {
+    padding: 1.5rem;
+  }
+
+  .section-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .edit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
   }
-  
-  .profile-actions {
-    flex-direction: column;
-  }
-  
-  .action-button {
+
+  .save-btn {
     width: 100%;
     justify-content: center;
   }

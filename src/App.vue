@@ -106,4 +106,47 @@ body {
     padding: 0;
   }
 }
+
+/* Global Print Styles */
+@media print {
+  /* Hide sidenav and other navigation elements */
+  .sidenav,
+  .nav-links,
+  .toggle-btn,
+  .logo-section,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Adjust main content area */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Remove backgrounds and shadows */
+  * {
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure full width for print */
+  .survey-preview-container {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Break pages appropriately */
+  .question-item {
+    page-break-inside: avoid;
+  }
+
+  /* Remove unnecessary spacing */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+}
 </style>

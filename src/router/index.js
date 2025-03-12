@@ -15,6 +15,11 @@ import ManageUsers from "../components/admin/ManageUsers.vue";
 import ManageExams from "../components/teacher/ManageExams.vue";
 import PreviewExam from "../components/teacher/PreviewExam.vue";
 import ExamResults from "../components/teacher/ExamResults.vue";
+import CreateSurvey from "../components/survey/CreateSurvey.vue";
+import AnswerSurvey from "../components/survey/AnswerSurvey.vue";
+import SurveyList from '@/components/survey/SurveyList.vue'
+import SurveyResults from '@/components/survey/SurveyResults.vue'
+import SurveyPreview from '@/components/survey/SurveyPreview.vue'
 
 const routes = [
   { path: "/", component: LoginPage },
@@ -33,6 +38,26 @@ const routes = [
   { path: '/manage-exams', component: ManageExams },
   { path: '/preview-exam/:examId', component: PreviewExam },
   { path: '/exam-results/:examId', component: ExamResults },
+  { path: '/create-survey', component: CreateSurvey },
+  { path: '/answer-survey', component: AnswerSurvey },
+  {
+    path: '/my-surveys',
+    name: 'MySurveys',
+    component: SurveyList,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/survey/:code/results',
+    name: 'SurveyResults',
+    component: SurveyResults,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/survey/:code/preview',
+    name: 'SurveyPreview',
+    component: SurveyPreview,
+    meta: { requiresAuth: true }
+  },
 ];
 
 const router = createRouter({

@@ -8,7 +8,7 @@ class SocketManager {
   initialize() {
     if (!this.socket) {
       // this.socket = io('http://localhost:3300');
-      this.socket = io('http://192.168.0.110:3300');
+      this.socket = io('http://192.168.0.104:3300');
       console.log('Socket initialized');
     }
     return this.socket;

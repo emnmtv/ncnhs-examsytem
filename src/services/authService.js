@@ -1,5 +1,5 @@
 // const BASE_URL = 'http://localhost:3300/auth';
-const BASE_URL = 'http://192.168.0.110:3300/auth';
+const BASE_URL = 'http://192.168.0.104:3300/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
   try {
@@ -669,6 +669,161 @@ export const fetchExamAnalysis = async (examId) => {
     return analysis;
   } catch (error) {
     console.error("AuthService: Exam analysis fetch error:", error);
+    throw error;
+  }
+};
+
+// Create a new survey
+export const createSurvey = async (surveyData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/survey`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(surveyData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create survey');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Survey creation error:', error);
+    throw error;
+  }
+};
+
+// Fetch user's surveys
+export const fetchUserSurveys = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/my-surveys`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch surveys');
+    }
+
+    const { surveys } = await response.json();
+    return surveys;
+  } catch (error) {
+    console.error('Surveys fetch error:', error);
+    throw error;
+  }
+};
+
+// Fetch survey by code
+export const fetchSurvey = async (code) => {
+  try {
+    const response = await fetch(`${BASE_URL}/survey/${code}`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch survey');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Survey fetch error:', error);
+    throw error;
+  }
+};
+
+// Submit survey response
+export const submitSurveyResponse = async (code, responseData) => {
+  try {
+    if (!code) {
+      throw new Error('Survey code is required');
+    }
+
+    // Format answers before sending
+    const formattedAnswers = responseData.answers.map(answer => ({
+      questionId: answer.questionId,
+      answer: Array.isArray(answer.answer)
+        ? JSON.stringify(answer.answer.filter(Boolean)) // Remove empty values
+        : answer.answer
+    }));
+
+    const response = await fetch(`${BASE_URL}/survey/${code}/submit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code: code.trim().toUpperCase(),
+        respondent: responseData.respondent,
+        answers: formattedAnswers
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to submit survey');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Survey submission error:', error);
+    throw error;
+  }
+};
+
+// Fetch survey results
+export const fetchSurveyResults = async (code) => {
+  try {
+    const response = await fetch(`${BASE_URL}/survey/${code}/results`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch survey results');
+    }
+
+    const data = await response.json();
+    
+    // Pre-process the data to ensure answers are properly parsed
+    if (data.results && data.results.questions) {
+      data.results.questions = data.results.questions.map(question => ({
+        ...question,
+        options: typeof question.options === 'string' 
+          ? JSON.parse(question.options) 
+          : question.options,
+        answers: question.answers?.map(answer => ({
+          ...answer,
+          answer: (() => {
+            try {
+              if (question.questionType === 'checkbox' && typeof answer.answer === 'string') {
+                return JSON.parse(answer.answer);
+              }
+              return answer.answer;
+            } catch (e) {
+              console.warn('Failed to parse answer:', answer.answer);
+              return answer.answer;
+            }
+          })()
+        }))
+      }));
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Survey results fetch error:', error);
     throw error;
   }
 };
