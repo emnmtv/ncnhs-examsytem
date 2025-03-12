@@ -47,14 +47,34 @@
         </div>
       </div>
 
+      <div class="search-container">
+        <div class="search-box">
+          <span class="material-icons search-icon">search</span>
+          <input 
+            type="text" 
+            v-model="searchQuery" 
+            placeholder="Search by student name, LRN, or section..."
+            class="search-input"
+          />
+        </div>
+      </div>
+
       <div class="stats-cards">
         <div class="stat-card">
           <h3>Average Score</h3>
-          <p class="stat-value">{{ getAverageScore(filteredResults) }}%</p>
+          <p class="stat-value">{{ getAverageScore(filteredResults) }}</p>
         </div>
         <div class="stat-card">
           <h3>Total Submissions</h3>
           <p class="stat-value">{{ filteredResults.length }}</p>
+        </div>
+        <div class="stat-card">
+          <h3>Highest Score</h3>
+          <p class="stat-value">{{ getHighestScore(filteredResults) }}</p>
+        </div>
+        <div class="stat-card">
+          <h3>Lowest Score</h3>
+          <p class="stat-value">{{ getLowestScore(filteredResults) }}</p>
         </div>
       </div>
 
@@ -115,6 +135,20 @@
               <option value="low">Low (below 50%)</option>
             </select>
           </div>
+
+          <div class="filter-group">
+            <label for="analysisSearch">Search:</label>
+            <div class="search-box">
+              <span class="material-icons search-icon">search</span>
+              <input 
+                type="text" 
+                v-model="analysisSearchQuery" 
+                placeholder="Search by question #, text, answer, scores, or difficulty..."
+                class="search-input"
+                id="analysisSearch"
+              />
+            </div>
+          </div>
         </div>
 
         <div class="table-wrapper" ref="analysisTableWrapper">
@@ -131,7 +165,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in filteredAnalysis" :key="item.questionId">
+              <tr v-for="item in paginatedAnalysis" :key="item.questionId">
                 <td>{{ item.questionNumber }}</td>
                 <td>{{ item.questionText }}</td>
                 <td>{{ item.correctAnswer }}</td>
@@ -163,11 +197,69 @@
               </tr>
             </tbody>
           </table>
+
+          <div class="pagination" v-if="totalPages > 1">
+            <button 
+              class="pagination-btn" 
+              :disabled="currentPage === 1"
+              @click="prevPage"
+            >
+              <span class="material-icons">chevron_left</span>
+            </button>
+
+            <div class="page-numbers">
+              <button 
+                v-if="currentPage > 3"
+                class="page-number"
+                @click="goToPage(1)"
+              >
+                1
+              </button>
+              
+              <span v-if="currentPage > 3" class="ellipsis">...</span>
+              
+              <button 
+                v-for="page in displayedPages" 
+                :key="page"
+                class="page-number"
+                :class="{ active: currentPage === page }"
+                @click="goToPage(page)"
+              >
+                {{ page }}
+              </button>
+              
+              <span v-if="currentPage < totalPages - 2" class="ellipsis">...</span>
+              
+              <button 
+                v-if="currentPage < totalPages - 2"
+                class="page-number"
+                @click="goToPage(totalPages)"
+              >
+                {{ totalPages }}
+              </button>
+            </div>
+
+            <button 
+              class="pagination-btn" 
+              :disabled="currentPage === totalPages"
+              @click="nextPage"
+            >
+              <span class="material-icons">chevron_right</span>
+            </button>
+
+            <div class="page-info">
+              Page {{ currentPage }} of {{ totalPages }}
+            </div>
+          </div>
         </div>
 
         <div class="analysis-summary">
           <h3>Summary</h3>
           <div class="summary-grid">
+            <div class="summary-item">
+              <span class="label">Total Items:</span>
+              <span class="value">{{ getTotalItems() }}</span>
+            </div>
             <div class="summary-item">
               <span class="label">Easy Questions:</span>
               <span class="value">{{ getDifficultyCount('easy') }}</span>
@@ -188,7 +280,7 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { ref, onMounted, computed, onUnmounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { fetchStudentScores, fetchExamAnalysis } from '../../services/authService';
 
@@ -213,6 +305,38 @@ export default {
     const resultsTableWrapper = ref(null);
     const analysisTableWrapper = ref(null);
 
+    const itemsPerPage = ref(10);
+    const currentPage = ref(1);
+
+    const searchQuery = ref('');
+    const analysisSearchQuery = ref('');
+
+    const paginatedAnalysis = computed(() => {
+      const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+      const endIndex = startIndex + itemsPerPage.value;
+      return filteredAnalysis.value.slice(startIndex, endIndex);
+    });
+
+    const totalPages = computed(() => {
+      return Math.ceil(filteredAnalysis.value.length / itemsPerPage.value);
+    });
+
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+      }
+    };
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--;
+      }
+    };
+
+    const goToPage = (page) => {
+      currentPage.value = page;
+    };
+
     const loadResults = async () => {
       try {
         loading.value = true;
@@ -232,9 +356,10 @@ export default {
     };
 
     const getAverageScore = (results) => {
-      if (!results.length) return 0;
-      const total = results.reduce((sum, result) => sum + result.percentage, 0);
-      return Math.round(total / results.length);
+      if (!results.length) return '0/0';
+      const totalScore = results.reduce((sum, result) => sum + result.score, 0);
+      const totalItems = results[0].total; // Assuming all have same total
+      return `${Math.round(totalScore/results.length)}/${totalItems}`;
     };
 
     const getAverageScoreColor = (score) => {
@@ -260,7 +385,16 @@ export default {
           result.user.gradeLevel === filters.value.gradeLevel;
         const matchesSection = !filters.value.section || 
           result.user.section === filters.value.section;
-        return matchesGrade && matchesSection;
+        
+        // Add search filtering with type checking
+        const searchLower = searchQuery.value.toLowerCase();
+        const matchesSearch = searchLower === '' || 
+          result.user.firstName.toLowerCase().includes(searchLower) ||
+          result.user.lastName.toLowerCase().includes(searchLower) ||
+          (result.user.lrn?.toString() || '').toLowerCase().includes(searchLower) ||
+          result.user.section.toLowerCase().includes(searchLower);
+        
+        return matchesGrade && matchesSection && matchesSearch;
       });
     });
 
@@ -302,8 +436,26 @@ export default {
           if (analysisFilters.value.successRate === 'moderate' && (percentage < 50 || percentage >= 80)) return false;
           if (analysisFilters.value.successRate === 'low' && percentage >= 50) return false;
         }
-        
-        return true;
+
+        // Enhanced search filtering
+        const searchLower = analysisSearchQuery.value.toLowerCase();
+        if (searchLower === '') return true;
+
+        return (
+          // Search by question number
+          item.questionNumber.toString().includes(searchLower) ||
+          // Search by question text
+          item.questionText.toLowerCase().includes(searchLower) ||
+          // Search by correct answer
+          item.correctAnswer.toLowerCase().includes(searchLower) ||
+          // Search by correct/incorrect counts
+          `${item.correctCount}/${item.totalStudents}`.includes(searchLower) ||
+          `${item.incorrectCount}/${item.totalStudents}`.includes(searchLower) ||
+          // Search by percentage
+          `${item.percentageCorrect}%`.includes(searchLower) ||
+          // Search by difficulty level
+          getDifficultyLabel(item.percentageCorrect).toLowerCase().includes(searchLower)
+        );
       });
     });
 
@@ -325,6 +477,42 @@ export default {
         );
       }
     };
+
+    const displayedPages = computed(() => {
+      let pages = [];
+      const start = Math.max(1, currentPage.value - 1);
+      const end = Math.min(totalPages.value, currentPage.value + 1);
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      
+      return pages;
+    });
+
+    const getHighestScore = (results) => {
+      if (!results.length) return '0';
+      const highest = results.reduce((max, result) => 
+        result.score > max.score ? result : max
+      , results[0]);
+      return highest.score;
+    };
+
+    const getLowestScore = (results) => {
+      if (!results.length) return '0';
+      const lowest = results.reduce((min, result) => 
+        result.score < min.score ? result : min
+      , results[0]);
+      return lowest.score;
+    };
+
+    const getTotalItems = () => {
+      return filteredAnalysis.value.length;
+    };
+
+    watch([analysisFilters, analysisSearchQuery], () => {
+      currentPage.value = 1;
+    });
 
     onMounted(() => {
       loadResults();
@@ -355,7 +543,20 @@ export default {
       getDifficultyClass,
       getDifficultyCount,
       resultsTableWrapper,
-      analysisTableWrapper
+      analysisTableWrapper,
+      itemsPerPage,
+      currentPage,
+      paginatedAnalysis,
+      totalPages,
+      nextPage,
+      prevPage,
+      goToPage,
+      displayedPages,
+      searchQuery,
+      analysisSearchQuery,
+      getHighestScore,
+      getLowestScore,
+      getTotalItems
     };
   }
 };
@@ -363,9 +564,11 @@ export default {
 
 <style scoped>
 .exam-results {
-  max-width: 1000px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
+  box-sizing: border-box;
 }
 
 .results-header {
@@ -429,6 +632,45 @@ export default {
   border-color: #2196f3;
 }
 
+.search-container {
+  margin-bottom: 20px;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s;
+  background: white;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -446,14 +688,20 @@ export default {
   overflow: hidden;
 }
 
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
+.stat-card:nth-child(1)::before {
   background-color: v-bind("getAverageScoreColor(getAverageScore(filteredResults))");
+}
+
+.stat-card:nth-child(2)::before {
+  background-color: #2196f3;
+}
+
+.stat-card:nth-child(3)::before {
+  background-color: #4caf50;
+}
+
+.stat-card:nth-child(4)::before {
+  background-color: #f44336;
 }
 
 .stat-value {
@@ -471,19 +719,31 @@ export default {
 
 table {
   width: 100%;
+  min-width: 800px;
   border-collapse: collapse;
 }
 
 th, td {
-  padding: 12px 15px;
+  padding: 15px;
   text-align: left;
   border-bottom: 1px solid #eee;
+  white-space: nowrap;
 }
 
 th {
   background: #f5f5f5;
-  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
+
+th:nth-child(1), td:nth-child(1) { width: 5%; }
+th:nth-child(2), td:nth-child(2) { width: 30%; }
+th:nth-child(3), td:nth-child(3) { width: 15%; }
+th:nth-child(4), td:nth-child(4) { width: 12%; }
+th:nth-child(5), td:nth-child(5) { width: 12%; }
+th:nth-child(6), td:nth-child(6) { width: 13%; }
+th:nth-child(7), td:nth-child(7) { width: 13%; }
 
 tr:hover {
   background: #f8f8f8;
@@ -503,7 +763,8 @@ tr:hover {
 }
 
 .analysis-filters {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   margin-bottom: 20px;
   background: #f8f9fa;
@@ -578,21 +839,23 @@ tr:hover {
 
 .progress-bar {
   width: 100%;
+  min-width: 100px;
+  height: 24px;
   background: #f5f5f5;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .progress {
-  padding: 4px 8px;
-  color: white;
-  text-align: right;
-  font-size: 0.9em;
-  transition: width 0.3s ease;
-  position: relative;
-  height: 24px;
-  line-height: 24px;
+  height: 100%;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 12px;
   font-weight: 600;
+  color: white;
+  transition: width 0.3s ease;
 }
 
 .progress::after {
@@ -651,28 +914,6 @@ tr:hover {
   color: white;
 }
 
-/* Stats Card Color Coding */
-.stat-card:first-child::before {
-  background-color: v-bind("getAverageScoreColor(getAverageScore(filteredResults))");
-}
-
-/* Item Analysis Enhancement */
-.analysis-table tr {
-  transition: background-color 0.2s;
-}
-
-.analysis-table tr:hover {
-  background-color: #f5f5f5;
-}
-
-/* Success Rate Column Enhancement */
-.progress::after {
-  content: attr(data-label);
-  position: absolute;
-  right: 8px;
-  color: white;
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
   .results-header {
@@ -696,7 +937,7 @@ tr:hover {
   }
 
   .stats-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .results-table, .analysis-table {
@@ -735,7 +976,7 @@ tr:hover {
   }
 
   .exam-results {
-    padding: 15px;
+    padding: 10px;
   }
 
   .item-analysis {
@@ -745,10 +986,132 @@ tr:hover {
   .percentage-badge {
     min-width: 70px;
   }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .analysis-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .search-input {
+    font-size: 16px; /* Prevent zoom on mobile */
+  }
 }
 
 @keyframes bounce {
   0%, 100% { transform: translateY(-50%) translateX(0); }
   50% { transform: translateY(-50%) translateX(5px); }
+}
+
+/* Update pagination styles */
+.pagination {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+  padding: 15px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-btn:not(:disabled):hover {
+  background: #e0e0e0;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-btn .material-icons {
+  font-size: 20px;
+  color: #666;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-number {
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.page-number.active {
+  background: #2196f3;
+  color: white;
+}
+
+.page-number:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.ellipsis {
+  color: #666;
+  padding: 0 4px;
+}
+
+.page-info {
+  color: #666;
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+@media (min-width: 1200px) {
+  .exam-results {
+    padding: 30px;
+  }
+
+  .table-wrapper {
+    margin: 30px 0;
+  }
+
+  table {
+    font-size: 16px;
+  }
+
+  th, td {
+    padding: 20px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 30px;
+  }
 }
 </style> 
