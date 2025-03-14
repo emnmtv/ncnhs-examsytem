@@ -41,9 +41,14 @@
           <div class="question-text">
             {{ question.questionText }}
           </div>
+          
+          <!-- Question Image -->
+          <div v-if="question.imageUrl" class="question-image-container">
+            <img :src="getImageUrl(question.imageUrl)" alt="Question image" class="question-image">
+          </div>
 
-          <div class="question-options" v-if="question.questionType === 'multiple_choice'">
-            <div v-for="(option, optIndex) in question.options" :key="optIndex" class="option">
+          <div class="question-options" v-if="question.questionType === 'multiple_choice' || question.questionType === 'multipleChoice'">
+            <div v-for="(option, optIndex) in parseOptions(question.options)" :key="optIndex" class="option">
               <input 
                 type="radio" 
                 :id="`q${index}-opt${optIndex}`" 
@@ -96,7 +101,7 @@
 <script>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchTeacherExams } from '../../services/authService';
+import { fetchTeacherExams, getFullImageUrl } from '../../services/authService';
 
 export default {
   name: 'PreviewExam',
@@ -128,6 +133,7 @@ export default {
     const formatQuestionType = (type) => {
       const types = {
         multiple_choice: 'Multiple Choice',
+        multipleChoice: 'Multiple Choice',
         true_false: 'True/False',
         enumeration: 'Short Answer'
       };
@@ -135,6 +141,8 @@ export default {
     };
 
     const parseOptions = (options) => {
+      console.log("Question options:", options);
+      
       if (!options) return [];
       if (typeof options === 'string') {
         try {
@@ -153,6 +161,10 @@ export default {
       }
       return question.correctAnswer;
     };
+    
+    const getImageUrl = (imageUrl) => {
+      return getFullImageUrl(imageUrl);
+    };
 
     onMounted(loadExam);
 
@@ -163,7 +175,8 @@ export default {
       loadExam,
       formatQuestionType,
       parseOptions,
-      formatAnswer
+      formatAnswer,
+      getImageUrl
     };
   }
 };
@@ -252,6 +265,19 @@ export default {
   font-size: 1.1em;
   margin-bottom: 20px;
   color: #333;
+}
+
+/* Add styles for the question image */
+.question-image-container {
+  margin: 15px 0;
+  text-align: center;
+}
+
+.question-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .question-options {

@@ -21,6 +21,9 @@ import SurveyList from '@/components/survey/SurveyList.vue'
 import SurveyResults from '@/components/survey/SurveyResults.vue'
 import SurveyPreview from '@/components/survey/SurveyPreview.vue'
 import StudentExams from '@/components/student/StudentExams.vue'
+import ActiveUsersMonitor from '@/components/admin/ActiveUsersMonitor.vue'
+import ExamHistory from '@/components/student/ExamHistory.vue'
+import ExamHistoryDetail from '@/components/student/ExamHistoryDetail.vue'
 
 const routes = [
   { 
@@ -137,7 +140,32 @@ const routes = [
     component: StudentExams,
     meta: { requiresAuth: true, roles: ['student'] }
   },
+  {
+    path: '/active-users',
+    name: 'ActiveUsersMonitor',
+    component: ActiveUsersMonitor,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/exam-history',
+    name: 'ExamHistory',
+    component: ExamHistory,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  {
+    path: '/exam-history/:id',
+    name: 'ExamHistoryDetail',
+    component: ExamHistoryDetail,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  {
+    path: '/exam-paper/:examId',
+    name: 'ExamPaperPreview',
+    component: () => import('@/components/teacher/ExamPaperPreview.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
 ];
+
 
 const router = createRouter({
   history: createWebHistory(),

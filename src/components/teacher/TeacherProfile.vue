@@ -54,6 +54,19 @@
             </div>
 
             <div class="form-group">
+              <label>Email</label>
+              <div class="input-wrapper">
+                <span class="material-icons-round">email</span>
+                <input 
+                  v-model="profile.email" 
+                  type="email" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
               <label>Department</label>
               <div class="input-wrapper">
                 <span class="material-icons-round">business</span>

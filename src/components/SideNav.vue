@@ -70,7 +70,7 @@ const navigationItems = {
     { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
     { name: 'Manage Users', path: '/manage-users', icon: 'group' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
-    { name: 'Users List', path: '/users-list', icon: 'list' },
+    { name: 'Active Users', path: '/active-users', icon: 'person_search' },
     { name: 'Profile', path: '/profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
@@ -78,21 +78,22 @@ const navigationItems = {
     { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
-    { name: 'View Results', path: '/view-results', icon: 'bar_chart' },
+   
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
-    { name: 'Profile', path: '/teacher-profile', icon: 'person' },
-    { name: 'Settings', path: '/settings', icon: 'settings' },
-    { name: 'Manage Exams', path: '/manage-exams', icon: 'assignment' },
+    { name: 'Manage Exams', path: '/manage-exams', icon: 'bar_chart' },
     { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
     { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
+    { name: 'Profile', path: '/teacher-profile', icon: 'person' },
+    { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
-    { name: 'View Grades', path: '/grades', icon: 'analytics' },
+    { name: 'Available Exams', path: '/student-exams', icon: 'assignment' },
+    { name: 'View Scores', path: '/grades', icon: 'analytics' },
     { name: 'Profile', path: '/student-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
-    { name: 'Available Exams', path: '/student-exams', icon: 'assignment' },
+    { name: 'Exam History', path: '/exam-history', icon: 'history' },
   ]
 };
 
@@ -160,6 +161,8 @@ const handleLogout = async () => {
   top: 0;
   left: 0;
   z-index: 100;
+  border-top-right-radius: 20px;
+  border-bottom-right-radius: 20px;
 }
 
 .sidenav.collapsed {

@@ -1,5 +1,5 @@
 <template>
-    <div class="manage-exam-container">
+    <div class="manage-exam-container" :key="componentKey">
       <div class="header">
         <h1>Manage Exam</h1>
         <p class="subtitle">Monitor and control your exam session</p>
@@ -130,7 +130,7 @@
   </template>
   
   <script>
-  import { startExam, stopExam } from '@/services/authService';
+  import { startExam, stopExam, fetchExamQuestions } from '@/services/authService';
   import socketManager from '@/utils/socketManager';
   import Swal from 'sweetalert2';
   import ExamProgressModal from './ExamProgressModal.vue';
@@ -148,10 +148,12 @@
         socket: null,
         showExamControls: false,
         exam: null,
+        loading: false,
         colors: [
           '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
           '#9C27B0', '#009688', '#673AB7', '#F44336'
-        ]
+        ],
+        componentKey: 0
       };
     },
     watch: {
@@ -174,11 +176,13 @@
           
           // Set up socket event listeners
           this.socket.on('studentJoined', (students) => {
+            console.log('Students joined event received:', students);
             // Filter out the teacher from the students list
             this.students = students.filter(student => student.role !== 'teacher');
           });
           
           this.socket.on('studentLeft', (students) => {
+            console.log('Students left event received:', students);
             // Filter out the teacher from the students list
             this.students = students.filter(student => student.role !== 'teacher');
           });
@@ -190,6 +194,7 @@
           });
 
           this.socket.on('examStatusUpdate', ({ status }) => {
+            console.log('Exam status update received:', status);
             if (this.exam) {
               this.exam.status = status;
             }
@@ -201,20 +206,73 @@
           this.error = "Please enter a test code";
           return;
         }
-  
+        
+        // Show loading indicator
+        this.loading = true;
+        Swal.fire({
+          title: 'Connecting...',
+          text: 'Please wait while we connect to the exam session',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
         this.error = null;
-        const userId = localStorage.getItem("userId");
-  
-        if (userId) {
-          this.socket.emit('joinExam', { 
-            testCode: this.testCode, 
-            userId,
-            role: 'teacher' // Specify role as teacher
-          });
-          this.showExamControls = true;
-          localStorage.setItem("testCode", this.testCode);
-        } else {
-          this.error = "User ID not found. Please log in again.";
+        
+        try {
+          // First fetch the exam details to ensure it exists
+          const examDetails = await fetchExamQuestions(this.testCode);
+          this.exam = examDetails.exam;
+          
+          const userId = localStorage.getItem("userId");
+          
+          if (userId) {
+            // Ensure we have a clean socket connection
+            if (this.socket) {
+              // Clean up existing listeners
+              this.socket.off('studentJoined');
+              this.socket.off('studentLeft');
+              this.socket.off('examProgressUpdate');
+              this.socket.off('examStatusUpdate');
+            }
+            
+            // Reinitialize socket to ensure fresh connection
+            this.socket = null;
+            this.initializeSocket();
+            
+            console.log('Joining exam as teacher:', this.testCode, userId);
+            
+            // Join the exam with a short delay to ensure socket is ready
+            setTimeout(() => {
+              this.socket.emit('joinExam', { 
+                testCode: this.testCode, 
+                userId,
+                role: 'teacher' // Specify role as teacher
+              });
+              
+              this.showExamControls = true;
+              localStorage.setItem("testCode", this.testCode);
+              
+              // Close loading dialog
+              Swal.close();
+              this.loading = false;
+              
+              // Force component refresh
+              this.componentKey += 1;
+            }, 500);
+          } else {
+            this.error = "User ID not found. Please log in again.";
+            Swal.close();
+            this.loading = false;
+          }
+        } catch (error) {
+          console.error('Error joining exam:', error);
+          this.error = error.message || "Failed to join exam session";
+          Swal.close();
+          this.loading = false;
         }
       },
       async startExam() {
@@ -341,7 +399,7 @@
   
   <style scoped>
   .manage-exam-container {
-    max-width: 1200px;
+      max-width: auto;
     margin: 0 auto;
     padding: 2rem;
     font-family: 'Inter', sans-serif;

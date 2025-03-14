@@ -118,6 +118,38 @@
                   ></textarea>
                 </div>
                 
+                <!-- Add image upload section -->
+                <div class="form-group image-upload-section">
+                  <label>Question Image (Optional)</label>
+                  <div class="image-upload-container">
+                    <div v-if="question.imageUrl" class="image-preview">
+                      <img :src="getImageUrl(question.imageUrl)" alt="Question image" />
+                      <button 
+                        type="button" 
+                        class="remove-image-btn" 
+                        @click="removeImage(question)"
+                        title="Remove image"
+                      >
+                        <span class="material-icons-round">close</span>
+                      </button>
+                    </div>
+                    <div v-else class="upload-placeholder">
+                      <input 
+                        type="file" 
+                        :id="`question-${index}-image`" 
+                        @change="(e) => handleImageUpload(e, question)"
+                        accept="image/*"
+                        class="file-input"
+                      />
+                      <label :for="`question-${index}-image`" class="upload-label">
+                        <span class="material-icons-round">add_photo_alternate</span>
+                        <span>Upload Image</span>
+                      </label>
+                    </div>
+                  </div>
+                  <small>Supported formats: JPG, PNG, GIF (max 5MB)</small>
+                </div>
+                
                 <div class="question-type-selector">
                   <label>Question Type</label>
                   <div class="type-buttons">
@@ -292,7 +324,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { createExam, fetchTeacherExams, updateExam } from '../../services/authService';
+import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl } from '../../services/authService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -352,7 +384,8 @@ export default {
               text: q.questionText,
               type: q.questionType,
               options: Array.isArray(q.options) ? q.options : [],
-              correctAnswer: q.correctAnswer
+              correctAnswer: q.correctAnswer,
+              imageUrl: q.imageUrl || null // Add imageUrl from loaded question
             }));
           }
         } catch (error) {
@@ -361,6 +394,95 @@ export default {
         }
       }
     });
+
+    // Handle image upload
+    const handleImageUpload = async (event, question) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire('Error', 'Image size should not exceed 5MB', 'error');
+        return;
+      }
+      
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        Swal.fire('Error', 'Only JPG, PNG, and GIF images are supported', 'error');
+        return;
+      }
+      
+      try {
+        // Show loading indicator
+        Swal.fire({
+          title: 'Uploading...',
+          text: 'Please wait while we upload your image',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+        
+        // Create an image element to resize the image
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+        
+        img.onload = async () => {
+          try {
+            // Create a canvas to resize the image
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Calculate new dimensions (max width/height of 800px)
+            const MAX_SIZE = 800;
+            let width = img.width;
+            let height = img.height;
+            
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height = Math.round(height * (MAX_SIZE / width));
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width = Math.round(width * (MAX_SIZE / height));
+                height = MAX_SIZE;
+              }
+            }
+            
+            // Resize the image
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Get the resized image as base64 with reduced quality
+            const resizedImage = canvas.toDataURL('image/jpeg', 0.7); // 70% quality
+            
+            // Use the service to upload the image
+            const data = await uploadImage(resizedImage);
+            // Store the image URL returned by the server
+            question.imageUrl = data.imageUrl;
+            Swal.close();
+          } catch (error) {
+            console.error('Image upload error:', error);
+            Swal.fire('Error', 'Failed to upload image', 'error');
+          }
+        };
+        
+        img.onerror = () => {
+          Swal.fire('Error', 'Failed to process image', 'error');
+        };
+      } catch (error) {
+        console.error('Image upload error:', error);
+        Swal.fire('Error', 'Failed to upload image', 'error');
+      }
+    };
+    
+    // Remove image from question
+    const removeImage = (question) => {
+      question.imageUrl = null;
+    };
 
     const handleSubmit = async () => {
       await submitExam(false);
@@ -392,7 +514,8 @@ export default {
           options: q.type === 'true_false' ? ['true', 'false'] : 
                    q.type === 'enumeration' ? [] : 
                    q.options,
-          correctAnswer: q.correctAnswer
+          correctAnswer: q.correctAnswer,
+          imageUrl: q.imageUrl // Include imageUrl in formatted questions
         }));
 
         if (isEditing.value) {
@@ -486,7 +609,8 @@ export default {
         text: '',
         type: 'multipleChoice',
         options: ['', '', '', ''], // Initialize with empty options
-        correctAnswer: ''
+        correctAnswer: '',
+        imageUrl: null // Initialize with no image
       };
       questions.value.push(newQuestion);
     };
@@ -594,6 +718,10 @@ export default {
       questions.value = [];
     };
 
+    const getImageUrl = (imageUrl) => {
+      return getFullImageUrl(imageUrl);
+    };
+
     return {
       examData,
       questions,
@@ -609,7 +737,10 @@ export default {
       handleSubmit,
       saveAsDraft,
       resetForm,
-      handleQuestionTypeChange
+      handleQuestionTypeChange,
+      handleImageUpload,
+      removeImage,
+      getImageUrl
     };
   }
 };
@@ -1305,5 +1436,105 @@ small {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Add these new styles for image upload */
+.image-upload-section {
+  margin-bottom: 20px;
+}
+
+.image-upload-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 150px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  background-color: #f9f9f9;
+  transition: all 0.3s;
+}
+
+.image-upload-container:hover {
+  border-color: #4CAF50;
+  background-color: #f0f9f0;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+}
+
+.file-input {
+  position: absolute;
+  width: 0.1px;
+  height: 0.1px;
+  opacity: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 15px;
+  color: #4CAF50;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.upload-label:hover {
+  color: #2E7D32;
+}
+
+.upload-label .material-icons-round {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(244, 67, 54, 0.8);
 }
 </style>

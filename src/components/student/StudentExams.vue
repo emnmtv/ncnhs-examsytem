@@ -304,7 +304,7 @@ export default {
 <style scoped>
 .student-exams-container {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
 }
 

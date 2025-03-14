@@ -1,5 +1,6 @@
-// const BASE_URL = 'http://localhost:3300/auth';
-const BASE_URL = 'http://192.168.0.104:3300/auth';
+// Export the BASE_URL at the top of the file
+export const BASE_URL = 'http://192.168.0.104:3300/auth';
+
 // Helper function to decode JWT token
 const decodeToken = (token) => {
   try {
@@ -30,7 +31,7 @@ export const loginUser = async (email, lrn, password) => {
       throw new Error(errorData.error || "Login failed");
     }
 
-    const {  token } = await response.json();
+    const { token } = await response.json();
     console.log('AuthService: Login successful');
 
     // Store the token
@@ -38,13 +39,27 @@ export const loginUser = async (email, lrn, password) => {
 
     // Decode and store user info from token
     const payload = decodeToken(token);
-    console.log('AuthService: Decoded token payload:', payload); // Debug log
+    console.log('AuthService: Decoded token payload:', payload);
 
     if (payload) {
       localStorage.setItem("userId", payload.userId.toString());
       localStorage.setItem("userRole", payload.role);
       
-      // //helloReturn both token and decoded info
+      // Use synchronous require to avoid issues
+      const socketManager = require('@/utils/socketManager').default;
+      
+      // Initialize socket and emit login event
+      socketManager.emitUserLogin(payload.userId, payload.role);
+      
+      // Set up heartbeat interval
+      const heartbeatInterval = setInterval(() => {
+        socketManager.sendActivityHeartbeat(payload.userId);
+      }, 60000); // Send heartbeat every minute
+      
+      // Store interval ID for cleanup on logout
+      localStorage.setItem("heartbeatInterval", heartbeatInterval);
+      
+      // Return both token and decoded info
       return {
         token,
         userId: payload.userId,
@@ -186,7 +201,8 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
         questionText: q.questionText,
         questionType: q.questionType,
         options: options,
-        correctAnswer: q.correctAnswer
+        correctAnswer: q.correctAnswer,
+        imageUrl: q.imageUrl || null  // Include imageUrl in the question data
       };
     });
 
@@ -327,15 +343,40 @@ export const stopExam = async (testCode) => {
 // Auth helper functions
 export const logout = () => {
   try {
-    // Clear all authentication-related items from localStorage
-    localStorage.removeItem('jwtToken');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('testCode');
-    // Clear any other app-specific storage items
-    localStorage.clear(); // This will clear everything
+    // Get userId before clearing storage
+    const userId = localStorage.getItem("userId");
     
-    console.log('AuthService: User logged out successfully');
+    // Clear heartbeat interval
+    const heartbeatInterval = localStorage.getItem("heartbeatInterval");
+    if (heartbeatInterval) {
+      clearInterval(Number(heartbeatInterval));
+    }
+    
+    // Import the socket manager synchronously
+    const socketManager = require('@/utils/socketManager').default;
+    
+    // Emit logout event if we have a userId
+    if (userId) {
+      console.log('Logging out user:', userId);
+      socketManager.emitUserLogout(userId);
+    }
+    
+    // Disconnect the socket
+    socketManager.disconnect();
+    
+    // Add a small delay to ensure the socket events are sent
+    setTimeout(() => {
+      // Clear all authentication-related items from localStorage
+      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('testCode');
+      localStorage.removeItem('heartbeatInterval');
+      // Clear any other app-specific storage items
+      localStorage.clear();
+      
+      console.log('AuthService: User logged out successfully');
+    }, 500);
   } catch (error) {
     console.error('AuthService: Error during logout:', error);
     throw error;
@@ -546,30 +587,53 @@ export const fetchStudentScores = async (studentId, examId) => {
 };
 
 /**
- * Fetch all exams created by the logged-in teacher
+ * Fetch the exams created by the current teacher
  */
 export const fetchTeacherExams = async () => {
   try {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) throw new Error("No token found");
-
     const response = await fetch(`${BASE_URL}/teacher-exams`, {
-      method: "GET",
       headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
       }
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to fetch teacher exams");
+      throw new Error(errorData.error || 'Failed to fetch exams');
     }
 
-    const { exams } = await response.json();
-    return exams;
+    const data = await response.json();
+    
+    // Process the exam data to ensure options are parsed and image URLs are prepared
+    const processedExams = data.exams.map(exam => {
+      // Process questions to ensure options are properly formatted
+      if (exam.questions) {
+        exam.questions = exam.questions.map(question => {
+          // Ensure options are parsed from JSON if needed
+          if (question.options && typeof question.options === 'string') {
+            try {
+              question.options = JSON.parse(question.options);
+            } catch (e) {
+              console.error('Error parsing options for question:', question.id, e);
+              question.options = [];
+            }
+          }
+          
+          // Ensure image URLs are properly formatted
+          if (question.imageUrl) {
+            question.imageUrl = getFullImageUrl(question.imageUrl);
+          }
+          
+          return question;
+        });
+      }
+      
+      return exam;
+    });
+    
+    return processedExams;
   } catch (error) {
-    console.error("AuthService: Teacher exams fetch error:", error);
+    console.error('Error fetching teacher exams:', error);
     throw error;
   }
 };
@@ -598,7 +662,8 @@ export const updateExam = async (examId, examData) => {
           questionText: q.questionText,
           questionType: q.questionType,
           options: q.questionType === 'enumeration' ? [] : (q.options || []),
-          correctAnswer: q.correctAnswer
+          correctAnswer: q.correctAnswer,
+          imageUrl: q.imageUrl || null  // Include imageUrl in the question data
         }))
       })
     });
@@ -1074,6 +1139,84 @@ export const getAllExams = async () => {
     return await response.json();
   } catch (error) {
     console.error('Get all exams error:', error);
+    throw error;
+  }
+};
+
+// Add this function to your authService.js
+export const uploadImage = async (imageData) => {
+  try {
+    const response = await fetch(`${BASE_URL}/upload-image`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ image: imageData })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Image upload error:', error);
+    throw error;
+  }
+};
+
+// Add this utility function
+export const getFullImageUrl = (imageUrl) => {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http')) return imageUrl;
+  // Remove '/auth' from BASE_URL since image paths are relative to the server root
+  const serverUrl = BASE_URL.replace('/auth', '');
+  return `${serverUrl}${imageUrl}`;
+};
+
+// Add this function to fetch available sections
+export const getAvailableSections = async (grade) => {
+  try {
+    const url = grade 
+      ? `${BASE_URL}/available-sections?grade=${grade}`
+      : `${BASE_URL}/available-sections`;
+      
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch available sections');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get available sections error:', error);
+    throw error;
+  }
+};
+
+// Update the fetch student exam history function to use fetch instead of axios
+export const getStudentExamHistory = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/student-exam-history`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch exam history');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching student exam history:', error);
     throw error;
   }
 };

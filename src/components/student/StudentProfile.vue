@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import { fetchUserProfile, updateProfile } from '@/services/authService';
+import { ref, onMounted, watch } from 'vue';
+import { fetchUserProfile, updateProfile, getAvailableSections } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -18,6 +18,7 @@ const profile = ref({
 
 const loading = ref(true);
 const isEditing = ref(false);
+const availableSections = ref([]);
 
 onMounted(async () => {
   await loadProfile();
@@ -28,6 +29,10 @@ const loadProfile = async () => {
     loading.value = true;
     const data = await fetchUserProfile();
     profile.value = data;
+    if (data.gradeLevel) {
+      const response = await getAvailableSections(data.gradeLevel);
+      availableSections.value = response.sections;
+    }
   } catch (err) {
     Swal.fire({
       icon: 'error',
@@ -96,6 +101,20 @@ const toggleEditMode = () => {
     isEditing.value = true;
   }
 };
+
+// Load available sections when grade level changes
+watch(() => profile.value.gradeLevel, async (newGrade) => {
+  if (newGrade) {
+    try {
+      const response = await getAvailableSections(newGrade);
+      availableSections.value = response.sections;
+    } catch (error) {
+      console.error('Failed to load sections:', error);
+    }
+  } else {
+    availableSections.value = [];
+  }
+});
 </script>
 
 <template>
@@ -154,6 +173,19 @@ const toggleEditMode = () => {
             </div>
 
             <div class="form-group">
+              <label>Email</label>
+              <div class="input-wrapper">
+                <span class="material-icons-round">email</span>
+                <input 
+                  v-model="profile.email" 
+                  type="email" 
+                  :readonly="!isEditing"
+                  :class="{ 'editable': isEditing }"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
               <label>LRN</label>
               <div class="input-wrapper">
                 <span class="material-icons-round">numbers</span>
@@ -188,13 +220,20 @@ const toggleEditMode = () => {
               <label>Section</label>
               <div class="input-wrapper">
                 <span class="material-icons-round">groups</span>
-                <input 
+                <select 
                   v-model="profile.section" 
-                  type="text" 
-                  :readonly="!isEditing"
+                  :disabled="!isEditing || !profile.gradeLevel"
                   :class="{ 'editable': isEditing }"
-                  placeholder="Enter your section"
-                />
+                >
+                  <option value="" disabled>Select a section</option>
+                  <option 
+                    v-for="section in availableSections" 
+                    :key="section.id" 
+                    :value="section.section"
+                  >
+                    {{ section.section }}
+                  </option>
+                </select>
               </div>
             </div>
 

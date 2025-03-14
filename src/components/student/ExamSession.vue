@@ -36,8 +36,8 @@
       <p class="error-message">{{ error }}</p>
     </div>
     
-    <!-- Score Results -->
-    <div v-if="scoreResult" class="score-result">
+    <!-- Score Results - only show if user chose to view them -->
+    <div v-if="scoreResult && showResults" class="score-result">
       <div class="score-card">
         <h2>Your Score</h2>
         <div class="score-display">
@@ -53,11 +53,28 @@
       </div>
     </div>
     
+    <!-- Submitted but not viewing results message -->
+    <div v-else-if="examSubmitted && !showResults" class="waiting-container">
+      <div class="waiting-icon">
+        <i class="fas fa-check-circle" style="color: #4CAF50;"></i>
+      </div>
+      <p>Your exam has been submitted successfully.</p>
+      <div class="action-buttons">
+        <button @click="showResults = true" class="view-results-btn">View Results</button>
+        <button @click="quitExam" class="return-btn">Return to Exam Details</button>
+      </div>
+    </div>
+    
     <!-- Question Display -->
     <div v-else-if="exam && exam.questions && currentQuestionIndex !== null && !scoreResult" class="question-container">
       <div class="question-card">
         <div class="question-text">
           <h3>{{ currentQuestionIndex + 1 }}. {{ currentQuestion.questionText }}</h3>
+        </div>
+        
+        <!-- Add this after the question text -->
+        <div v-if="currentQuestion.imageUrl" class="question-image">
+          <img :src="getImageUrl(currentQuestion.imageUrl)" alt="Question image" />
         </div>
         
         <div class="answer-container">
@@ -137,7 +154,7 @@
 </template>
 
 <script>
-import { fetchExamQuestions, submitExamAnswers } from '@/services/authService';
+import { fetchExamQuestions, submitExamAnswers, getFullImageUrl } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import Swal from 'sweetalert2';
 
@@ -159,6 +176,9 @@ export default {
       currentQuestionIndex: this.loadCurrentIndex() || null,
       shuffledQuestions: this.loadShuffledQuestions() || [],
       socket: null,
+      examSubmitted: false,
+      showResults: false,
+      isSubmitting: false
     };
   },
   computed: {
@@ -349,8 +369,15 @@ export default {
     },
     
     async submitAnswers() {
+      // Prevent multiple simultaneous submissions
+      if (this.isSubmitting || this.examSubmitted) {
+        console.log('Submission already in progress or already submitted, ignoring duplicate request');
+        return;
+      }
+      
+      this.isSubmitting = true;
+      
       try {
-        // Remove the check for empty answers
         this.error = null;
         const answerData = {
           testCode: this.testCode,
@@ -360,75 +387,89 @@ export default {
           })),
         };
         
-        // Show submitting notification
-        Swal.fire({
-          title: 'Submitting...',
-          text: 'Please wait while your answers are being submitted',
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-          showConfirmButton: false,
-          didOpen: () => {
-            Swal.showLoading();
-          }
-        });
-
+        console.log('Submitting exam answers...');
         const response = await submitExamAnswers(answerData);
         
-        // Store the score result
+        // Store the score result but don't show it yet
         this.scoreResult = response.score;
+        this.examSubmitted = true;
+        this.showResults = false; // Explicitly set to not show results
         
         // Clear saved exam state after successful submission
         this.clearExamState();
         
-        // Show success message before emitting event
-        await Swal.fire({
-          title: 'Answers Submitted!',
-          text: `Your score: ${response.score.percentage}%`,
+        // Make sure we only close any existing alerts
+        if (Swal.isVisible()) {
+          console.log('Closing any existing alerts');
+          Swal.close();
+        }
+        
+        // Add a small delay before showing the options alert
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Show the score options dialog
+        const result = await Swal.fire({
+          title: 'Exam Submitted!',
+          text: 'Your exam has been submitted successfully.',
           icon: 'success',
-          confirmButtonText: 'OK',
-          allowOutsideClick: false
+          showCancelButton: true,
+          confirmButtonColor: '#4CAF50',
+          cancelButtonColor: '#2196F3',
+          confirmButtonText: 'View Results',
+          cancelButtonText: 'Return to Exam Details'
         });
         
-        // Emit an event to notify parent component
+        // Emit an event to notify parent component about the submission
         this.$emit('answers-submitted', this.scoreResult);
+        
+        // Set showResults based on user choice
+        if (result.isConfirmed) {
+          console.log('User chose to view detailed results');
+          this.showResults = true;
+        } else {
+          console.log('User chose to return to exam details');
+          this.quitExam();
+        }
+        
+        console.log('Exam submitted successfully.');
       } catch (err) {
+        console.error('Error submitting exam:', err);
         this.error = err.message;
         
+        // Make sure we only close the loading alert if it's still open
+        if (Swal.isVisible()) {
+          console.log('Closing submission loading alert due to error');
+          Swal.close();
+        }
+        
+        // Add a small delay before showing the error alert
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Show a more specific error message for the auto-submit case
         Swal.fire({
-          title: 'Error',
-          text: err.message || 'Failed to submit answers',
+          title: 'Submission Error',
+          text: 'There was a problem submitting your exam. Your responses have been saved locally. Please try manually submitting again or contact your teacher.',
           icon: 'error',
           confirmButtonText: 'OK'
-        }).then(() => {
-          if (this.exam?.status === 'stopped') {
-            this.clearExamState();
-            this.$emit('quit-exam');
-          }
         });
+      } finally {
+        // Always reset the submission flag when done
+        this.isSubmitting = false;
       }
     },
     
     quitExam() {
-      if (!this.scoreResult) {
-        Swal.fire({
-          title: 'Are you sure?',
-          text: "You'll lose your progress if you haven't submitted.",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#4CAF50',
-          cancelButtonColor: '#f44336',
-          confirmButtonText: 'Yes, quit exam',
-          cancelButtonText: 'Stay on exam'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            this.clearExamState();
-            this.$emit('quit-exam');
-          }
-        });
-      } else {
-        this.clearExamState();
-        this.$emit('quit-exam');
+      // Only leave the socket room if we're quitting before submission
+      // If the exam is already submitted, we don't need to quit the socket
+      if (this.socket && !this.examSubmitted) {
+        this.socket.emit('quitExam', { testCode: this.testCode });
       }
+      
+      // Clear saved state
+      this.clearExamState();
+      
+      // Emit event to parent component
+      this.$emit('quit-exam');
     },
     
     getScoreClass(percentage) {
@@ -498,88 +539,106 @@ export default {
           userId: localStorage.getItem('userId')
         });
 
-        // Handle exam status updates
+        // Listen for exam status updates
         this.socket.on('examStatusUpdate', ({ status }) => {
-          console.log('Received exam status update:', status);
+          console.log('Exam status update received:', status);
           if (this.exam) {
             this.exam.status = status;
-            
-            if (status === 'started') {
-              this.fetchExam();
-            } else if (status === 'stopped') {
-              console.log('Exam stopped via status update');
-              this.handleExamStopped();
-            }
           }
         });
 
-        // Handle direct stop event
+        // Listen for exam stopped event
         this.socket.on('examStopped', () => {
-          console.log('Received direct stop signal');
-          if (this.exam && !this.scoreResult) {  // Only show if exam is active
-            this.handleExamStopped();
+          console.log('Exam stopped event received');
+          if (this.exam) {
+            this.exam.status = 'stopped';
+          }
+
+          // Replace the blocking SweetAlert with a non-blocking toast notification
+          const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 10000, // Show for 10 seconds
+            timerProgressBar: true
+          });
+          
+          Toast.fire({
+            icon: 'warning',
+            title: 'Exam has been stopped by the teacher',
+            text: 'You can review your answers before submitting.'
+          });
+          
+          // Only set up auto-submit if not already submitted
+          if (!this.examSubmitted && !this.isSubmitting) {
+            // Auto-submit after 60 seconds with a countdown toast
+            let remainingTime = 60;
+            
+            // Create a countdown toast that doesn't block interaction
+            const countdownToast = Swal.mixin({
+              toast: true,
+              position: 'top-end', // Changed to top-end
+              showConfirmButton: false,
+              timer: 60000, // 60 seconds
+              timerProgressBar: true,
+              didOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer);
+                toast.addEventListener('mouseleave', Swal.resumeTimer);
+                
+                // Update the countdown every second
+                const countdownInterval = setInterval(() => {
+                  // Check if already submitted before updating countdown
+                  if (this.examSubmitted || this.isSubmitting) {
+                    clearInterval(countdownInterval);
+                    Swal.close();
+                    return;
+                  }
+                  
+                  remainingTime--;
+                  if (remainingTime <= 0) {
+                    clearInterval(countdownInterval);
+                  } else {
+                    const countdownEl = toast.querySelector('.countdown-text');
+                    if (countdownEl) {
+                      countdownEl.textContent = `Auto-submitting in ${remainingTime} seconds`;
+                    }
+                  }
+                }, 1000);
+              }
+            });
+            
+            countdownToast.fire({
+              icon: 'info',
+              title: `Auto-submitting in ${remainingTime} seconds`,
+              html: `<div class="countdown-text">Auto-submitting in ${remainingTime} seconds</div>
+                     <button id="submit-now-btn" class="swal2-confirm swal2-styled" style="display: inline-block; margin-top: 10px;">Submit Now</button>`,
+              didOpen: (toast) => {
+                // Add click handler for the submit now button
+                const submitBtn = toast.querySelector('#submit-now-btn');
+                if (submitBtn) {
+                  submitBtn.addEventListener('click', () => {
+                    if (!this.examSubmitted && !this.isSubmitting) {
+                      Swal.close();
+                      this.submitAnswers();
+                    }
+                  });
+                }
+              }
+            });
+            
+            // Set a timeout to auto-submit
+            setTimeout(() => {
+              // Only submit if not already submitted and not currently submitting
+              if (!this.examSubmitted && !this.isSubmitting) {
+                console.log('Auto-submitting exam after timeout...');
+                this.submitAnswers();
+              } else {
+                console.log('Skipping auto-submit: exam already submitted or submission in progress');
+              }
+            }, 60000);
           }
         });
       }
-    },
-
-    handleExamStopped() {
-      // Prevent multiple popups
-      if (Swal.isVisible()) return;
-      
-      console.log('Showing exam stop dialog');
-      Swal.fire({
-        title: 'Exam Ended',
-        text: 'The teacher has ended the exam. Please submit your answers now.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#4CAF50',
-        cancelButtonColor: '#f44336',
-        confirmButtonText: 'Submit Answers',
-        cancelButtonText: 'Review Answers',
-        allowOutsideClick: false,
-        allowEscapeKey: false
-      }).then((result) => {
-        if (result.isConfirmed) {
-          this.submitAnswers();
-        } else {
-          // Show a timer notification that answers will be auto-submitted
-          let timeLeft = 60;
-          const timerInterval = setInterval(() => {
-            timeLeft -= 1;
-            if (Swal.isVisible()) {
-              Swal.update({
-                title: 'Final Review',
-                text: `Your answers will be automatically submitted in ${timeLeft} seconds`,
-                showConfirmButton: true,
-                confirmButtonText: 'Submit Now'
-              });
-            }
-
-            if (timeLeft <= 0) {
-              clearInterval(timerInterval);
-              this.submitAnswers(); // Will now submit even with no answers
-            }
-          }, 1000);
-
-          Swal.fire({
-            title: 'Final Review',
-            text: `You have ${timeLeft} seconds to review your answers`,
-            icon: 'info',
-            timer: timeLeft * 1000,
-            timerProgressBar: true,
-            showConfirmButton: true,
-            confirmButtonText: 'Submit Now',
-            allowOutsideClick: false,
-            allowEscapeKey: false
-          }).then((result) => {
-            clearInterval(timerInterval);
-            if (result.isConfirmed || result.dismiss === Swal.DismissReason.timer) {
-              this.submitAnswers(); // Will now submit even with no answers
-            }
-          });
-        }
-      });
     },
 
     emitProgress() {
@@ -598,6 +657,11 @@ export default {
         userId: localStorage.getItem('userId'),
         progress
       });
+    },
+
+    // Replace the getImageUrl method
+    getImageUrl(imageUrl) {
+      return getFullImageUrl(imageUrl);
     },
   }
 };
@@ -720,6 +784,18 @@ export default {
   font-size: 1.3rem;
   font-weight: 500;
   line-height: 1.5;
+}
+
+.question-image {
+  margin: 15px 0;
+  text-align: center;
+}
+
+.question-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .answer-container {
@@ -960,7 +1036,7 @@ export default {
 
 .return-btn {
   padding: 12px 24px;
-  background-color: #f44336;
+  background-color: #2196F3;
   color: white;
   border: none;
   border-radius: 8px;
@@ -972,7 +1048,7 @@ export default {
 }
 
 .return-btn:hover {
-  background-color: #d32f2f;
+  background-color: #1976D2;
 }
 
 @media (min-width: 768px) {
@@ -1006,5 +1082,28 @@ export default {
     width: 100%;
     justify-content: center;
   }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.view-results-btn {
+  padding: 12px 24px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.view-results-btn:hover {
+  background-color: #43A047;
 }
 </style> 

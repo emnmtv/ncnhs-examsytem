@@ -1,10 +1,10 @@
 <template>
-  <div class="take-exam-container">
+  <div class="take-exam-container" :key="componentKey">
     <!-- Exam Session View -->
     <exam-session 
       v-if="showExamSession" 
       :test-code="testCode"
-      @quit-exam="showExamSession = false"
+      @quit-exam="handleQuitExam"
       @answers-submitted="handleAnswersSubmitted"
     />
     
@@ -103,7 +103,7 @@
 </template>
 
 <script>
-import { fetchExamQuestions } from '@/services/authService';
+import { fetchExamQuestions, getFullImageUrl } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import ExamSession from './ExamSession.vue';
 import Swal from 'sweetalert2';
@@ -125,7 +125,9 @@ export default {
         '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
         '#9C27B0', '#009688', '#673AB7', '#F44336'
       ],
-      hasExamInProgress: false
+      hasExamInProgress: false,
+      examScore: null,
+      componentKey: 0
     };
   },
   watch: {
@@ -335,11 +337,25 @@ export default {
     
     handleAnswersSubmitted(scoreResult) {
       console.log('Answers submitted successfully, score:', scoreResult);
-      Swal.fire({
-        title: 'Success!',
-        text: `Your answers have been submitted successfully. You scored ${scoreResult.percentage}%`,
+      
+      // Store the score for reference
+      this.examScore = scoreResult;
+      
+      // DON'T reset anything here - let the user view their results
+      // The user will explicitly call quitExam when they're ready
+      
+      // Just show a small notification that submission was successful
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+      
+      Toast.fire({
         icon: 'success',
-        confirmButtonText: 'OK'
+        title: `Answers submitted! Score: ${scoreResult.percentage}%`
       });
     },
     
@@ -371,6 +387,77 @@ export default {
       
       // Capitalize first letter
       return status.charAt(0).toUpperCase() + status.slice(1);
+    },
+    
+    getImageUrl(imageUrl) {
+      return getFullImageUrl(imageUrl);
+    },
+    
+    handleQuitExam() {
+      console.log('User quit exam session, refreshing component...');
+      
+      // Show loading SweetAlert
+      Swal.fire({
+        title: 'Reconnecting...',
+        text: 'Please wait while your session refreshes',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      // First, mark exam session as not showing
+      this.showExamSession = false;
+      
+      // Force component to re-render by changing the key
+      this.componentKey += 1;
+      
+      // Clean up current socket event listeners
+      if (this.socket) {
+        this.socket.off('examStatusUpdate');
+        this.socket.off('studentJoined');
+        this.socket.off('studentLeft');
+        
+        // Disconnect and reconnect the socket completely
+        socketManager.disconnect();
+        setTimeout(() => {
+          this.socket = null;
+          this.initializeSocket();
+          
+          // If we have an exam, re-join the room after a short delay
+          if (this.exam && this.testCode) {
+            setTimeout(() => {
+              const userId = localStorage.getItem("userId");
+              if (userId) {
+                console.log(`Re-joining exam room: ${this.testCode} with user ID: ${userId}`);
+                this.socket.emit('joinExam', { testCode: this.testCode, userId });
+              }
+              
+              // Re-fetch exam details to ensure everything is up to date
+              this.fetchExamQuestions();
+              
+              // Close the loading SweetAlert after everything is done
+              setTimeout(() => {
+                Swal.close();
+              }, 500);
+            }, 500);
+          } else {
+            // Close the loading alert if we don't have an exam to rejoin
+            Swal.close();
+          }
+        }, 500);
+      } else {
+        // Close the loading alert if there's no socket
+        Swal.close();
+      }
+      
+      // Reset exam progress flag
+      this.hasExamInProgress = false;
+      
+      // Also reset the students array to ensure it's freshly populated
+      this.students = [];
     }
   },
   beforeUnmount() {
@@ -666,5 +753,17 @@ export default {
 
 .uppercase-input::placeholder {
   text-transform: none;
+}
+
+.question-image {
+  margin: 15px 0;
+  text-align: center;
+}
+
+.question-image img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 </style> 

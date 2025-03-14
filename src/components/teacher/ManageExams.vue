@@ -148,6 +148,14 @@
             <span class="material-icons-round">security</span>
             Manage Access
           </button>
+
+          <button 
+            @click="viewPrintableExam(exam)" 
+            class="paper-btn"
+            title="View printable exam"
+          >
+            <i class="fas fa-file-alt"></i> Paper View
+          </button>
         </div>
       </div>
     </div>
@@ -727,6 +735,10 @@ export default {
       }
     };
 
+    const viewPrintableExam = (exam) => {
+      router.push(`/exam-paper/${exam.id}`);
+    };
+
     // Clean up socket listeners on component unmount
     onUnmounted(() => {
       if (socket.value) {
@@ -777,7 +789,8 @@ export default {
       addAccessSection,
       removeAccessSection,
       saveAccessSettings,
-      isClosing
+      isClosing,
+      viewPrintableExam
     };
   }
 };
@@ -786,7 +799,7 @@ export default {
 <style scoped>
 .manage-exams {
   padding: 2rem;
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
 }
 
@@ -1617,6 +1630,15 @@ input:checked + .slider:before {
 .action-btn.access-btn:hover {
   background: #5e35b1;
   transform: translateY(-2px);
+}
+
+.paper-btn {
+  background: #9C27B0;
+  color: white;
+}
+
+.paper-btn:hover {
+  background: #7B1FA2;
 }
 
 @media (max-width: 768px) {
