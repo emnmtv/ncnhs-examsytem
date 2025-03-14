@@ -2,7 +2,8 @@
   <div class="app-container" :class="{ 'nav-collapsed': isNavCollapsed, 'no-nav': !showSidebar }">
     <!-- Show sidebar only if not on login or register page -->
     <Sidenav v-if="showSidebar" @nav-toggle="handleNavToggle" />
-    <div class="content" :class="{ 'full-width': !showSidebar }">
+    <TopBar v-if="showSidebar" />
+    <div class="content" :class="{ 'full-width': !showSidebar, 'with-topbar': showSidebar }">
       <router-view />
     </div>
   </div>
@@ -10,12 +11,14 @@
 
 <script>
 import Sidenav from "./components/SideNav.vue";
+import TopBar from "./components/TopBar.vue";
 import { useRoute } from "vue-router";
 import { computed, ref } from "vue";
 
 export default {
   components: {
     Sidenav,
+    TopBar
   },
   setup() {
     const route = useRoute();
@@ -74,7 +77,12 @@ body {
   transition: all 0.3s ease;
   max-width: 100%;
   overflow-x: hidden;
-  margin-left: 280px;
+  margin-left: 200px;
+}
+
+.content.with-topbar {
+  margin-top: 100px; /* Update to match the 100px height of the top bar */
+  padding-top: 16px; /* Slightly increased padding for better spacing */
 }
 
 .content.full-width {

@@ -1,14 +1,23 @@
 <template>
   <div class="sidenav" :class="{ 'collapsed': isCollapsed }">
-    <div class="logo-section">
-      <img src="../assets/logo.png" alt="Logo" class="logo" />
-      <span v-show="!isCollapsed" class="logo-text">NCNHS</span>
-    </div>
-
     <div class="toggle-btn" @click="toggleNav">
       <span class="material-icons">
-        {{ isCollapsed ? 'chevron_right' : 'chevron_left' }}
+        {{ isCollapsed ? 'menu' : 'menu' }}
       </span>
+    </div>
+    
+    <!-- User Profile Section -->
+    <div class="user-profile" v-if="userProfile">
+      <div class="avatar" v-if="!isCollapsed">
+        <span class="material-icons">account_circle</span>
+      </div>
+      <div class="logo-avatar" v-else>
+        <img src="../assets/logo.png" alt="Logo" class="logo" />
+      </div>
+      <div class="user-info">
+        <div class="user-name">{{ userProfile.firstName }} {{ userProfile.lastName }}</div>
+        <div class="user-role">{{ formatRole(userRole) }}</div>
+      </div>
     </div>
 
     <div class="nav-links">
@@ -28,7 +37,7 @@
       </template>
     </div>
 
-    <button @click="handleLogout" class="logout-btn" :title="isCollapsed ? 'Logout' : ''">
+    <button @click="handleLogout" class="logout-btn" title="Logout">
       <div class="icon-container">
         <span class="material-icons">logout</span>
       </div>
@@ -40,17 +49,26 @@
 <script setup>
 import { ref, onMounted, defineEmits } from 'vue';
 import { useRouter } from 'vue-router';
-import { getUserRole, logout } from '../services/authService';
+import { getUserRole, logout, fetchUserProfile } from '../services/authService';
 import Swal from 'sweetalert2';
 
 const router = useRouter();
 const userRole = ref('');
 const isCollapsed = ref(window.innerWidth <= 768);
+const userProfile = ref(null);
 
 const emit = defineEmits(['nav-toggle']);
 
-onMounted(() => {
+onMounted(async () => {
   userRole.value = getUserRole();
+  
+  // Fetch user profile
+  try {
+    const profileData = await fetchUserProfile();
+    userProfile.value = profileData;
+  } catch (error) {
+    console.error('Failed to load user profile:', error);
+  }
   
   // Handle responsive collapse on window resize
   window.addEventListener('resize', () => {
@@ -59,6 +77,11 @@ onMounted(() => {
     }
   });
 });
+
+const formatRole = (role) => {
+  if (!role) return '';
+  return role.charAt(0).toUpperCase() + role.slice(1);
+};
 
 const toggleNav = () => {
   isCollapsed.value = !isCollapsed.value;
@@ -149,10 +172,10 @@ const handleLogout = async () => {
 
 <style scoped>
 .sidenav {
-  width: 280px;
+  width: 200px;
   height: 100vh;
-  background: #1e1e2d;
-  color: #9899ac;
+  background: #19a759;
+  color: white;
   display: flex;
   flex-direction: column;
   position: fixed;
@@ -169,95 +192,68 @@ const handleLogout = async () => {
   width: 80px;
 }
 
-.logo-section {
-  padding: 24px 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 16px;
-}
-
-.logo {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-}
-
-.logo-text {
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: white;
-  transition: opacity 0.3s ease;
-}
-
-.sidenav.collapsed .logo-text {
-  opacity: 0;
-  width: 0;
-  overflow: hidden;
-}
-
 .toggle-btn {
   position: absolute;
-  right: -12px;
-  top: 32px;
-  background: #009ef7;
-  width: 24px;
-  height: 24px;
+  right: -50px;
+  top: 20px;
+  background: #f0f0f0;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 1;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 158, 247, 0.3);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .toggle-btn:hover {
-  transform: scale(1.1);
-  background: #0095e8;
+  background: #e0e0e0;
 }
 
 .toggle-btn .material-icons {
-  font-size: 18px;
-  color: white;
+  font-size: 24px;
+  color: #333;
 }
 
 .nav-links {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 0 12px;
+  gap: 0;
+  padding: 0;
   overflow-y: auto;
   height: calc(100vh - 180px);
 }
 
 .nav-link {
-  color: #9899ac;
+  color: white;
   text-decoration: none;
-  padding: 12px 16px;
-  border-radius: 6px;
+  padding: 14px 16px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
+  margin: 0;
+  border-left: 3px solid transparent;
 }
 
 .nav-link:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(0, 0, 0, 0.1);
+  border-left: 3px solid white;
 }
 
 .nav-link.router-link-active {
-  background: rgba(0, 158, 247, 0.1);
-  color: #009ef7;
+  background: rgba(0, 0, 0, 0.15);
+  border-left: 3px solid white;
+  font-weight: 600;
 }
 
 .nav-link.router-link-active .material-icons {
-  color: #009ef7;
+  color: white;
 }
 
 .icon-container {
@@ -270,14 +266,15 @@ const handleLogout = async () => {
 }
 
 .icon-container .material-icons {
-  font-size: 22px;
+  font-size: 24px;
 }
 
 .link-text {
   transition: opacity 0.3s ease;
   white-space: nowrap;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
+  color: white;
 }
 
 .sidenav.collapsed .link-text {
@@ -287,23 +284,31 @@ const handleLogout = async () => {
 }
 
 .logout-btn {
-  margin: 16px 12px;
-  padding: 12px 16px;
+  margin: 12px auto;
+  padding: 10px;
   border: none;
-  background: #f1416c;
+  background: rgba(0, 0, 0, 0.2);
   color: white;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 50%;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: calc(100% - 24px);
+  justify-content: center;
+  width: 40px;
+  height: 40px;
 }
 
 .logout-btn:hover {
-  background: #e41146;
-  transform: translateY(-1px);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.logout-btn .link-text {
+  display: none;
+}
+
+.logout-btn .icon-container {
+  margin: 0;
 }
 
 /* Scrollbar Styling */
@@ -316,7 +321,7 @@ const handleLogout = async () => {
 }
 
 .nav-links::-webkit-scrollbar-thumb {
-  background: #4a5568;
+  background: rgba(255, 255, 255, 0.6);
   border-radius: 4px;
 }
 
@@ -347,6 +352,93 @@ const handleLogout = async () => {
     opacity: 1;
     width: auto;
   }
+}
+
+/* Add dividers between sections like in reference */
+.nav-links:after {
+  content: "";
+  display: block;
+  margin: 12px 24px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* User Profile Styles */
+.user-profile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 8px 16px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+  margin-bottom: 16px;
+  text-align: center;
+  margin-top: 16px;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.avatar .material-icons {
+  font-size: 54px;
+  color: white;
+}
+
+.user-info {
+  width: 100%;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 16px;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.user-role {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
+/* Even in collapsed state, keep avatar centered */
+.sidenav.collapsed .user-profile {
+  padding: 12px 0;
+}
+
+.sidenav.collapsed .user-info {
+  display: none;
+}
+
+.logo-avatar {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 </style>
   

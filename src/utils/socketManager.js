@@ -8,11 +8,23 @@ class SocketManager {
     this.isInitializing = false;
     this.pendingEvents = [];
     this.reconnectAttempts = 0;
+    this.currentUserId = null;
+    this.connectionTimeout = null;
   }
 
   initialize() {
-    if (this.socket) return this.socket;
-    
+    // Clear any existing connection timeout
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+
+    // If we already have a connected socket, disconnect it first
+    if (this.socket) {
+      console.log('Cleaning up existing socket before initialization');
+      this.disconnect();
+    }
+
     if (this.isInitializing) {
       console.log('Socket already initializing, waiting...');
       return null;
@@ -21,30 +33,41 @@ class SocketManager {
     this.isInitializing = true;
     console.log('Initializing socket connection...');
     
-    // this.socket = io('http://localhost:3300');
     this.socket = io('http://192.168.0.104:3300', {
       reconnection: true,
       reconnectionAttempts: 5,
-      reconnectionDelay: 1000
+      reconnectionDelay: 1000,
+      auth: {
+        userId: localStorage.getItem('userId')
+      },
+      // Add these options to help prevent ghost connections
+      forceNew: true,
+      timeout: 5000
     });
     
     // Set up connection event handlers
     this.socket.on('connect', () => {
       console.log('Socket connected successfully:', this.socket.id);
+      this.isInitializing = false;
       
-      // Re-register user on reconnect
-      this.handleReconnect();
-      
-      // Process any pending events
-      if (this.pendingEvents.length > 0) {
-        console.log(`Processing ${this.pendingEvents.length} pending events`);
-        this.pendingEvents.forEach(event => {
-          this.socket.emit(event.name, event.data);
-        });
-        this.pendingEvents = [];
+      // Clear any existing timeout
+      if (this.connectionTimeout) {
+        clearTimeout(this.connectionTimeout);
       }
+      
+      // Re-register user on reconnect if we have their ID
+      this.handleReconnect();
     });
-    
+
+    // Add a connection timeout
+    this.connectionTimeout = setTimeout(() => {
+      if (!this.socket?.connected) {
+        console.log('Connection timeout - forcing reconnect');
+        this.disconnect();
+        this.initialize();
+      }
+    }, 5000);
+
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
       this.reconnectAttempts++;
@@ -67,7 +90,6 @@ class SocketManager {
       this.activeUsersCallbacks.forEach(callback => callback(users));
     });
     
-    this.isInitializing = false;
     return this.socket;
   }
 
@@ -99,18 +121,19 @@ class SocketManager {
 
   disconnect() {
     if (this.socket) {
-      // Emit a logout event before disconnecting if we have a userId
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        this.emitUserLogout(userId);
-      }
-      
-      // Wait a moment to ensure the logout event is sent
-      setTimeout(() => {
-        console.log('Disconnecting socket');
-        this.socket.disconnect();
+      // Force disconnect and cleanup
+      try {
+        if (this.currentUserId) {
+          this.emitUserLogout(this.currentUserId);
+        }
+        this.socket.disconnect(true);
+        this.socket.close();
         this.socket = null;
-      }, 300);
+        this.currentUserId = null;
+        this.isInitializing = false;
+      } catch (error) {
+        console.error('Error during socket cleanup:', error);
+      }
     }
   }
 
@@ -148,6 +171,15 @@ class SocketManager {
   // New method to notify server of user login
   emitUserLogin(userId, userRole) {
     if (!userId) return;
+    
+    // Ensure clean state before login
+    if (this.currentUserId && this.currentUserId !== userId) {
+      console.log('Different user logging in - cleaning up previous session');
+      this.disconnect();
+      this.initialize();
+    }
+    
+    this.currentUserId = userId;
     console.log(`Emitting userLogin event for user ${userId} (${userRole})`);
     this.emitEvent('userLogin', { userId, userRole });
   }
@@ -155,6 +187,10 @@ class SocketManager {
   // New method to notify server of user logout
   emitUserLogout(userId) {
     if (!userId) return;
+    
+    // Clear the current user ID
+    this.currentUserId = null;
+    
     console.log(`Emitting userLogout event for user ${userId}`);
     this.emitEvent('userLogout', { userId });
   }

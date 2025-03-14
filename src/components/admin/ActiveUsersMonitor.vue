@@ -1,5 +1,5 @@
 <template>
-  <div class="active-users-monitor">
+  <div class="active-users-monitor" :key="componentKey">
     <div class="page-header">
       <h1>Active Users Monitor</h1>
       <div class="header-actions">
@@ -180,6 +180,12 @@ const filters = ref({
   gradeLevel: '',
   section: '',
 });
+const componentKey = ref(0);
+const socket = ref(null);
+const isConnected = ref(false);
+const reconnectAttempts = ref(0);
+const MAX_RECONNECT_ATTEMPTS = 5;
+const reconnectTimer = ref(null);
 
 // Add this function to handle user removal
 const removeUser = (userId) => {
@@ -187,46 +193,148 @@ const removeUser = (userId) => {
   activeUsers.value = activeUsers.value.filter(user => user.id !== userId);
 };
 
-// Update the onActiveUsersUpdate handler
-onMounted(() => {
-  console.log('ActiveUsersMonitor mounted');
+// Initialize or reinitialize socket connection
+const initializeSocket = () => {
+  // Clean up existing socket if it exists
+  cleanupSocket();
   
-  // Initialize socket if needed
-  const socket = socketManager.getSocket();
+  console.log('ActiveUsersMonitor: Initializing socket connection...');
   
-  // Subscribe to active users updates
-  const unsubscribe = socketManager.onActiveUsersUpdate((users) => {
-    console.log('Received active users update:', users);
-    // Ensure users are unique by ID (this prevents duplicates)
-    const uniqueUsersMap = new Map();
-    users.forEach(user => {
-      uniqueUsersMap.set(user.id, user);
-    });
-    activeUsers.value = Array.from(uniqueUsersMap.values());
+  // Get a fresh socket instance
+  socket.value = socketManager.getSocket();
+  
+  if (!socket.value) {
+    console.error('Failed to get socket instance');
+    scheduleReconnect();
+    return;
+  }
+  
+  // Set up socket event listeners
+  socket.value.on('connect', () => {
+    console.log('ActiveUsersMonitor: Socket connected!', socket.value.id);
+    isConnected.value = true;
+    reconnectAttempts.value = 0;
+    clearReconnectTimer();
+    
+    // Request active users immediately on connect
+    requestActiveUsers();
+  });
+  
+  socket.value.on('disconnect', (reason) => {
+    console.log('ActiveUsersMonitor: Socket disconnected:', reason);
+    isConnected.value = false;
+    scheduleReconnect();
+  });
+  
+  socket.value.on('connect_error', (error) => {
+    console.error('ActiveUsersMonitor: Socket connection error:', error);
+    isConnected.value = false;
+    scheduleReconnect();
+  });
+  
+  // Listen for active users updates
+  socket.value.on('activeUsersUpdate', (users) => {
+    console.log('ActiveUsersMonitor: Received active users update:', users.length);
+    activeUsers.value = users;
   });
   
   // Add direct listener for user logout events
-  socket.on('userLogout', (data) => {
-    console.log('Received userLogout event:', data);
+  socket.value.on('userLogout', (data) => {
+    console.log('ActiveUsersMonitor: Received userLogout event:', data);
     if (data.userId) {
       removeUser(data.userId);
     }
   });
+};
+
+// Clean up socket connections and event listeners
+const cleanupSocket = () => {
+  if (socket.value) {
+    console.log('ActiveUsersMonitor: Cleaning up socket event listeners');
+    socket.value.off('connect');
+    socket.value.off('disconnect');
+    socket.value.off('connect_error');
+    socket.value.off('activeUsersUpdate');
+    socket.value.off('userLogout');
+  }
+};
+
+// Schedule a reconnection attempt
+const scheduleReconnect = () => {
+  if (reconnectTimer.value) return; // Don't schedule if already scheduled
   
-  // Request initial active users list
-  socketManager.requestActiveUsers();
+  if (reconnectAttempts.value < MAX_RECONNECT_ATTEMPTS) {
+    reconnectAttempts.value++;
+    const delay = Math.min(reconnectAttempts.value * 1000, 5000); // Exponential backoff with max 5 seconds
+    
+    console.log(`ActiveUsersMonitor: Scheduling reconnect attempt ${reconnectAttempts.value} in ${delay}ms`);
+    
+    reconnectTimer.value = setTimeout(() => {
+      console.log(`ActiveUsersMonitor: Attempting reconnect #${reconnectAttempts.value}`);
+      initializeSocket();
+      reconnectTimer.value = null;
+    }, delay);
+  } else {
+    console.error('ActiveUsersMonitor: Max reconnect attempts reached. Please refresh the page.');
+  }
+};
+
+// Clear reconnect timer
+const clearReconnectTimer = () => {
+  if (reconnectTimer.value) {
+    clearTimeout(reconnectTimer.value);
+    reconnectTimer.value = null;
+  }
+};
+
+// Request active users list from the server
+const requestActiveUsers = () => {
+  if (!socket.value || !isConnected.value) {
+    console.warn('ActiveUsersMonitor: Cannot request users - socket not connected');
+    initializeSocket();
+    return;
+  }
+  
+  console.log('ActiveUsersMonitor: Requesting active users...');
+  socket.value.emit('getActiveUsers', {});
+};
+
+// Refresh users list manually
+const refreshUsers = () => {
+  console.log('ActiveUsersMonitor: Manual refresh requested');
+  
+  // Force component re-render
+  componentKey.value++;
+  
+  // Check if socket is connected, reinitialize if needed
+  if (!socket.value || !isConnected.value) {
+    initializeSocket();
+  } else {
+    requestActiveUsers();
+  }
+};
+
+// Set up component lifecycle
+onMounted(() => {
+  console.log('ActiveUsersMonitor: Component mounted');
+  initializeSocket();
   
   // Set up refresh interval (every 30 seconds)
   const refreshInterval = setInterval(() => {
-    socketManager.requestActiveUsers();
+    if (isConnected.value) {
+      console.log('ActiveUsersMonitor: Auto-refreshing active users');
+      requestActiveUsers();
+    } else {
+      console.warn('ActiveUsersMonitor: Auto-refresh skipped - socket disconnected');
+    }
   }, 30000);
   
   // Clean up on unmount
   onUnmounted(() => {
-    console.log('ActiveUsersMonitor unmounting, cleaning up');
-    unsubscribe();
+    console.log('ActiveUsersMonitor: Component unmounting');
     clearInterval(refreshInterval);
-    socket.off('userLogout');
+    cleanupSocket();
+    clearReconnectTimer();
   });
 });
 
@@ -234,6 +342,11 @@ onMounted(() => {
 watch(activeUsers, (newUsers) => {
   console.log('Active users updated:', newUsers.length, 'users');
 }, { deep: true });
+
+// Watch for connection status changes
+watch(isConnected, (connected) => {
+  console.log('ActiveUsersMonitor: Connection status changed:', connected ? 'connected' : 'disconnected');
+});
 
 // Computed properties
 const filterOptions = computed(() => ({
@@ -277,11 +390,7 @@ const filteredUsers = computed(() => {
   });
 });
 
-// Methods
-const refreshUsers = () => {
-  socketManager.requestActiveUsers();
-};
-
+// Format the last active timestamp
 const formatLastActive = (timestamp) => {
   if (!timestamp) return 'just now';
   

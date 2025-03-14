@@ -473,7 +473,7 @@ export default {
 
 <style scoped>
 .take-exam-container {
-  max-width: 900px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -486,7 +486,7 @@ export default {
 }
 
 .header {
-  text-align: center;
+  text-align: left;
   margin-bottom: 10px;
 }
 
