@@ -261,7 +261,7 @@ export default {
 
 <style scoped>
 .exam-history-container {
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
   padding: 24px;
   font-family: 'Roboto', sans-serif;

@@ -112,7 +112,7 @@ const navigationItems = {
   student: [
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
-    { name: 'Available Exams', path: '/student-exams', icon: 'assignment' },
+    { name: 'Exams', path: '/student-exams', icon: 'assignment' },
     { name: 'View Scores', path: '/grades', icon: 'analytics' },
     { name: 'Profile', path: '/student-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
@@ -171,10 +171,11 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
+/* Side Navigation Container */
 .sidenav {
-  width: 200px;
+  width: 180px;
   height: 100vh;
-  background: #19a759;
+  background: #159750; /* Default theme */
   color: white;
   display: flex;
   flex-direction: column;
@@ -192,13 +193,200 @@ const handleLogout = async () => {
   width: 80px;
 }
 
+/* Dark Theme */
+:root[data-theme='dark'] .sidenav {
+  background: #333;
+  color: #fff;
+}
+
+/* Yellow Theme */
+:root[data-theme='yellow'] .sidenav {
+  background: #f1c40f;
+  color: #333;
+}
+
+:root[data-theme='yellow'] .toggle-btn {
+  background: #f39c12;
+}
+
+:root[data-theme='yellow'] .toggle-btn:hover {
+  background: #e67e22;
+}
+
+:root[data-theme='yellow'] .nav-link {
+  color: #333;
+}
+
+:root[data-theme='yellow'] .nav-link:hover {
+  background: rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #333;
+}
+
+:root[data-theme='yellow'] .nav-link.router-link-active {
+  background: rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+
+:root[data-theme='yellow'] .nav-link.router-link-active .material-icons {
+  color: #333;
+}
+
+:root[data-theme='yellow'] .icon-container .material-icons {
+  color: #333;
+}
+
+:root[data-theme='yellow'] .logout-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+:root[data-theme='yellow'] .logout-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Blue Theme */
+:root[data-theme='blue'] .sidenav {
+  background: #1d6ea5;
+  color: #fff;
+}
+
+:root[data-theme='blue'] .toggle-btn {
+  background: #2980b9;
+}
+
+:root[data-theme='blue'] .toggle-btn:hover {
+  background: #1abc9c;
+}
+
+:root[data-theme='blue'] .nav-link {
+  color: #fff;
+}
+
+:root[data-theme='blue'] .nav-link:hover {
+  background: rgba(0, 0, 0, 0.1);
+  border-left: 3px solid #fff;
+}
+
+:root[data-theme='blue'] .nav-link.router-link-active {
+  background: rgba(0, 0, 0, 0.2);
+  font-weight: 600;
+}
+
+:root[data-theme='blue'] .nav-link.router-link-active .material-icons {
+  color: #fff;
+}
+
+:root[data-theme='blue'] .icon-container .material-icons {
+  color: #fff;
+}
+
+:root[data-theme='blue'] .logout-btn {
+  background: rgba(0, 0, 0, 0.1);
+  color: #fff;
+}
+
+:root[data-theme='blue'] .logout-btn:hover {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Fire Effect */
+:root[data-effect='fire'] .nav-link.router-link-active {
+  
+  animation: fireEffect 1s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-effect='fire'] .nav-link.router-link-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 40%;
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/fire.gif') center center / cover no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@keyframes fireEffect {
+  0% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.8); }
+  50% { box-shadow: 0 0 20px rgba(255, 69, 0, 1); }
+  100% { box-shadow: 0 0 10px rgba(255, 69, 0, 0.8); }
+}
+
+/* Smoke Effect */
+:root[data-effect='smoke'] .nav-link.router-link-active {
+ 
+  animation: smokeEffect 1s infinite;
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-effect='smoke'] .nav-link.router-link-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/fire2.gif') center center / cover no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@keyframes smokeEffect {
+  0% { box-shadow: 0 0 10px rgba(169, 169, 169, 0.8); }
+  50% { box-shadow: 0 0 20px rgba(169, 169, 169, 1); }
+  100% { box-shadow: 0 0 10px rgba(169, 169, 169, 0.8); }
+}
+
+/* Real Fire Effect */
+:root[data-effect='real-fire'] .nav-link.router-link-active {
+  background: rgba(255, 69, 0, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-effect='real-fire'] .nav-link.router-link-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/fire.gif') center center / cover no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Real Smoke Effect */
+:root[data-effect='real-smoke'] .nav-link.router-link-active {
+  background: rgba(169, 169, 169, 0.8);
+  position: relative;
+  overflow: hidden;
+}
+
+:root[data-effect='real-smoke'] .nav-link.router-link-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/fire2.gif') center center / cover no-repeat;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Toggle Button */
 .toggle-btn {
   position: absolute;
-  right: -50px;
-  top: 20px;
+  right: -55px;
+  top: 30px;
   background: #f0f0f0;
-  width: 40px;
-  height: 40px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -206,7 +394,7 @@ const handleLogout = async () => {
   cursor: pointer;
   z-index: 1;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-btn:hover {
@@ -218,6 +406,7 @@ const handleLogout = async () => {
   color: #333;
 }
 
+/* Navigation Links */
 .nav-links {
   flex: 1;
   display: flex;
@@ -242,13 +431,13 @@ const handleLogout = async () => {
 }
 
 .nav-link:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.2);
   border-left: 3px solid white;
 }
 
 .nav-link.router-link-active {
-  background: rgba(0, 0, 0, 0.15);
-  border-left: 3px solid white;
+  background: rgba(0, 0, 0, 0.30);
+  
   font-weight: 600;
 }
 
@@ -283,14 +472,15 @@ const handleLogout = async () => {
   overflow: hidden;
 }
 
+/* Logout Button */
 .logout-btn {
-  margin: 12px auto;
+  margin: 50px auto;
   padding: 10px;
   border: none;
   background: rgba(0, 0, 0, 0.2);
   color: white;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 20%;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
@@ -376,8 +566,8 @@ const handleLogout = async () => {
 }
 
 .avatar {
-  width: 72px;
-  height: 72px;
+  width: 100px;
+  height: 100px;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   display: flex;
@@ -441,4 +631,3 @@ const handleLogout = async () => {
   object-fit: contain;
 }
 </style>
-  

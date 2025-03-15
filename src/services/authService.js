@@ -147,7 +147,15 @@ export const updateProfile = async (profileData) => {
     const token = localStorage.getItem("jwtToken");
     if (!token) throw new Error("No token found");
 
-    console.log('AuthService: Updating profile', profileData);
+    // If password is included, validate it
+    if (profileData.password && profileData.password.length < 8) {
+      throw new Error("Password must be at least 8 characters");
+    }
+
+    console.log('AuthService: Updating profile', { 
+      ...profileData, 
+      password: profileData.password ? '********' : undefined 
+    });
 
     const response = await fetch(`${BASE_URL}/profile`, {
       method: "PUT",

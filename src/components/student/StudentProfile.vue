@@ -16,9 +16,20 @@ const profile = ref({
   createdAt: ''
 });
 
+// Add password fields
+const passwordData = ref({
+  password: '',
+  confirmPassword: ''
+});
+
+// Add show password toggles
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
+
 const loading = ref(true);
 const isEditing = ref(false);
 const availableSections = ref([]);
+const showPasswordFields = ref(false);
 
 onMounted(async () => {
   await loadProfile();
@@ -47,25 +58,55 @@ const loadProfile = async () => {
 
 const handleUpdate = async () => {
   try {
-    // Show loading state
-    Swal.fire({
-      title: 'Updating Profile',
-      text: 'Please wait...',
-      allowOutsideClick: false,
-      showConfirmButton: false,
-      willOpen: () => {
-        Swal.showLoading();
+    // Validate password if user is changing it
+    if (showPasswordFields.value) {
+      if (!passwordData.value.password) {
+        throw new Error('Please enter a new password');
       }
+      
+      if (passwordData.value.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+      
+      if (passwordData.value.password !== passwordData.value.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+      
+      // Add password to profile data for update
+      profile.value.password = passwordData.value.password;
+    }
+    
+    // Show loading state
+    const loadingAlert = Swal.fire({
+      title: 'Updating Profile',
+      html: 'Please wait while we update your profile...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      showConfirmButton: false
     });
     
     await updateProfile(profile.value);
     
+    // Close loading alert
+    loadingAlert.close();
+    
+    // Reset password fields
+    passwordData.value.password = '';
+    passwordData.value.confirmPassword = '';
+    showPasswordFields.value = false;
+    showPassword.value = false;
+    showConfirmPassword.value = false;
+    
     // Show success message
-    await Swal.fire({
+     Swal.fire({
       icon: 'success',
       title: 'Profile Updated!',
       text: 'Your profile has been updated successfully.',
-      confirmButtonColor: '#4CAF50'
+      confirmButtonColor: '#4CAF50',
+      timer: 2000,
+      timerProgressBar: true
     });
     
     isEditing.value = false;
@@ -94,11 +135,35 @@ const toggleEditMode = () => {
     }).then((result) => {
       if (result.isConfirmed) {
         isEditing.value = false;
+        showPasswordFields.value = false;
+        passwordData.value.password = '';
+        passwordData.value.confirmPassword = '';
+        showPassword.value = false;
+        showConfirmPassword.value = false;
         loadProfile(); // Reload original data
       }
     });
   } else {
     isEditing.value = true;
+  }
+};
+
+const togglePasswordFields = () => {
+  showPasswordFields.value = !showPasswordFields.value;
+  if (!showPasswordFields.value) {
+    passwordData.value.password = '';
+    passwordData.value.confirmPassword = '';
+    showPassword.value = false;
+    showConfirmPassword.value = false;
+  }
+};
+
+// Toggle password visibility
+const togglePasswordVisibility = (field) => {
+  if (field === 'password') {
+    showPassword.value = !showPassword.value;
+  } else if (field === 'confirmPassword') {
+    showConfirmPassword.value = !showConfirmPassword.value;
   }
 };
 
@@ -188,13 +253,12 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
             <div class="form-group">
               <label>LRN</label>
               <div class="input-wrapper">
-                <span class="material-icons-round">numbers</span>
+                <span class="material-icons-round">badge</span>
                 <input 
                   v-model="profile.lrn" 
-                  type="text" 
-                  :readonly="!isEditing"
-                  :class="{ 'editable': isEditing }"
-                  placeholder="Enter your LRN"
+                  type="number" 
+                  readonly
+                  placeholder="LRN cannot be changed"
                 />
               </div>
             </div>
@@ -209,7 +273,7 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
                   :class="{ 'editable': isEditing }"
                 >
                   <option value="">Select Grade</option>
-                  <option v-for="grade in [7,8,9,10]" :key="grade" :value="grade">
+                  <option v-for="grade in [7, 8, 9, 10, 11, 12]" :key="grade" :value="grade">
                     Grade {{ grade }}
                   </option>
                 </select>
@@ -222,15 +286,11 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
                 <span class="material-icons-round">groups</span>
                 <select 
                   v-model="profile.section" 
-                  :disabled="!isEditing || !profile.gradeLevel"
+                  :disabled="!isEditing"
                   :class="{ 'editable': isEditing }"
                 >
-                  <option value="" disabled>Select a section</option>
-                  <option 
-                    v-for="section in availableSections" 
-                    :key="section.id" 
-                    :value="section.section"
-                  >
+                  <option value="">Select Section</option>
+                  <option v-for="section in availableSections" :key="section.id" :value="section.section">
                     {{ section.section }}
                   </option>
                 </select>
@@ -248,6 +308,66 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
                   :class="{ 'editable': isEditing }"
                   placeholder="Enter your address"
                 />
+              </div>
+            </div>
+          </div>
+
+          <!-- Password Change Section -->
+          <div v-if="isEditing" class="password-section">
+            <div class="password-header" @click="togglePasswordFields">
+              <h3>
+                <span class="material-icons-round">lock</span>
+                Change Password
+              </h3>
+              <span class="material-icons-round toggle-icon">
+                {{ showPasswordFields ? 'expand_less' : 'expand_more' }}
+              </span>
+            </div>
+            
+            <div v-if="showPasswordFields" class="password-fields">
+              <div class="form-group">
+                <label>New Password</label>
+                <div class="input-wrapper password-input">
+                  <span class="material-icons-round">lock</span>
+                  <input 
+                    v-model="passwordData.password" 
+                    :type="showPassword ? 'text' : 'password'" 
+                    placeholder="Enter new password"
+                    class="editable"
+                  />
+                  <button 
+                    type="button" 
+                    class="toggle-password-btn" 
+                    @click="togglePasswordVisibility('password')"
+                  >
+                    <span class="material-icons-round">
+                      {{ showPassword ? 'visibility_off' : 'visibility' }}
+                    </span>
+                  </button>
+                </div>
+                <p class="password-hint">Password must be at least 8 characters long</p>
+              </div>
+              
+              <div class="form-group">
+                <label>Confirm Password</label>
+                <div class="input-wrapper password-input">
+                  <span class="material-icons-round">lock_clock</span>
+                  <input 
+                    v-model="passwordData.confirmPassword" 
+                    :type="showConfirmPassword ? 'text' : 'password'" 
+                    placeholder="Confirm new password"
+                    class="editable"
+                  />
+                  <button 
+                    type="button" 
+                    class="toggle-password-btn" 
+                    @click="togglePasswordVisibility('confirmPassword')"
+                  >
+                    <span class="material-icons-round">
+                      {{ showConfirmPassword ? 'visibility_off' : 'visibility' }}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -309,12 +429,12 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: #e3f2fd;
-  color: #1976d2;
+  background: #e8f5e9;
+  color: #2e7d32;
 }
 
 .edit-btn:hover {
-  background: #bbdefb;
+  background: #c8e6c9;
 }
 
 .edit-btn.cancel {
@@ -369,6 +489,27 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   font-size: 1rem;
   transition: all 0.3s ease;
   background: #f8f9fa;
+}
+
+.input-wrapper.password-input input {
+  padding-right: 3rem; /* Make room for the toggle button */
+}
+
+.toggle-password-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+}
+
+.toggle-password-btn:hover {
+  color: #4CAF50;
 }
 
 .input-wrapper input.editable,
@@ -432,6 +573,53 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   animation: spin 1s linear infinite;
 }
 
+/* Password section styles */
+.password-section {
+  margin-top: 2rem;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1.5rem;
+}
+
+.password-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.password-header:hover {
+  background-color: #f5f5f5;
+}
+
+.password-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.toggle-icon {
+  color: #666;
+}
+
+.password-fields {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.password-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.25rem 0 0 0;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -458,6 +646,10 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .password-fields {
     grid-template-columns: 1fr;
   }
 

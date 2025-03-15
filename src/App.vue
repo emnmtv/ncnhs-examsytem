@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container" :class="{ 'nav-collapsed': isNavCollapsed, 'no-nav': !showSidebar }">
+  <div class="app-container" :class="{ 'nav-collapsed': isNavCollapsed, 'no-nav': !showSidebar }" @click="handleClick" @mousemove="handleMouseMove">
     <!-- Show sidebar only if not on login or register page -->
     <Sidenav v-if="showSidebar" @nav-toggle="handleNavToggle" />
     <TopBar v-if="showSidebar" />
@@ -13,7 +13,7 @@
 import Sidenav from "./components/SideNav.vue";
 import TopBar from "./components/TopBar.vue";
 import { useRoute } from "vue-router";
-import { computed, ref } from "vue";
+import { computed, ref, provide } from "vue";
 
 export default {
   components: {
@@ -23,6 +23,7 @@ export default {
   setup() {
     const route = useRoute();
     const isNavCollapsed = ref(window.innerWidth <= 768);
+    const clickEffectType = ref('none');
 
     // Define routes where sidebar should NOT be shown
     const authRoutes = ["/"];
@@ -34,10 +35,44 @@ export default {
       isNavCollapsed.value = collapsed;
     };
 
+    const handleClick = (event) => {
+      if (clickEffectType.value !== 'none') {
+        const clickEffect = document.createElement('div');
+        clickEffect.className = 'click-effect';
+        clickEffect.style.top = `${event.clientY}px`;
+        clickEffect.style.left = `${event.clientX}px`;
+        document.body.appendChild(clickEffect);
+        setTimeout(() => {
+          clickEffect.remove();
+        }, 1500);
+      }
+    };
+
+    const handleMouseMove = (event) => {
+      if (clickEffectType.value === 'line') {
+        const lineEffect = document.createElement('div');
+        lineEffect.className = 'line-effect';
+        lineEffect.style.top = `${event.clientY}px`;
+        lineEffect.style.left = `${event.clientX}px`;
+        document.body.appendChild(lineEffect);
+        setTimeout(() => {
+          lineEffect.remove();
+        }, 500);
+      }
+    };
+
+    const setClickEffectType = (type) => {
+      clickEffectType.value = type;
+    };
+
+    provide('setClickEffectType', setClickEffectType);
+
     return {
       showSidebar,
       isNavCollapsed,
       handleNavToggle,
+      handleClick,
+      handleMouseMove,
     };
   },
 };
@@ -82,7 +117,7 @@ body {
 
 .content.with-topbar {
   margin-top: 100px; /* Update to match the 100px height of the top bar */
-  padding-top: 16px; /* Slightly increased padding for better spacing */
+  padding-top: 60px; /* Slightly increased padding for better spacing */
 }
 
 .content.full-width {
@@ -156,5 +191,37 @@ body {
     margin: 0;
     padding: 0;
   }
+}
+
+/* Click Effect Styles */
+.click-effect {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: url('@/assets/fire.gif') center center / cover no-repeat;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+/* Line Effect Styles */
+.line-effect {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: red;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+}
+
+/* For mobile screens */
+@media (max-width: 768px) {
+  .content.with-topbar {
+  margin-top: 90px; /* Update to match the 100px height of the top bar */
+  padding-top: 20px; /* Slightly increased padding for better spacing */
+  
+}
 }
 </style>

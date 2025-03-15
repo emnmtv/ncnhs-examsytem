@@ -415,7 +415,7 @@ export default {
 
 <style scoped>
 .exam-detail-container {
-  max-width: 1100px;
+  max-width: auto;
   margin: 0 auto;
   padding: 24px;
   font-family: 'Roboto', sans-serif;

@@ -3,9 +3,9 @@
     <div class="page-header">
       <h1>Active Users Monitor</h1>
       <div class="header-actions">
-        <button @click="refreshUsers" class="refresh-btn">
+        <!-- <button @click="refreshUsers" class="refresh-btn">
           <span class="material-icons">refresh</span> Refresh
-        </button>
+        </button> -->
       </div>
     </div>
 
@@ -299,20 +299,20 @@ const requestActiveUsers = () => {
   socket.value.emit('getActiveUsers', {});
 };
 
-// Refresh users list manually
-const refreshUsers = () => {
-  console.log('ActiveUsersMonitor: Manual refresh requested');
+// // Refresh users list manually
+// const refreshUsers = () => {
+//   console.log('ActiveUsersMonitor: Manual refresh requested');
   
-  // Force component re-render
-  componentKey.value++;
+//   // Force component re-render
+//   componentKey.value++;
   
-  // Check if socket is connected, reinitialize if needed
-  if (!socket.value || !isConnected.value) {
-    initializeSocket();
-  } else {
-    requestActiveUsers();
-  }
-};
+//   // Check if socket is connected, reinitialize if needed
+//   if (!socket.value || !isConnected.value) {
+//     initializeSocket();
+//   } else {
+//     requestActiveUsers();
+//   }
+// };
 
 // Set up component lifecycle
 onMounted(() => {
@@ -436,8 +436,8 @@ const formatLastActive = (timestamp) => {
 <style scoped>
 .active-users-monitor {
   padding: 2rem;
-  max-width: auto;
-  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .page-header {
@@ -472,15 +472,10 @@ const formatLastActive = (timestamp) => {
 }
 
 .filters-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  margin-bottom: 2rem;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  align-items: center;
+  margin-bottom: 2rem;
 }
 
 .search-box {
@@ -499,7 +494,7 @@ const formatLastActive = (timestamp) => {
 
 .search-box .material-icons {
   position: absolute;
-  left: 1rem;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   color: #666;
@@ -508,44 +503,40 @@ const formatLastActive = (timestamp) => {
 .tabs {
   display: flex;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
-  cursor: pointer;
   background: #f5f5f5;
-  color: #666;
+  cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .tab-btn.active {
-  background: #2196F3;
+  background: #2196f3;
   color: white;
 }
 
 .filter-group {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .filter-group select {
-  padding: 0.75rem;
+  padding: 0.5rem 1rem;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 6px;
   background: white;
-  min-width: 150px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #333;
-  transition: all 0.3s ease;
 }
 
 .view-controls {
   display: flex;
-  gap: 0.5rem;
-  margin: 1rem 0;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .view-toggle-btn {
@@ -560,36 +551,27 @@ const formatLastActive = (timestamp) => {
   transition: all 0.3s ease;
 }
 
-.view-toggle-btn:hover {
-  background: #f5f5f5;
-}
-
 .view-toggle-btn.active {
-  background: #2196F3;
+  background: #2196f3;
   color: white;
-  border-color: #2196F3;
+  border-color: #2196f3;
 }
 
 .users-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .user-card {
   background: white;
   border-radius: 12px;
   padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   display: flex;
+  flex-direction: column;
   gap: 1rem;
-  align-items: center;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-  transition: all 0.3s ease;
-}
-
-.user-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
 .user-avatar {
@@ -729,26 +711,110 @@ const formatLastActive = (timestamp) => {
   color: #ccc;
 }
 
+/* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .active-users-monitor {
     padding: 1rem;
   }
-  
+
   .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .filters-section {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
+  .search-box {
+    width: 100%;
+  }
+
+  .tabs {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 0.5rem;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group select {
+    flex: 1;
+  }
+
+  .view-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
   .users-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
-  
+
   .users-table {
-    display: block;
+    margin-top: 1rem;
+    overflow-x: auto;
   }
-  
+
   .users-table table {
     min-width: 600px;
+  }
+
+  /* Adjust table for mobile scroll */
+  .users-table th,
+  .users-table td {
+    white-space: nowrap;
+    padding: 0.75rem;
+  }
+
+  /* Make user cards more compact on mobile */
+  .user-card {
+    padding: 1rem;
+  }
+
+  .user-card .user-info {
+    font-size: 0.9rem;
+  }
+
+  /* Adjust empty state for mobile */
+  .empty-state {
+    padding: 2rem 1rem;
+  }
+
+  .empty-state .material-icons {
+    font-size: 36px;
+  }
+}
+
+/* Additional styles for very small screens */
+@media (max-width: 480px) {
+  .tab-btn {
+    font-size: 0.8rem;
+    padding: 0.4rem;
+  }
+
+  .view-toggle-btn {
+    font-size: 0.9rem;
+  }
+
+  .view-toggle-btn .material-icons {
+    font-size: 18px;
   }
 }
 </style> 

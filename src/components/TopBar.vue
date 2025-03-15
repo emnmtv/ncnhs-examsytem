@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .top-bar {
-  height: 80px;
+  height: 100px;
   background: white;
   display: flex;
   align-items: center;
@@ -87,7 +87,7 @@ onBeforeUnmount(() => {
 .datetime {
   display: flex;
   align-items: center;
-  font-size: 14px;
+  font-size: 30px;
   color: #666;
   gap: 8px;
 }

@@ -10,9 +10,16 @@
     
     <!-- Exam Setup View -->
     <div v-else class="exam-setup">
-      <div class="header">
-        <h1>Student Exam Portal</h1>
-        <p class="subtitle">Enter a test code to join an exam session</p>
+      <div class="header-container">
+        <div class="header-content">
+          <h1>Join Exam<span class="material-icons">computer</span></h1>
+          <div class="divider"></div> <!-- Add this line -->
+          <div class="header-text">
+            
+            
+          </div>
+        </div>
+        <div class="header-background">EXAMS</div>
       </div>
       
       <!-- Test Code Input Section -->
@@ -49,6 +56,7 @@
       <!-- Exam Details Section -->
       <div v-if="exam" class="exam-details-container">
         <div class="exam-header">
+          <div class="texture-layer"></div>
           <h2>{{ exam.examTitle }}</h2>
           <div class="exam-meta">
             <span class="exam-meta-item">
@@ -477,12 +485,18 @@ export default {
   margin: 0 auto;
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
+  
 }
 
 .exam-setup {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 10px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .header {
@@ -494,16 +508,52 @@ export default {
   color: #333;
   margin-bottom: 5px;
 }
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+ .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+  
 
+}
 .subtitle {
   color: #666;
   font-size: 1rem;
 }
 
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
+}
+
 .test-code-section {
   background-color: #f8f9fa;
   border-radius: 10px;
-  padding: 20px;
+  /* padding: 20px; */
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
 }
@@ -589,17 +639,92 @@ export default {
   border-radius: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  position: relative;
 }
 
 .exam-header {
   padding: 20px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #eee;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+/* Main paint swipe */
+.exam-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Secondary paint swipe */
+.exam-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
+}
+
+/* Additional texture layers */
+.exam-header .texture-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+/* Hover animations */
+.exam-header:hover::after {
+  transform: skewX(-20deg) translateX(10px);
+  transition: transform 0.3s ease;
+}
+
+.exam-header:hover::before {
+  transform: skewX(-35deg) translateX(-10px);
+  transition: transform 0.3s ease;
 }
 
 .exam-header h2 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: #f1f1f1;
   font-size: 1.5rem;
 }
 
@@ -613,8 +738,9 @@ export default {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.9rem;
-  color: #555;
+  font-size: 1rem;
+  color: #fafafa;
+  font-weight: 600;
 }
 
 .status-started {
@@ -637,6 +763,9 @@ export default {
 
 .students-container {
   padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .section-header {
@@ -722,11 +851,58 @@ export default {
   .input-group {
     flex-direction: column;
   }
+  .take-exam-container {
+  padding: 5px; 
+}
+  .header-background {
+  position: absolute;
+  top: 27%;
+  right: 0.3rem;
+
+  font-size: 4rem;
+  font-weight: 900;
+
+}
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 0.5rem;
+  width: 100%;
+  max-width: auto; 
+}
+.header-content h1 {
+  color: #159750;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+ .material-icons {
+  color: #159750;
+  font-size: 2rem;
+  font-weight: 700;
+  padding-left: 1%;
   
+
+}
+.exam-header h2 {
+  margin: 0 0 10px 0;
+  color: #f1f1f1;
+  font-size: 1.2rem;
+}
   .exam-meta {
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row;
+    gap: 5px;
+    
   }
+  
+.exam-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+
+  font-weight: 600;
+}
   
   .students-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
