@@ -24,7 +24,7 @@ import StudentExams from '@/components/student/StudentExams.vue'
 import ActiveUsersMonitor from '@/components/admin/ActiveUsersMonitor.vue'
 import ExamHistory from '@/components/student/ExamHistory.vue'
 import ExamHistoryDetail from '@/components/student/ExamHistoryDetail.vue'
-
+import AdminProfile from '@/components/admin/AdminProfile.vue'
 const routes = [
   { 
     path: "/", 
@@ -164,6 +164,12 @@ const routes = [
     component: () => import('@/components/teacher/ExamPaperPreview.vue'),
     meta: { requiresAuth: true, roles: ['teacher'] }
   },
+  {
+    path: '/admin-profile',
+    name: 'AdminProfile',
+    component: AdminProfile,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  }
 ];
 
 

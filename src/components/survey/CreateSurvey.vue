@@ -1,15 +1,21 @@
 <template>
   <div class="create-survey-container">
-    <div class="survey-header">
-      <h1>Create New Survey</h1>
-      <p class="subtitle">Design your survey with various question types</p>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>Create New Survey<span class="material-icons">poll</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Design your survey with various question types</p>
+        </div>
+      </div>
+      <div class="header-background">CREATE</div>
     </div>
 
     <form @submit.prevent="handleSubmit" class="survey-form">
       <!-- Survey Details Card -->
       <div class="card details-card">
         <div class="card-header">
-          <h2><span class="material-icons-round">info</span> Survey Details</h2>
+          <h2><i class="fas fa-info-circle"></i> Survey Details</h2>
         </div>
         <div class="card-body">
           <div class="form-group full-width">
@@ -38,8 +44,8 @@
       <!-- Questions Section -->
       <div class="card questions-card">
         <div class="card-header">
-          <h2><span class="material-icons-round">quiz</span> Questions</h2>
-          <span class="question-count">{{ questions.length }} questions</span>
+          <h2><i class="fas fa-question-circle"></i> Questions</h2>
+          <span class="question-count badge">{{ questions.length }} questions</span>
         </div>
 
         <div class="card-body">
@@ -359,55 +365,144 @@ export default {
 
 <style scoped>
 .create-survey-container {
-  max-width: 900px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.survey-header {
-  text-align: center;
-  margin-bottom: 2rem;
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
 }
 
-.survey-header h1 {
-  font-size: 2rem;
-  color: #333;
-  margin-bottom: 0.5rem;
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
 }
 
 .subtitle {
   color: #666;
+  font-size: 1.1rem;
 }
 
 .survey-form {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 25px;
 }
 
 .card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  background-color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
+  transition: all 0.3s;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layer to card headers */
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
 }
 
 .card-header h2 {
-  font-size: 1.25rem;
-  color: #333;
+  margin: 0;
+  font-size: 1.5rem;
+  color: white;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.card-header .question-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
 }
 
 .card-body {
@@ -447,51 +542,90 @@ export default {
 }
 
 .question-item {
-  background: #f8f9fa;
-  border-radius: 8px;
-  padding: 1.5rem;
+  background-color: white;
+  border: none;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   margin-bottom: 1.5rem;
 }
 
+.question-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
 .question-header {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  border-bottom: none;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layer to question headers */
+.question-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
 }
 
 .question-number {
   font-weight: 600;
-  color: #333;
+  position: relative;
+  z-index: 1;
 }
 
 .question-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
-.action-btn {
-  padding: 8px;
+.question-actions button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
   border: none;
   border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.duplicate-btn {
-  color: #2196F3;
+.question-actions button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
-.duplicate-btn:hover {
-  background: rgba(33, 150, 243, 0.1);
-}
-
-.remove-btn {
-  color: #f44336;
-}
-
-.remove-btn:hover {
-  background: rgba(244, 67, 54, 0.1);
+.question-content {
+  padding: 1.5rem;
 }
 
 .question-type-selector {
@@ -522,6 +656,8 @@ export default {
 .type-button:hover {
   border-color: #4CAF50;
   color: #4CAF50;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .type-button.active {
@@ -531,7 +667,7 @@ export default {
 }
 
 .options-section {
-  background: white;
+  background: #f9f9f9;
   border-radius: 8px;
   padding: 1.5rem;
   margin-top: 1rem;
@@ -564,6 +700,8 @@ export default {
 
 .add-option-btn:hover {
   background: #c8e6c9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .options-list {
@@ -597,6 +735,7 @@ export default {
 
 .remove-option-btn:hover:not(:disabled) {
   background: #ffcdd2;
+  transform: translateY(-2px);
 }
 
 .remove-option-btn:disabled {
@@ -618,68 +757,80 @@ export default {
 }
 
 .add-question-button {
-  width: 100%;
-  padding: 1rem;
-  border: 2px dashed #e0e0e0;
-  border-radius: 8px;
-  background: none;
-  color: #666;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
+  gap: 10px;
+  width: 100%;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border: 2px dashed #ccc;
+  border-radius: 16px;
+  color: #666;
+  font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .add-question-button:hover {
-  border-color: #4CAF50;
-  color: #4CAF50;
+  background-color: #e0e0e0;
+  border-color: #999;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .reset-button,
 .publish-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 12px 24px;
   border: none;
   border-radius: 8px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
+  transition: all 0.3s;
 }
 
 .reset-button {
-  background: #f5f5f5;
-  color: #666;
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
 }
 
 .reset-button:hover {
-  background: #e0e0e0;
+  background-color: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .publish-button {
-  background: #4CAF50;
+  background-color: #4CAF50;
   color: white;
 }
 
 .publish-button:hover:not(:disabled) {
-  background: #43A047;
+  background-color: #43A047;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .publish-button:disabled {
-  background: #9E9E9E;
+  background-color: #9E9E9E;
   cursor: not-allowed;
   transform: none;
+  box-shadow: none;
 }
 
 .empty-state {
@@ -687,7 +838,7 @@ export default {
   padding: 3rem 1rem;
 }
 
-.empty-state i {
+.empty-state .material-icons-round {
   font-size: 3rem;
   color: #bdbdbd;
   margin-bottom: 1rem;
@@ -698,36 +849,61 @@ export default {
   margin-top: 0.5rem;
 }
 
-.question-count {
-  background: #e8f5e9;
-  color: #4CAF50;
-  padding: 4px 12px;
+.badge {
+  display: inline-block;
+  padding: 5px 10px;
   border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background-color: #e8f5e9;
+  color: #2E7D32;
 }
 
 /* Transitions */
 .question-transition-enter-active,
 .question-transition-leave-active {
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
 }
 
 .question-transition-enter-from,
 .question-transition-leave-to {
   opacity: 0;
-  transform: translateY(20px);
+  transform: translateY(30px);
 }
 
 @media (max-width: 768px) {
+  .create-survey-container {
+    padding: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
+  }
+  
   .type-buttons {
     flex-direction: column;
   }
 
   .form-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
+    gap: 15px;
+    padding: 15px;
   }
-
+  
   .reset-button,
   .publish-button {
     width: 100%;

@@ -94,15 +94,13 @@ const navigationItems = {
     { name: 'Manage Users', path: '/manage-users', icon: 'group' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },
-    { name: 'Profile', path: '/profile', icon: 'person' },
+    { name: 'Profile', path: '/admin-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
   teacher: [
     { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
-   
-    { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Manage Exams', path: '/manage-exams', icon: 'bar_chart' },
     { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
     { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
@@ -113,10 +111,10 @@ const navigationItems = {
     { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
     { name: 'Exams', path: '/student-exams', icon: 'assignment' },
-    { name: 'View Scores', path: '/grades', icon: 'analytics' },
+    { name: 'Exam History', path: '/exam-history', icon: 'history' },
     { name: 'Profile', path: '/student-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
-    { name: 'Exam History', path: '/exam-history', icon: 'history' },
+    
   ]
 };
 

@@ -113,6 +113,10 @@
                 Active {{ formatLastActive(user.lastActive) }}
               </span>
             </div>
+            <div v-if="user.inExam" class="exam-indicator">
+              <span class="material-icons">assignment</span>
+              <span>In Exam: {{ user.examCode || 'Unknown' }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -130,7 +134,7 @@
               <th v-if="activeTab === 'all' || activeTab === 'teachers'">Department</th>
               <th v-if="activeTab === 'all' || activeTab === 'teachers'">Domain</th>
               <th>Last Active</th>
-              <th>Status</th>
+              <th>Exam Status</th>
             </tr>
           </thead>
           <tbody>
@@ -156,8 +160,11 @@
               </td>
               <td>{{ formatLastActive(user.lastActive) }}</td>
               <td>
-                <span class="activity-indicator active"></span>
-                Online
+                <span v-if="user.inExam" class="exam-badge">
+                  <span class="material-icons">assignment</span>
+                  {{ user.examCode || 'Unknown' }}
+                </span>
+                <span v-else>-</span>
               </td>
             </tr>
           </tbody>
@@ -326,8 +333,26 @@ onMounted(() => {
       requestActiveUsers();
     } else {
       console.warn('ActiveUsersMonitor: Auto-refresh skipped - socket disconnected');
+      // Try to reconnect if disconnected
+      initializeSocket();
     }
   }, 30000);
+  
+  // Add page visibility handler
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      console.log('ActiveUsersMonitor: Page became visible - checking connection');
+      if (!socket.value?.connected) {
+        console.log('ActiveUsersMonitor: Socket disconnected - reconnecting');
+        initializeSocket();
+      } else {
+        // Even if connected, request latest data
+        requestActiveUsers();
+      }
+    }
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibilityChange);
   
   // Clean up on unmount
   onUnmounted(() => {
@@ -335,6 +360,7 @@ onMounted(() => {
     clearInterval(refreshInterval);
     cleanupSocket();
     clearReconnectTimer();
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
   });
 });
 
@@ -816,5 +842,36 @@ const formatLastActive = (timestamp) => {
   .view-toggle-btn .material-icons {
     font-size: 18px;
   }
+}
+
+.exam-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+  color: #1565c0;
+  font-size: 0.8rem;
+}
+
+.exam-indicator .material-icons {
+  font-size: 1rem;
+}
+
+.exam-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+  color: #1565c0;
+  font-size: 0.8rem;
+}
+
+.exam-badge .material-icons {
+  font-size: 1rem;
 }
 </style> 

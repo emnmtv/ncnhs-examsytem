@@ -1,9 +1,16 @@
 <template>
     <div class="manage-exam-container" :key="componentKey">
-      <div class="header">
-        <h1>Manage Exam</h1>
-        <p class="subtitle">Monitor and control your exam session</p>
+     <!-- Update header section to match TakeExam -->
+     <div class="header-container">
+      <div class="header-content">
+        <h1>Manage Exam<span class="material-icons">admin_panel_settings</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Monitor and control your exam session</p>
+        </div>
       </div>
+      <div class="header-background">MONITOR</div>
+    </div>
   
       <div class="test-code-section" :class="{ 'with-exam': showExamControls }">
         <div class="input-wrapper">
@@ -165,40 +172,58 @@
     },
     mounted() {
       this.initializeSocket();
-      if (this.testCode) {
+      
+      // Check for saved exam session
+      const savedTestCode = localStorage.getItem("testCode");
+      if (savedTestCode) {
+        this.testCode = savedTestCode;
         this.joinExam();
       }
+      
+      // Add window focus/blur handlers
+      window.addEventListener('focus', this.handleWindowFocus);
+      window.addEventListener('blur', this.handleWindowBlur);
     },
     methods: {
       initializeSocket() {
         if (!this.socket) {
           this.socket = socketManager.getSocket();
           
-          // Set up socket event listeners
-          this.socket.on('studentJoined', (students) => {
-            console.log('Students joined event received:', students);
-            // Filter out the teacher from the students list
-            this.students = students.filter(student => student.role !== 'teacher');
-          });
-          
-          this.socket.on('studentLeft', (students) => {
-            console.log('Students left event received:', students);
-            // Filter out the teacher from the students list
-            this.students = students.filter(student => student.role !== 'teacher');
-          });
-          
-          this.socket.on('examProgressUpdate', (progressData) => {
-            if (this.$refs.progressModal) {
-              this.$refs.progressModal.updateStudentProgress(progressData);
-            }
-          });
+          if (this.socket) {
+            // Set up reconnection handler
+            this.socket.on('connect', () => {
+              console.log('Socket reconnected - restoring exam state');
+              if (this.showExamControls && this.testCode) {
+                this.joinExam();
+              }
+            });
 
-          this.socket.on('examStatusUpdate', ({ status }) => {
-            console.log('Exam status update received:', status);
-            if (this.exam) {
-              this.exam.status = status;
-            }
-          });
+            // Set up socket event listeners
+            this.socket.on('studentJoined', (students) => {
+              console.log('Students joined event received:', students);
+              // Filter out the teacher from the students list
+              this.students = students.filter(student => student.role !== 'teacher');
+            });
+            
+            this.socket.on('studentLeft', (students) => {
+              console.log('Students left event received:', students);
+              // Filter out the teacher from the students list
+              this.students = students.filter(student => student.role !== 'teacher');
+            });
+            
+            this.socket.on('examProgressUpdate', (progressData) => {
+              if (this.$refs.progressModal) {
+                this.$refs.progressModal.updateStudentProgress(progressData);
+              }
+            });
+
+            this.socket.on('examStatusUpdate', ({ status }) => {
+              console.log('Exam status update received:', status);
+              if (this.exam) {
+                this.exam.status = status;
+              }
+            });
+          }
         }
       },
       async joinExam() {
@@ -383,6 +408,22 @@
           default:
             return 'Pending';
         }
+      },
+      handleWindowFocus() {
+        console.log('Window focused - checking connection');
+        if (!this.socket?.connected) {
+          console.log('Socket disconnected - attempting to reconnect');
+          this.initializeSocket();
+          
+          // Re-join exam if we were in one
+          if (this.showExamControls && this.testCode) {
+            this.joinExam();
+          }
+        }
+      },
+      handleWindowBlur() {
+        // Optionally handle window blur
+        console.log('Window blurred');
       }
     },
     beforeUnmount() {
@@ -393,6 +434,10 @@
         this.socket.off('examProgressUpdate');
         this.socket.off('examStatusUpdate');
       }
+      
+      // Remove window event listeners
+      window.removeEventListener('focus', this.handleWindowFocus);
+      window.removeEventListener('blur', this.handleWindowBlur);
     }
   };
   </script>
@@ -404,23 +449,59 @@
     padding: 2rem;
     font-family: 'Inter', sans-serif;
   }
-  
-  .header {
-    text-align: center;
-    margin-bottom: 2.5rem;
-  }
-  
-  .header h1 {
-    font-size: 2.5rem;
-    color: #1a1a1a;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-  }
-  
-  .subtitle {
-    color: #666;
-    font-size: 1.1rem;
-  }
+  .header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
   
   .test-code-section {
     background: #fff;
@@ -724,10 +805,24 @@
       padding: 1rem;
     }
   
-    .header h1 {
-      font-size: 2rem;
-    }
+    
+  .header-content h1 {
+    font-size: 2rem;
+  }
   
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
+  }
     .panel-grid {
       grid-template-columns: 1fr;
     }

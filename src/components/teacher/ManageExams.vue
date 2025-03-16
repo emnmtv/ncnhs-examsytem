@@ -1,44 +1,53 @@
 <template>
   <div class="manage-exams">
-    <div class="header">
-      <h1>Manage Exams</h1>
-      <div class="header-actions">
-        <button class="template-btn" @click="downloadTemplate">
-          <i class="fas fa-file-download"></i> Download Template
-        </button>
-        <label class="import-btn">
-          <i class="fas fa-file-upload"></i> Import Exam
-          <input 
-            type="file" 
-            accept=".xlsx" 
-            @change="handleImport" 
-            style="display: none"
-          >
-        </label>
-        <router-link to="/create-exam" class="create-btn">
-          <i class="fas fa-plus"></i> Create New Exam
-        </router-link>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>Manage Exams<span class="material-icons">assignment</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Create, edit and monitor your exams</p>
+        </div>
       </div>
+      <div class="header-background">EXAMS</div>
+    </div>
+
+    <div class="header-actions">
+      <button class="template-btn" @click="downloadTemplate">
+        <i class="fas fa-file-download"></i> Download Template
+      </button>
+      <label class="import-btn">
+        <i class="fas fa-file-upload"></i> Import Exam
+        <input 
+          type="file" 
+          accept=".xlsx" 
+          @change="handleImport" 
+          style="display: none"
+        >
+      </label>
+      <router-link to="/create-exam" class="create-btn">
+        <i class="fas fa-plus"></i> Create New Exam
+      </router-link>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
-      <i class="fas fa-spinner fa-spin"></i>
+      <span class="material-icons-round rotating">sync</span>
       <p>Loading exams...</p>
     </div>
 
     <!-- Error State -->
     <div v-else-if="error" class="error-state">
-      <i class="fas fa-exclamation-circle"></i>
+      <span class="material-icons-round">error_outline</span>
       <p>{{ error }}</p>
       <button @click="loadExams" class="retry-btn">
-        <i class="fas fa-redo"></i> Retry
+        <span class="material-icons-round">refresh</span>
+        Retry
       </button>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="!exams.length" class="empty-state">
-      <i class="fas fa-clipboard-list"></i>
+      <span class="material-icons-round">assignment</span>
       <p>No exams found</p>
       <p class="subtitle">Create your first exam to get started</p>
       <router-link to="/create-exam" class="create-btn">
@@ -50,35 +59,44 @@
     <div v-else class="exams-grid">
       <div v-for="exam in exams" :key="exam.id" class="exam-card" :class="exam.status">
         <div class="exam-header">
-          <h3>{{ exam.examTitle }}</h3>
-          <div class="status-badge" :class="exam.status">
-            {{ formatStatus(exam.status) }}
-          </div>
-        </div>
-
-        <div class="exam-details">
-          <p><i class="fas fa-code"></i> Test Code: <strong>{{ exam.testCode }}</strong></p>
-          <p><i class="fas fa-chalkboard"></i> Class: {{ exam.classCode }}</p>
-          <p>
-            <i class="fas fa-question-circle"></i> 
-            Questions: {{ exam.questions.length }}
-          </p>
-          <p>
-            <i class="fas fa-users"></i>
-            Submissions: {{ exam._count.examAnswers }}
-          </p>
-        </div>
-
-        <div class="exam-stats" v-if="exam.scores.length">
-          <div class="stat">
-            <span class="label">Average Score</span>
-            <span class="value">
-              {{ calculateAverageScore(exam.scores) }}%
+          <div class="texture-layer"></div>
+          <h2>{{ exam.examTitle }}</h2>
+          <div class="exam-meta">
+            <span class="exam-meta-item">
+              <i class="fas fa-chalkboard"></i> {{ exam.classCode || 'No Class' }}
+            </span>
+            <span class="exam-meta-item">
+              <i class="fas fa-key"></i> {{ exam.testCode }}
+            </span>
+            <span class="exam-meta-item" :class="'status-' + exam.status">
+              <i class="fas fa-circle"></i> {{ formatStatus(exam.status) }}
             </span>
           </div>
-          <div class="stat">
-            <span class="label">Submissions</span>
-            <span class="value">{{ exam.scores.length }}</span>
+        </div>
+
+        <div class="exam-body">
+          <div class="exam-info">
+            <div class="info-item">
+              <span class="material-icons-round">help_outline</span>
+              <div class="info-content">
+                <span class="info-label">Questions</span>
+                <span class="info-value">{{ exam.questions.length }} items</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <span class="material-icons-round">people</span>
+              <div class="info-content">
+                <span class="info-label">Submissions</span>
+                <span class="info-value">{{ exam.scores.length }}</span>
+              </div>
+            </div>
+            <div v-if="exam.scores.length" class="info-item">
+              <span class="material-icons-round">analytics</span>
+              <div class="info-content">
+                <span class="info-label">Average Score</span>
+                <span class="info-value">{{ calculateAverageScore(exam.scores) }}%</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -86,7 +104,7 @@
           <button 
             v-if="!exam.scores.length"
             @click="editExam(exam)" 
-            class="edit-btn"
+            class="action-btn edit-btn"
             title="Edit exam"
           >
             <i class="fas fa-edit"></i> Edit
@@ -94,7 +112,7 @@
 
           <button 
             @click="previewExam(exam)" 
-            class="preview-btn"
+            class="action-btn preview-btn"
             title="Preview exam"
           >
             <i class="fas fa-eye"></i> Preview
@@ -103,7 +121,7 @@
           <button 
             v-if="exam.status === 'pending' || exam.status === 'stopped'"
             @click="startExam(exam.testCode)" 
-            class="start-btn"
+            class="action-btn start-btn"
             title="Start exam"
           >
             <i class="fas fa-play"></i> Start
@@ -112,7 +130,7 @@
           <button 
             v-if="exam.status === 'started'"
             @click="stopExam(exam.testCode)" 
-            class="stop-btn"
+            class="action-btn stop-btn"
             title="Stop exam"
           >
             <i class="fas fa-stop"></i> Stop
@@ -121,7 +139,7 @@
           <button 
             v-if="exam.status !== 'started' && !exam.scores.length"
             @click="confirmDelete(exam)" 
-            class="delete-btn"
+            class="action-btn delete-btn"
             title="Delete exam"
           >
             <i class="fas fa-trash"></i> Delete
@@ -129,7 +147,7 @@
 
           <button 
             @click="viewResults(exam)" 
-            class="results-btn"
+            class="action-btn results-btn"
             title="View results"
             :disabled="!exam.scores.length"
           >
@@ -138,23 +156,27 @@
 
           <button 
             @click="exportExam(exam)" 
-            class="export-btn"
+            class="action-btn export-btn"
             title="Export exam"
           >
             <i class="fas fa-file-export"></i> Export
           </button>
 
-          <button class="action-btn access-btn" @click="openAccessModal(exam)">
+          <button 
+            @click="openAccessModal(exam)" 
+            class="action-btn access-btn"
+            title="Manage access"
+          >
             <span class="material-icons-round">security</span>
-            Manage Access
+            Access
           </button>
 
           <button 
             @click="viewPrintableExam(exam)" 
-            class="paper-btn"
+            class="action-btn paper-btn"
             title="View printable exam"
           >
-            <i class="fas fa-file-alt"></i> Paper View
+            <i class="fas fa-file-alt"></i> Paper
           </button>
         </div>
       </div>
@@ -798,504 +820,669 @@ export default {
 
 <style scoped>
 .manage-exams {
-  padding: 2rem;
   max-width: auto;
   margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.header {
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
 }
 
-.header h1 {
-  font-size: 2rem;
-  color: #333;
-  margin: 0;
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
 }
 
 .header-actions {
   display: flex;
   gap: 1rem;
-  align-items: center;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
 }
 
-.template-btn,
-.import-btn {
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
+.template-btn, .import-btn, .create-btn {
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
   transition: all 0.3s;
+  text-decoration: none;
 }
 
 .template-btn {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #bbdefb;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border: none;
 }
 
 .template-btn:hover {
-  background-color: #bbdefb;
+  background-color: #c8e6c9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .import-btn {
-  background-color: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: none;
 }
 
 .import-btn:hover {
-  background-color: #eeeeee;
+  background-color: #bbdefb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .create-btn {
   background-color: #4CAF50;
   color: white;
-  padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.3s;
+  border: none;
 }
 
 .create-btn:hover {
-  background-color: #45a049;
+  background-color: #43a047;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
+/* Loading, Error, Empty States */
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   padding: 3rem;
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
-.loading-state i,
-.error-state i,
-.empty-state i {
+.loading-state .material-icons-round, 
+.error-state .material-icons-round, 
+.empty-state .material-icons-round {
   font-size: 3rem;
   margin-bottom: 1rem;
-  color: #666;
 }
 
-.error-state {
-  color: #d32f2f;
+.loading-state .material-icons-round {
+  color: #159750;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state .material-icons-round {
+  color: #f44336;
+}
+
+.empty-state .material-icons-round {
+  color: #9e9e9e;
 }
 
 .retry-btn {
   margin-top: 1rem;
   padding: 0.5rem 1rem;
-  background-color: #f44336;
+  background: #f44336;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   cursor: pointer;
+  transition: all 0.3s;
 }
 
+.retry-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Exams Grid */
 .exams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
 .exam-card {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
 .exam-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .exam-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-.exam-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-  color: #333;
+/* Main paint swipe */
+.exam-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
 }
 
-.status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.875rem;
-  font-weight: 500;
+/* Secondary paint swipe */
+.exam-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
 }
 
-.status-badge.draft {
-  background-color: #e3f2fd;
-  color: #1976d2;
-}
-
-.status-badge.pending {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-.status-badge.started {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status-badge.stopped {
-  background-color: #fafafa;
-  color: #616161;
-}
-
-.exam-details {
-  margin: 1rem 0;
-}
-
-.exam-details p {
-  margin: 0.5rem 0;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.exam-details i {
-  width: 20px;
-  color: #999;
-}
-
-.exam-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin: 1rem 0;
-  padding: 1rem;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.stat {
-  text-align: center;
-}
-
-.stat .label {
-  display: block;
-  font-size: 0.875rem;
-  color: #666;
-  margin-bottom: 0.25rem;
-}
-
-.stat .value {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-}
-
-.exam-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  flex-wrap: wrap;
-}
-
-.exam-actions button {
-  flex: 1;
-  padding: 0.5rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  transition: background-color 0.3s;
-}
-
-.edit-btn {
-  background-color: #2196f3;
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: #1976d2;
-}
-
-.start-btn {
-  background-color: #4caf50;
-  color: white;
-}
-
-.start-btn:hover {
-  background-color: #43a047;
-}
-
-.stop-btn {
-  background-color: #f44336;
-  color: white;
-}
-
-.stop-btn:hover {
-  background-color: #d32f2f;
-}
-
-.delete-btn {
-  background-color: #ff5252;
-  color: white;
-}
-
-.delete-btn:hover {
-  background-color: #d50000;
-}
-
-.results-btn {
-  background-color: #9c27b0;
-  color: white;
-}
-
-.results-btn:hover {
-  background-color: #7b1fa2;
-}
-
-.results-btn:disabled {
-  background-color: #e1bee7;
-  cursor: not-allowed;
-}
-
-.preview-btn {
-  background-color: #673ab7;
-  color: white;
-}
-
-.preview-btn:hover {
-  background-color: #5e35b1;
-}
-
-.export-btn {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  border: none;
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 500;
-  transition: background-color 0.3s;
-}
-
-.export-btn:hover {
-  background-color: #c8e6c9;
-}
-
-.action-btn {
-  background-color: #9c27b0;
-  color: white;
-}
-
-.action-btn:hover {
-  background-color: #7b1fa2;
-}
-
-.modal-backdrop {
-  position: fixed;
-  bottom: 0;
+/* Additional texture layers */
+.exam-header .texture-layer {
+  position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: flex-end;
-  z-index: 100;
-  height: 100vh;
-}
-
-.access-modal {
-  width: 100%;
-  max-width: 800px;
-  max-height: 80vh;
-  background: white;
-  border-radius: 20px 20px 0 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-.modal-closing {
-  animation: slideDown 0.3s ease-in;
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(100%);
-  }
-}
-
-.modal-header {
-  position: sticky;
-  top: 0;
-  background: white;
-  padding: 1.25rem;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-radius: 20px 20px 0 0;
-  z-index: 1;
-}
-
-.modal-header h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #333;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.modal-header .material-icons-round {
-  color: #5e35b1;
-}
-
-.close-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: none;
-  background: #f5f5f5;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.close-btn:hover {
-  background: #e0e0e0;
-  color: #333;
-}
-
-.modal-handle {
-  width: 40px;
-  height: 4px;
-  background: #e0e0e0;
-  border-radius: 2px;
-  margin: 0.5rem auto;
-}
-
-.modal-body {
-  padding: 1.25rem;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.modal-footer {
-  position: sticky;
   bottom: 0;
-  background: white;
-  padding: 1rem;
-  border-top: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.exam-header h2 {
+  margin: 0 0 10px 0;
+  color: white;
+  font-size: 1.5rem;
+  position: relative;
   z-index: 1;
-}
-
-.access-exam-info {
-  background-color: #fff;
-  padding: 1.25rem;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  margin-bottom: 1rem;
-}
-
-.access-exam-info h3 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1.1rem;
-  color: #333;
 }
 
 .exam-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.exam-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.status-started {
+  color: #4CAF50;
+}
+
+.status-pending {
+  color: #FF9800;
+}
+
+.status-stopped {
+  color: #F44336;
+}
+
+.exam-body {
+  padding: 20px;
+  flex: 1;
+}
+
+.exam-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  color: #666;
+}
+
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 1rem;
+  color: #424242;
+}
+
+.info-item .material-icons-round {
+  font-size: 1.25rem;
+  color: #159750;
+  margin-top: 0.25rem;
+}
+
+.exam-actions {
+  padding: 15px;
+  background: #f5f5f5;
+  border-top: 1px solid #eee;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.action-btn {
+  flex: 1;
+  min-width: calc(33.333% - 8px);
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.edit-btn:hover {
+  background-color: #1976D2;
+}
+
+.preview-btn {
+  background-color: #673AB7;
+  color: white;
+}
+
+.preview-btn:hover {
+  background-color: #5E35B1;
+}
+
+.start-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.start-btn:hover {
+  background-color: #43A047;
+}
+
+.stop-btn {
+  background-color: #F44336;
+  color: white;
+}
+
+.stop-btn:hover {
+  background-color: #D32F2F;
+}
+
+.delete-btn {
+  background-color: #FF5252;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: #D50000;
+}
+
+.results-btn {
+  background-color: #9C27B0;
+  color: white;
+}
+
+.results-btn:hover {
+  background-color: #7B1FA2;
+}
+
+.results-btn:disabled {
+  background-color: #E1BEE7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.export-btn {
+  background-color: #E8F5E9;
+  color: #2E7D32;
+}
+
+.export-btn:hover {
+  background-color: #C8E6C9;
+}
+
+.access-btn {
+  background-color: #FFF3E0;
+  color: #E65100;
+}
+
+.access-btn:hover {
+  background-color: #FFE0B2;
+}
+
+.paper-btn {
+  background-color: #ECEFF1;
+  color: #455A64;
+}
+
+.paper-btn:hover {
+  background-color: #CFD8DC;
+}
+
+/* Modal styles remain the same */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.access-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0;
+  animation: modalFadeIn 0.3s ease;
+  z-index: 1001;
+}
+
+.modal-closing {
+  animation: modalFadeOut 0.3s ease forwards;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.modal-handle {
+  width: 40px;
+  height: 5px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  margin: 10px auto;
+  display: none;
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.modal-header h2 {
+  color: white;
+  margin: 0;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.access-exam-info {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.access-exam-info h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.exam-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
   font-size: 0.9rem;
-  color: #616161;
-}
-
-.meta-item .material-icons-round {
-  font-size: 18px;
-  color: #673ab7;
+  color: #666;
 }
 
 .access-control-section {
-  background-color: #fff;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  padding: 1.25rem;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .access-type-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 15px;
 }
 
 .access-type-header h4 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
   color: #333;
+  font-size: 1.1rem;
 }
 
 .toggle-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .toggle-state {
-  font-weight: 500;
   font-size: 0.9rem;
-  color: #673ab7;
+  font-weight: 500;
+  color: #666;
 }
 
 .switch {
@@ -1325,20 +1512,20 @@ export default {
 .slider:before {
   position: absolute;
   content: "";
-  height: 16px;
-  width: 16px;
-  left: 4px;
-  bottom: 4px;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
   background-color: white;
   transition: .4s;
 }
 
 input:checked + .slider {
-  background-color: #673ab7;
+  background-color: #4CAF50;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #673ab7;
+  box-shadow: 0 0 1px #4CAF50;
 }
 
 input:checked + .slider:before {
@@ -1355,11 +1542,11 @@ input:checked + .slider:before {
 
 .access-description {
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-  background-color: #f5f5f5;
-  padding: 1rem;
+  gap: 15px;
+  padding: 15px;
+  background: #f9f9f9;
   border-radius: 8px;
+  margin-top: 15px;
 }
 
 .description-icon {
@@ -1368,348 +1555,211 @@ input:checked + .slider:before {
   justify-content: center;
   width: 40px;
   height: 40px;
+  background: #e8f5e9;
   border-radius: 50%;
-  background-color: #e0e0e0;
-  flex-shrink: 0;
-}
-
-.description-icon .material-icons-round {
-  color: #555;
-  font-size: 20px;
+  color: #4CAF50;
 }
 
 .description-text p {
   margin: 0;
-  font-size: 0.9rem;
-  color: #555;
+  color: #666;
   line-height: 1.5;
 }
 
-.section-access-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+.section-list-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.section-form-card, .section-list-card {
-  background-color: #fff;
-  border-radius: 10px;
-  border: 1px solid #e0e0e0;
-  padding: 1.25rem;
-}
-
-.section-form-card h4, .section-list-card h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #333;
+.section-list-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
+  margin-bottom: 15px;
 }
 
-.section-form-card h4 .material-icons-round {
-  color: #4CAF50;
+.section-list-header h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
 }
 
-.section-list-card h4 .material-icons-round {
-  color: #2196F3;
+.section-form-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .form-row {
   display: flex;
-  gap: 1rem;
-  align-items: flex-end;
+  gap: 15px;
+  margin-bottom: 15px;
 }
 
 .form-group {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .form-group label {
-  font-size: 0.85rem;
-  color: #555;
+  display: block;
+  margin-bottom: 8px;
   font-weight: 500;
-}
-
-.form-select {
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 0.9rem;
   color: #333;
-  background-color: #fff;
-  transition: border-color 0.2s;
 }
 
-.form-select:focus {
-  border-color: #673ab7;
-  outline: none;
-}
-
-.form-select:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.form-action {
-  display: flex;
-  align-items: flex-end;
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
 }
 
 .add-section-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background-color: #4CAF50;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #4CAF50;
   color: white;
-  font-weight: 500;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.add-section-btn:hover:not(:disabled) {
-  background-color: #3d8b40;
+.add-section-btn:hover {
+  background: #43A047;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.add-section-btn:disabled {
-  background-color: #a5d6a7;
-  cursor: not-allowed;
-}
-
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.section-count {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 500;
-}
-
-.empty-sections {
+.section-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 2rem;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.empty-sections .material-icons-round {
-  font-size: 40px;
-  color: #bdbdbd;
-  margin-bottom: 0.75rem;
-}
-
-.empty-sections p {
-  margin: 0;
-  color: #757575;
-}
-
-.empty-hint {
-  font-size: 0.85rem;
-  margin-top: 0.5rem !important;
-}
-
-.sections-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-top: 1rem;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 5px;
 }
 
 .section-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
-  background-color: #f9f9f9;
+  padding: 10px 15px;
+  background: #f5f5f5;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  transition: all 0.2s;
+}
+
+.section-item:hover {
+  background: #e8f5e9;
 }
 
 .section-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
-.grade-badge {
-  background-color: #e3f2fd;
-  color: #1976d2;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  font-weight: 500;
+.section-grade {
+  font-weight: 600;
+  color: #333;
 }
 
 .section-name {
-  font-weight: 500;
-  color: #333;
+  color: #666;
 }
 
 .remove-section-btn {
   background: none;
   border: none;
   color: #f44336;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .remove-section-btn:hover {
-  background-color: #ffebee;
+  color: #d32f2f;
+  transform: scale(1.1);
 }
 
-.cancel-btn, .save-btn {
+.modal-footer {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  justify-content: flex-end;
+  gap: 15px;
+  padding: 20px;
+  border-top: 1px solid #eee;
 }
 
 .cancel-btn {
-  background-color: #f5f5f5;
+  padding: 10px 20px;
+  background: #f5f5f5;
   color: #333;
   border: 1px solid #ddd;
-}
-
-.cancel-btn:hover {
-  background-color: #e0e0e0;
-}
-
-.save-btn {
-  background-color: #673ab7;
-  color: white;
-}
-
-.save-btn:hover {
-  background-color: #5e35b1;
-  transform: translateY(-2px);
-}
-
-.action-btn.access-btn {
-  background: #673ab7;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.action-btn.access-btn:hover {
-  background: #5e35b1;
+.cancel-btn:hover {
+  background: #e0e0e0;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.paper-btn {
-  background: #9C27B0;
+.save-btn {
+  padding: 10px 20px;
+  background: #4CAF50;
   color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.paper-btn:hover {
-  background: #7B1FA2;
+.save-btn:hover {
+  background: #43A047;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Responsive styles for the modal */
 @media (max-width: 768px) {
-  .manage-exams {
-    padding: 1rem;
+  .access-modal {
+    width: 95%;
+    max-height: 90vh;
   }
-
-  .header {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-
-  .header-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-
-  .template-btn,
-  .import-btn,
-  .create-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .exam-actions {
-    flex-direction: column;
-  }
-
-  .exam-actions button {
-    width: 100%;
-  }
-
+  
   .form-row {
     flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .add-section-btn {
-    width: 100%;
-    justify-content: center;
-  }
-  
-  .section-form-card, 
-  .section-list-card {
-    padding: 1rem;
+    gap: 10px;
   }
   
   .modal-footer {
     flex-direction: column-reverse;
-    gap: 0.75rem;
+    gap: 10px;
   }
   
-  .save-btn, 
-  .cancel-btn {
+  .cancel-btn, 
+  .save-btn {
     width: 100%;
-    justify-content: center;
   }
   
   .access-type-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.75rem;
+    gap: 10px;
   }
-
-  .access-modal {
-    max-height: 90vh;
-  }
-
-  .modal-footer {
-    padding: 1rem;
+  
+  .toggle-wrapper {
+    align-self: flex-start;
   }
 }
 </style> 

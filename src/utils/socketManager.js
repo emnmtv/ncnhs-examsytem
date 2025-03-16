@@ -10,131 +10,195 @@ class SocketManager {
     this.reconnectAttempts = 0;
     this.currentUserId = null;
     this.connectionTimeout = null;
+    this.reconnectionInProgress = false;
+    this.lastTestCode = null;
+
+    // Set up page visibility handling
+    this.setupPageVisibilityHandling();
   }
 
   initialize() {
+    if (this.reconnectionInProgress) {
+      console.log('Reconnection already in progress, waiting...');
+      return this.socket;
+    }
+
+    this.reconnectionInProgress = true;
+
     // Clear any existing connection timeout
     if (this.connectionTimeout) {
       clearTimeout(this.connectionTimeout);
       this.connectionTimeout = null;
     }
 
-    // If we already have a connected socket, disconnect it first
+    // If we already have a socket, clean it up properly
     if (this.socket) {
       console.log('Cleaning up existing socket before initialization');
-      this.disconnect();
+      this.cleanupSocket();
     }
 
-    if (this.isInitializing) {
-      console.log('Socket already initializing, waiting...');
-      return null;
-    }
-    
-    this.isInitializing = true;
-    console.log('Initializing socket connection...');
+    console.log('Initializing new socket connection...');
     
     this.socket = io('http://192.168.0.104:3300', {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      timeout: 5000,
       auth: {
         userId: localStorage.getItem('userId')
-      },
-      // Add these options to help prevent ghost connections
-      forceNew: true,
-      timeout: 5000
+      }
     });
-    
-    // Set up connection event handlers
+
+    // Set up connection handlers
     this.socket.on('connect', () => {
       console.log('Socket connected successfully:', this.socket.id);
-      this.isInitializing = false;
+      this.reconnectionInProgress = false;
       
-      // Clear any existing timeout
-      if (this.connectionTimeout) {
-        clearTimeout(this.connectionTimeout);
-      }
-      
-      // Re-register user on reconnect if we have their ID
-      this.handleReconnect();
+      // Automatically restore session state on reconnect
+      this.restoreSession();
     });
 
-    // Add a connection timeout
-    this.connectionTimeout = setTimeout(() => {
-      if (!this.socket?.connected) {
-        console.log('Connection timeout - forcing reconnect');
-        this.disconnect();
-        this.initialize();
-      }
-    }, 5000);
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      this.reconnectAttempts++;
-    });
-    
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
+      if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+        // Don't attempt to reconnect for intentional disconnects
+        return;
+      }
+      
+      // Store the current state before disconnection
+      this.lastTestCode = localStorage.getItem('testCode');
+      
+      // Attempt to reconnect
+      setTimeout(() => {
+        if (!this.socket.connected) {
+          console.log('Attempting to reconnect...');
+          this.initialize();
+        }
+      }, 1000);
     });
-    
-    this.socket.on('reconnect', (attemptNumber) => {
-      console.log(`Socket reconnected after ${attemptNumber} attempts`);
-      this.handleReconnect();
-    });
-    
-    // Set up listener for active users updates
-    this.socket.on('activeUsersUpdate', (users) => {
-      console.log('Received active users update:', users);
-      this.activeUsers = users;
-      // Notify all callbacks
-      this.activeUsersCallbacks.forEach(callback => callback(users));
-    });
-    
+
     return this.socket;
   }
 
-  // Handle reconnection logic
-  handleReconnect() {
+  // New method to restore session state
+  async restoreSession() {
     const userId = localStorage.getItem('userId');
     const userRole = localStorage.getItem('userRole');
-    
-    if (userId && userRole) {
-      console.log(`Re-registering user ${userId} after reconnect`);
+    const testCode = localStorage.getItem('testCode');
+
+    if (!userId || !userRole) {
+      console.log('No session to restore - missing user credentials');
+      return;
+    }
+
+    console.log('Restoring session state...');
+
+    // Make sure we have a connected socket
+    if (!this.socket?.connected) {
+      console.log('Socket not connected, initializing before restoring session');
+      this.initialize();
       
-      // Add a small delay to ensure server has time to process any disconnect events
+      // Wait for connection before proceeding
+      if (this.socket) {
+        await new Promise(resolve => {
+          const checkConnection = () => {
+            if (this.socket.connected) {
+              resolve();
+            } else {
+              setTimeout(checkConnection, 100);
+            }
+          };
+          checkConnection();
+        });
+      }
+    }
+
+    // First register the user
+    this.emitUserLogin(userId, userRole);
+
+    // If there was an active exam session, restore it
+    if (testCode) {
+      console.log('Restoring exam session:', testCode);
       setTimeout(() => {
-        this.emitUserLogin(userId, userRole);
-        
-        // If user was in an exam, rejoin it
-        const testCode = localStorage.getItem('testCode');
-        if (testCode) {
-          console.log(`Re-joining exam ${testCode} after reconnect`);
-          this.joinExam(testCode, userId);
-        }
+        this.joinExam(testCode, userId);
       }, 500);
     }
   }
 
-  getSocket() {
-    return this.socket || this.initialize();
+  cleanupSocket() {
+    if (this.socket) {
+      // Store current state before cleanup
+      this.lastTestCode = localStorage.getItem('testCode');
+      
+      // Remove all listeners
+      this.socket.removeAllListeners();
+      
+      // Disconnect the socket
+      if (this.socket.connected) {
+        this.socket.disconnect();
+      }
+      
+      this.socket = null;
+    }
   }
 
   disconnect() {
-    if (this.socket) {
-      // Force disconnect and cleanup
-      try {
-        if (this.currentUserId) {
-          this.emitUserLogout(this.currentUserId);
-        }
-        this.socket.disconnect(true);
-        this.socket.close();
-        this.socket = null;
-        this.currentUserId = null;
-        this.isInitializing = false;
-      } catch (error) {
-        console.error('Error during socket cleanup:', error);
-      }
+    const userId = this.currentUserId;
+    if (userId) {
+      this.emitUserLogout(userId);
     }
+    this.cleanupSocket();
+    this.currentUserId = null;
+    this.isInitializing = false;
+    this.reconnectionInProgress = false;
+  }
+
+  // Modified joinExam method
+  joinExam(testCode, userId) {
+    if (!testCode || !userId) {
+      console.error('Cannot join exam: missing testCode or userId');
+      return;
+    }
+
+    console.log(`Joining exam ${testCode} as user ${userId}`);
+    
+    // Store test code for reconnection
+    localStorage.setItem('testCode', testCode);
+    this.lastTestCode = testCode;
+
+    // Ensure we have a valid socket connection
+    if (!this.socket?.connected) {
+      console.log('Socket not connected, initializing...');
+      this.initialize();
+      
+      // Wait for connection before joining
+      this.socket.once('connect', () => {
+        this.emitEvent('joinExam', { testCode, userId });
+      });
+      return;
+    }
+
+    this.emitEvent('joinExam', { testCode, userId });
+  }
+
+  // Modified quitExam method
+  quitExam(testCode) {
+    if (!testCode) {
+      console.error('Cannot quit exam: missing testCode');
+      return;
+    }
+
+    console.log(`Quitting exam ${testCode}`);
+    
+    // Clear stored test code
+    localStorage.removeItem('testCode');
+    this.lastTestCode = null;
+
+    this.emitEvent('quitExam', { testCode });
+  }
+
+  getSocket() {
+    return this.socket || this.initialize();
   }
 
   // Emit an event with retry logic
@@ -219,50 +283,36 @@ class SocketManager {
     return this.activeUsers;
   }
 
-  // Add these methods for exam management
-  joinExam(testCode, userId) {
-    if (!testCode || !userId) {
-      console.error('Cannot join exam: missing testCode or userId');
-      return;
-    }
-    
-    console.log(`Joining exam ${testCode} as user ${userId}`);
-    
-    // Store the test code in localStorage for reconnection
-    localStorage.setItem('testCode', testCode);
-    
-    // Make sure we're still in the active users list
-    const userRole = localStorage.getItem('userRole');
-    if (userRole) {
-      this.emitUserLogin(userId, userRole);
-    }
-    
-    // Then join the exam
-    this.emitEvent('joinExam', { testCode, userId });
-  }
-
-  quitExam(testCode) {
-    if (!testCode) {
-      console.error('Cannot quit exam: missing testCode');
-      return;
-    }
-    
-    const userId = localStorage.getItem('userId');
-    console.log(`Quitting exam ${testCode} as user ${userId}`);
-    
-    // Remove the test code from localStorage
-    localStorage.removeItem('testCode');
-    
-    // Quit the exam
-    this.emitEvent('quitExam', { testCode });
-    
-    // Make sure we're still in the active users list
-    if (userId) {
-      const userRole = localStorage.getItem('userRole');
-      if (userRole) {
-        this.emitUserLogin(userId, userRole);
+  // Add this method to the SocketManager class
+  setupPageVisibilityHandling() {
+    // Handle page visibility changes (tab switching, minimizing)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Page became visible - checking connection');
+        if (!this.socket?.connected) {
+          console.log('Socket disconnected while page was hidden - reconnecting');
+          this.initialize();
+        }
+        
+        // Always restore session when page becomes visible
+        this.restoreSession();
       }
-      this.sendActivityHeartbeat(userId);
+    });
+    
+    // Handle before unload to properly disconnect
+    window.addEventListener('beforeunload', () => {
+      console.log('Page unloading - storing session state');
+      // We don't actually disconnect here, just store state
+      this.lastTestCode = localStorage.getItem('testCode');
+    });
+    
+    // Handle page load to restore session
+    if (document.readyState === 'complete') {
+      this.restoreSession();
+    } else {
+      window.addEventListener('load', () => {
+        this.restoreSession();
+      });
     }
   }
 }

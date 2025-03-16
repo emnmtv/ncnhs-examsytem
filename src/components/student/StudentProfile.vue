@@ -184,8 +184,19 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 
 <template>
   <div class="profile-page">
+    <div class="header-container">
+      <div class="header-content">
+        <h1>My Profile<span class="material-icons">person</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">View and manage your personal information</p>
+        </div>
+      </div>
+      <div class="header-background">PROFILE</div>
+    </div>
+    
     <div v-if="loading" class="loading-state">
-      <div class="spinner"></div>
+      <span class="material-icons-round rotating">sync</span>
       <p>Loading your profile...</p>
     </div>
     
@@ -386,9 +397,66 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 
 <style scoped>
 .profile-page {
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
 }
 
 .profile-content {
@@ -435,6 +503,8 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 
 .edit-btn:hover {
   background: #c8e6c9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .edit-btn.cancel {
@@ -444,6 +514,8 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 
 .edit-btn.cancel:hover {
   background: #ffcdd2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .form-grid {
@@ -553,6 +625,7 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 .save-btn:hover {
   background: #43A047;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .loading-state {
@@ -562,15 +635,21 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   justify-content: center;
   min-height: 400px;
   gap: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4CAF50;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.rotating {
+  animation: rotate 2s linear infinite;
+  font-size: 3rem;
+  color: #159750;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Password section styles */
@@ -620,14 +699,27 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   margin: 0.25rem 0 0 0;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
 @media (max-width: 768px) {
   .profile-page {
-    padding: 1rem;
+    padding: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
   }
 
   .edit-section {

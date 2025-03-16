@@ -2,10 +2,10 @@
   <div class="profile-page">
     <div class="header-container">
       <div class="header-content">
-        <h1>Teacher Profile<span class="material-icons">school</span></h1>
+        <h1>Admin Profile<span class="material-icons">admin_panel_settings</span></h1>
         <div class="divider"></div>
         <div class="header-text">
-          <p class="subtitle">View and manage your professional information</p>
+          <p class="subtitle">View and manage your administrator information</p>
         </div>
       </div>
       <div class="header-background">PROFILE</div>
@@ -91,20 +91,6 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label>Domain</label>
-              <div class="input-wrapper">
-                <span class="material-icons-round">school</span>
-                <input 
-                  v-model="profile.domain" 
-                  type="text" 
-                  :readonly="!isEditing"
-                  :class="{ 'editable': isEditing }"
-                  placeholder="Enter your teaching domain"
-                />
-              </div>
-            </div>
-
             <div class="form-group full-width">
               <label>Address</label>
               <div class="input-wrapper">
@@ -122,7 +108,10 @@
 
           <!-- Password Change Section -->
           <div v-if="isEditing" class="password-section">
-            <div class="password-header" @click="togglePasswordFields">
+            <div 
+              class="password-header" 
+              @click="showPasswordFields = !showPasswordFields"
+            >
               <h3>
                 <span class="material-icons-round">lock</span>
                 Change Password
@@ -131,17 +120,16 @@
                 {{ showPasswordFields ? 'expand_less' : 'expand_more' }}
               </span>
             </div>
-            
+
             <div v-if="showPasswordFields" class="password-fields">
               <div class="form-group">
                 <label>New Password</label>
-                <div class="input-wrapper password-input">
-                  <span class="material-icons-round">lock</span>
+                <div class="input-wrapper">
+                  <span class="material-icons-round">vpn_key</span>
                   <input 
                     v-model="passwordData.password" 
                     :type="showPassword ? 'text' : 'password'" 
                     placeholder="Enter new password"
-                    class="editable"
                   />
                   <button 
                     type="button" 
@@ -155,16 +143,15 @@
                 </div>
                 <p class="password-hint">Password must be at least 8 characters long</p>
               </div>
-              
+
               <div class="form-group">
                 <label>Confirm Password</label>
-                <div class="input-wrapper password-input">
-                  <span class="material-icons-round">lock_clock</span>
+                <div class="input-wrapper">
+                  <span class="material-icons-round">vpn_key</span>
                   <input 
                     v-model="passwordData.confirmPassword" 
                     :type="showConfirmPassword ? 'text' : 'password'" 
                     placeholder="Confirm new password"
-                    class="editable"
                   />
                   <button 
                     type="button" 
@@ -203,9 +190,8 @@ const profile = ref({
   lastName: '',
   email: '',
   address: '',
-  domain: '',
   department: '',
-  role: '',
+  role: 'admin',
   createdAt: ''
 });
 
@@ -237,11 +223,24 @@ const loadProfile = async () => {
       icon: 'error',
       title: 'Failed to Load Profile',
       text: 'There was an error loading your profile data.',
-      confirmButtonColor: '#2196F3'
+      confirmButtonColor: '#4CAF50'
     });
   } finally {
     loading.value = false;
   }
+};
+
+const toggleEditMode = () => {
+  if (isEditing.value) {
+    // Reset form if canceling edit
+    loadProfile();
+    passwordData.value = {
+      password: '',
+      confirmPassword: ''
+    };
+    showPasswordFields.value = false;
+  }
+  isEditing.value = !isEditing.value;
 };
 
 const handleUpdate = async () => {
@@ -259,90 +258,46 @@ const handleUpdate = async () => {
       if (passwordData.value.password !== passwordData.value.confirmPassword) {
         throw new Error('Passwords do not match');
       }
-      
-      // Add password to profile data for update
-      profile.value.password = passwordData.value.password;
     }
     
-    // Show loading state
-    const loadingAlert = Swal.fire({
-      title: 'Updating Profile',
-      html: 'Please wait while we update your profile...',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-      showConfirmButton: false
-    });
+    // Prepare update data
+    const updateData = {
+      firstName: profile.value.firstName,
+      lastName: profile.value.lastName,
+      email: profile.value.email,
+      address: profile.value.address,
+      department: profile.value.department
+    };
     
-    await updateProfile(profile.value);
+    // Add password if it's being changed
+    if (showPasswordFields.value && passwordData.value.password) {
+      updateData.password = passwordData.value.password;
+    }
     
-    // Close loading alert
-    loadingAlert.close();
-    
-    // Reset password fields
-    passwordData.value.password = '';
-    passwordData.value.confirmPassword = '';
-    showPasswordFields.value = false;
-    showPassword.value = false;
-    showConfirmPassword.value = false;
+    // Call API to update profile
+    await updateProfile(updateData);
     
     // Show success message
     Swal.fire({
       icon: 'success',
-      title: 'Profile Updated!',
+      title: 'Profile Updated',
       text: 'Your profile has been updated successfully.',
-      confirmButtonColor: '#2196F3',
-      timer: 2000,
-      timerProgressBar: true
+      confirmButtonColor: '#4CAF50'
     });
     
+    // Exit edit mode
     isEditing.value = false;
+    
+    // Reload profile data
+    await loadProfile();
+    
   } catch (err) {
     Swal.fire({
       icon: 'error',
       title: 'Update Failed',
-      text: err.message || 'Failed to update profile',
-      confirmButtonColor: '#2196F3'
+      text: err.message || 'Failed to update profile.',
+      confirmButtonColor: '#F44336'
     });
-  }
-};
-
-const toggleEditMode = () => {
-  if (isEditing.value) {
-    // Confirm before canceling edit
-    Swal.fire({
-      title: 'Cancel Editing?',
-      text: 'Any unsaved changes will be lost.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#2196F3',
-      cancelButtonColor: '#f44336',
-      confirmButtonText: 'Yes, cancel',
-      cancelButtonText: 'Continue editing'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        isEditing.value = false;
-        showPasswordFields.value = false;
-        passwordData.value.password = '';
-        passwordData.value.confirmPassword = '';
-        showPassword.value = false;
-        showConfirmPassword.value = false;
-        loadProfile(); // Reload original data
-      }
-    });
-  } else {
-    isEditing.value = true;
-  }
-};
-
-const togglePasswordFields = () => {
-  showPasswordFields.value = !showPasswordFields.value;
-  if (!showPasswordFields.value) {
-    passwordData.value.password = '';
-    passwordData.value.confirmPassword = '';
-    showPassword.value = false;
-    showConfirmPassword.value = false;
   }
 };
 
@@ -429,7 +384,7 @@ const togglePasswordVisibility = (field) => {
 .edit-section {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   padding: 2rem;
 }
 
@@ -446,13 +401,14 @@ const togglePasswordVisibility = (field) => {
   gap: 0.75rem;
   margin: 0;
   color: #333;
+  font-size: 1.5rem;
 }
 
 .edit-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   border: none;
   border-radius: 8px;
   font-weight: 500;
@@ -479,9 +435,15 @@ const togglePasswordVisibility = (field) => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
@@ -492,65 +454,46 @@ const togglePasswordVisibility = (field) => {
 }
 
 .form-group.full-width {
-  grid-column: 1 / -1;
+  grid-column: span 2;
 }
 
 .form-group label {
-  font-size: 0.9rem;
-  color: #666;
   font-weight: 500;
+  color: #333;
 }
 
 .input-wrapper {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 0 1rem;
+  transition: all 0.3s;
+  position: relative;
 }
 
 .input-wrapper .material-icons-round {
-  position: absolute;
-  left: 1rem;
-  color: #666;
+  color: #9e9e9e;
 }
 
 .input-wrapper input {
-  width: 100%;
-  padding: 0.75rem 1rem 0.75rem 3rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  background: #f8f9fa;
-}
-
-.input-wrapper.password-input input {
-  padding-right: 3rem; /* Make room for the toggle button */
-}
-
-.toggle-password-btn {
-  position: absolute;
-  right: 0.75rem;
-  background: transparent;
+  flex: 1;
+  padding: 1rem 0;
   border: none;
-  cursor: pointer;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
+  outline: none;
+  font-size: 1rem;
+  background: transparent;
+  color: #333;
 }
 
-.toggle-password-btn:hover {
-  color: #4CAF50;
+.input-wrapper input:read-only {
+  cursor: default;
+  color: #757575;
 }
 
 .input-wrapper input.editable {
-  background: white;
-  cursor: text;
-}
-
-.input-wrapper input:not(.editable) {
-  cursor: default;
+  color: #333;
 }
 
 .input-wrapper input.editable:focus {
@@ -559,9 +502,19 @@ const togglePasswordVisibility = (field) => {
   outline: none;
 }
 
-/* Password section styles */
+.toggle-password-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9e9e9e;
+  transition: color 0.3s;
+}
+
+.toggle-password-btn:hover {
+  color: #4CAF50;
+}
+
 .password-section {
-  margin-top: 2rem;
   border-top: 1px solid #e0e0e0;
   padding-top: 1.5rem;
 }
@@ -707,4 +660,4 @@ const togglePasswordVisibility = (field) => {
     justify-content: center;
   }
 }
-</style>
+</style> 

@@ -1,38 +1,43 @@
 <template>
   <div class="exam-history-container">
-    <div class="content-header">
-      <div class="left-section">
-        <h1><span class="material-icons-round">history</span> Exam History</h1>
-        <p class="subtitle">View and review your past exams</p>
-      </div>
-      <div class="right-section">
-        <div class="controls">
-          <div class="view-toggle">
-            <button 
-              @click="currentView = 'grid'" 
-              class="toggle-btn" 
-              :class="{ active: currentView === 'grid' }"
-            >
-              <span class="material-icons-round">grid_view</span>
-            </button>
-            <button 
-              @click="currentView = 'table'" 
-              class="toggle-btn" 
-              :class="{ active: currentView === 'table' }"
-            >
-              <span class="material-icons-round">table_rows</span>
-            </button>
-          </div>
-          <button @click="refreshHistory" class="refresh-btn">
-            <span class="material-icons-round">refresh</span>
-            Refresh
-          </button>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>Exam History<span class="material-icons">history</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">View and review your past exams</p>
         </div>
       </div>
+      <div class="header-background">HISTORY</div>
+    </div>
+
+    <div class="controls-section">
+      <div class="view-toggle">
+        <button 
+          @click="currentView = 'grid'" 
+          class="toggle-btn" 
+          :class="{ active: currentView === 'grid' }"
+        >
+          <span class="material-icons-round">grid_view</span>
+          Grid
+        </button>
+        <button 
+          @click="currentView = 'table'" 
+          class="toggle-btn" 
+          :class="{ active: currentView === 'table' }"
+        >
+          <span class="material-icons-round">table_rows</span>
+          Table
+        </button>
+      </div>
+      <button @click="refreshHistory" class="refresh-btn">
+        <span class="material-icons-round">refresh</span>
+        Refresh
+      </button>
     </div>
 
     <div v-if="loading" class="loading-state">
-      <div class="loader"></div>
+      <span class="material-icons-round rotating">sync</span>
       <p>Loading your exam history...</p>
     </div>
     
@@ -57,33 +62,37 @@
           class="exam-card"
           @click="viewExamDetails(getOriginalIndex(index))"
         >
-          <div class="card-header">
-            <span class="exam-status-badge" :class="getScoreClass(exam.score.percentage)">
-              {{ exam.score.percentage }}%
-            </span>
-            <span class="date-badge">{{ formatDate(exam.score.submittedAt) }}</span>
-          </div>
-          
-          <h3 class="exam-title">{{ exam.exam.examTitle }}</h3>
-          
-          <div class="exam-meta">
-            <div class="meta-item">
-              <span class="material-icons-round">school</span>
-              <span>{{ exam.exam.classCode }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="material-icons-round">person</span>
-              <span>{{ exam.exam.user.firstName }} {{ exam.exam.user.lastName }}</span>
-            </div>
-            <div class="meta-item">
-              <span class="material-icons-round">quiz</span>
-              <span>{{ exam.score.score }}/{{ exam.score.total }} correct</span>
+          <div class="exam-header">
+            <div class="texture-layer"></div>
+            <h2>{{ exam.exam.examTitle }}</h2>
+            <div class="exam-meta">
+              <span class="exam-meta-item">
+                <i class="fas fa-chalkboard"></i> {{ exam.exam.classCode }}
+              </span>
+              <span class="exam-meta-item">
+                <i class="fas fa-key"></i> {{ exam.exam.testCode }}
+              </span>
+              <span class="exam-meta-item">
+                <i class="fas fa-calendar-alt"></i> {{ formatDate(exam.score.submittedAt) }}
+              </span>
             </div>
           </div>
           
-          <div class="card-actions">
+          <div class="exam-body">
+            <div class="score-display">
+              <div class="score-circle" :class="getScoreClass(exam.score.percentage)">
+                <span class="score-percentage">{{ exam.score.percentage }}%</span>
+              </div>
+              <div class="score-details">
+                <p>You got <strong>{{ exam.score.score }}</strong> out of <strong>{{ exam.score.total }}</strong> questions correct.</p>
+                <p class="score-message">{{ getScoreMessage(exam.score.percentage) }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="exam-actions">
             <button class="view-details-btn" @click.stop="viewExamDetails(getOriginalIndex(index))">
-              <span class="material-icons-round">visibility</span>
+              <i class="fas fa-eye"></i>
               View Details
             </button>
           </div>
@@ -116,7 +125,7 @@
               <td>{{ formatDate(exam.score.submittedAt) }}</td>
               <td>
                 <button class="action-btn" @click="viewExamDetails(getOriginalIndex(index))">
-                  <span class="material-icons-round">visibility</span>
+                  <i class="fas fa-eye"></i>
                 </button>
               </td>
             </tr>
@@ -200,6 +209,15 @@ export default {
       link.rel = 'stylesheet';
       document.head.appendChild(link);
     }
+    
+    // Load FontAwesome if not already loaded
+    if (!document.getElementById('fontawesome-css')) {
+      const link = document.createElement('link');
+      link.id = 'fontawesome-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+      document.head.appendChild(link);
+    }
   },
   methods: {
     async fetchExamHistory() {
@@ -245,6 +263,13 @@ export default {
       return 'needs-improvement';
     },
     
+    getScoreMessage(percentage) {
+      if (percentage >= 90) return 'Excellent!';
+      if (percentage >= 80) return 'Good job!';
+      if (percentage >= 70) return 'Well done!';
+      return 'Keep practicing!';
+    },
+    
     // Convert paginated index back to original index in the full array
     getOriginalIndex(paginatedIndex) {
       return ((this.currentPage - 1) * this.itemsPerPage) + paginatedIndex;
@@ -263,43 +288,76 @@ export default {
 .exam-history-container {
   max-width: auto;
   margin: 0 auto;
-  padding: 24px;
-  font-family: 'Roboto', sans-serif;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #eee;
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
 }
 
-.left-section h1 {
-  font-size: 1.75rem;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 0.5rem;
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
 }
 
 .subtitle {
   color: #666;
-  font-size: 0.95rem;
+  font-size: 1.1rem;
 }
 
-.controls {
+.controls-section {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 20px;
 }
 
 .view-toggle {
   display: flex;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid #e0e0e0;
 }
@@ -308,27 +366,29 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  gap: 8px;
+  padding: 10px 16px;
   background-color: white;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .toggle-btn.active {
-  background-color: #4f46e5;
+  background-color: #159750;
   color: white;
 }
 
 .refresh-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 8px;
+  padding: 10px 16px;
   background-color: #f5f5f5;
   border: none;
-  border-radius: 6px;
-  color: #555;
+  border-radius: 8px;
+  color: #333;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
@@ -336,165 +396,265 @@ export default {
 
 .refresh-btn:hover {
   background-color: #e0e0e0;
+  transform: translateY(-2px);
 }
 
+/* Loading, Error, Empty States */
 .loading-state, .error-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
+  padding: 3rem;
+  background: #f9f9f9;
+  border-radius: 10px;
   text-align: center;
-  padding: 2rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  min-height: 300px;
 }
 
-.loading-state .loader {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #4f46e5;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.loading-state .material-icons-round,
+.error-state .material-icons-round,
+.empty-state .material-icons-round {
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
 
-@keyframes spin {
+.loading-state .material-icons-round {
+  color: #159750;
+}
+
+.error-state {
+  background: #fff3f3;
+}
+
+.error-state .material-icons-round {
+  color: #f44336;
+}
+
+.rotating {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-.error-state .material-icons-round, 
-.empty-state .material-icons-round {
-  font-size: 48px;
-  color: #9ca3af;
-  margin-bottom: 1rem;
+.retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: all 0.2s;
 }
 
-.error-state p, .empty-state p {
-  color: #6b7280;
-  margin-bottom: 1rem;
+.retry-btn:hover {
+  background: #e53935;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .empty-state h3 {
   font-size: 1.5rem;
-  color: #111827;
+  color: #333;
   margin-bottom: 0.5rem;
 }
 
-.retry-btn {
-  padding: 0.75rem 1.5rem;
-  background-color: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 1rem;
+.hint {
+  color: #757575;
+  margin-top: 0.5rem;
 }
 
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-/* Grid View Styles */
+/* Exams Grid */
 .exams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
 }
 
 .exam-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-  border: 1px solid #f3f4f6;
-  min-height: 250px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
 }
 
 .exam-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.07), 0 4px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
+.exam-header {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-.exam-status-badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: white;
+/* Main paint swipe */
+.exam-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
 }
 
-.date-badge {
-  font-size: 0.75rem;
-  color: #6b7280;
+/* Secondary paint swipe */
+.exam-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
 }
 
-.exam-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 1rem;
-  line-height: 1.4;
+/* Additional texture layers */
+.exam-header .texture-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+/* Hover animations */
+.exam-header:hover::after {
+  transform: skewX(-20deg) translateX(10px);
+  transition: transform 0.3s ease;
+}
+
+.exam-header:hover::before {
+  transform: skewX(-35deg) translateX(-10px);
+  transition: transform 0.3s ease;
+}
+
+.exam-header h2 {
+  margin: 0 0 10px 0;
+  color: #f1f1f1;
+  font-size: 1.5rem;
 }
 
 .exam-meta {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.meta-item {
+.exam-meta-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-  color: #4b5563;
-  font-size: 0.875rem;
+  gap: 6px;
+  font-size: 1rem;
+  color: #fafafa;
+  font-weight: 600;
 }
 
-.meta-item .material-icons-round {
-  font-size: 1.25rem;
-  color: #6b7280;
+.exam-body {
+  padding: 20px;
+  flex: 1;
 }
 
-.card-actions {
-  margin-top: auto;
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.view-details-btn {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 500;
+.score-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  color: white;
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+.score-details {
+  flex: 1;
+}
+
+.score-message {
+  font-weight: 600;
+  margin-top: 8px;
+  font-size: 1.1rem;
+}
+
+.exam-actions {
+  padding: 15px 20px;
+  background: #f5f5f5;
+  border-top: 1px solid #eee;
+}
+
+.view-details-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
+  text-decoration: none;
+  transition: all 0.2s;
+  width: 100%;
 }
 
 .view-details-btn:hover {
-  background-color: #4338ca;
+  background: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Table View Styles */
@@ -502,7 +662,7 @@ export default {
   overflow-x: auto;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .exams-table {
@@ -531,18 +691,27 @@ export default {
   background-color: #f9fafb;
 }
 
+.exam-status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: white;
+}
+
 .action-btn {
   background: none;
   border: none;
-  color: #4f46e5;
+  color: #4CAF50;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px;
   border-radius: 4px;
   transition: background-color 0.15s;
 }
 
 .action-btn:hover {
-  background-color: rgba(79, 70, 229, 0.1);
+  background-color: rgba(76, 175, 80, 0.1);
 }
 
 /* Pagination Styles */
@@ -584,48 +753,68 @@ export default {
 
 /* Score Classes */
 .excellent {
-  background-color: #10b981;
+  background-color: #4CAF50;
 }
 
 .good {
-  background-color: #3b82f6;
+  background-color: #2196F3;
 }
 
 .average {
-  background-color: #f59e0b;
+  background-color: #FF9800;
 }
 
 .needs-improvement {
-  background-color: #ef4444;
+  background-color: #F44336;
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .exam-history-container {
-    padding: 16px;
+    padding: 10px;
   }
   
-  .content-header {
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
+  }
+  
+  .controls-section {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1rem;
-  }
-  
-  .left-section h1 {
-    font-size: 1.5rem;
+    gap: 10px;
+    align-items: stretch;
   }
   
   .exams-grid {
     grid-template-columns: 1fr;
   }
   
-  .exams-table th:nth-child(3),
-  .exams-table td:nth-child(3) {
-    display: none;
+  .score-display {
+    flex-direction: column;
+    text-align: center;
   }
   
-  .exams-table th:nth-child(5),
-  .exams-table td:nth-child(5) {
+  .score-circle {
+    margin: 0 auto 15px;
+  }
+  
+  .exams-table th:nth-child(3),
+  .exams-table td:nth-child(3),
+  .exams-table th:nth-child(4),
+  .exams-table td:nth-child(4) {
     display: none;
   }
 }

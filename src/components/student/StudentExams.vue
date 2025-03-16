@@ -1,8 +1,14 @@
 <template>
   <div class="student-exams-container">
-    <div class="exams-header">
-      <h1>Available Exams</h1>
-      <p class="subtitle">Exams you can access based on your grade and section</p>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>Available Exams<span class="material-icons">assignment</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Exams you can access based on your grade and section</p>
+        </div>
+      </div>
+      <div class="header-background">EXAMS</div>
     </div>
 
     <!-- Loading State -->
@@ -31,29 +37,24 @@
     <!-- Exams List -->
     <div v-else class="exams-grid">
       <div v-for="exam in exams" :key="exam.id" class="exam-card" :class="exam.status">
-        <div class="exam-status">
-          <span class="status-badge" :class="exam.status">
-            {{ formatStatus(exam.status) }}
-          </span>
+        <div class="exam-header">
+          <div class="texture-layer"></div>
+          <h2>{{ exam.examTitle }}</h2>
+          <div class="exam-meta">
+            <span class="exam-meta-item">
+              <i class="fas fa-chalkboard"></i> {{ exam.classCode || 'No Class' }}
+            </span>
+            <span class="exam-meta-item">
+              <i class="fas fa-key"></i> {{ exam.testCode }}
+            </span>
+            <span class="exam-meta-item" :class="'status-' + exam.status">
+              <i class="fas fa-circle"></i> {{ formatStatus(exam.status) }}
+            </span>
+          </div>
         </div>
         
         <div class="exam-body">
-          <h3 class="exam-title">{{ exam.examTitle }}</h3>
           <div class="exam-info">
-            <div class="info-item">
-              <span class="material-icons-round">code</span>
-              <div class="info-content">
-                <span class="info-label">Test Code:</span>
-                <span class="info-value">{{ exam.testCode }}</span>
-              </div>
-            </div>
-            <div class="info-item">
-              <span class="material-icons-round">subject</span>
-              <div class="info-content">
-                <span class="info-label">Subject/Class:</span>
-                <span class="info-value">{{ exam.classCode || 'No subject' }}</span>
-              </div>
-            </div>
             <div class="info-item">
               <span class="material-icons-round">person</span>
               <div class="info-content">
@@ -61,18 +62,18 @@
                 <span class="info-value">{{ formatTeacherName(exam) }}</span>
               </div>
             </div>
-            <div class="info-item">
-              <span class="material-icons-round">schedule</span>
-              <div class="info-content">
-                <span class="info-label">Duration:</span>
-                <span class="info-value">{{ exam.duration || 'Not specified' }} {{ exam.duration ? 'minutes' : '' }}</span>
-              </div>
-            </div>
             <div class="info-item" v-if="exam.totalItems">
               <span class="material-icons-round">help_outline</span>
               <div class="info-content">
                 <span class="info-label">Questions:</span>
                 <span class="info-value">{{ exam.totalItems }} items</span>
+              </div>
+            </div>
+            <div class="info-item">
+              <span class="material-icons-round">schedule</span>
+              <div class="info-content">
+                <span class="info-label">Duration:</span>
+                <span class="info-value">{{ exam.duration || 'Not specified' }} {{ exam.duration ? 'minutes' : '' }}</span>
               </div>
             </div>
           </div>
@@ -85,7 +86,7 @@
             :class="{ 'disabled': exam.status !== 'started' }"
             :disabled="exam.status !== 'started'"
           >
-            <span class="material-icons-round">play_arrow</span>
+            <i class="fas" :class="exam.status === 'started' ? 'fa-play-circle' : 'fa-clock'"></i>
             {{ exam.status === 'started' ? 'Take Exam' : 'Not Started' }}
           </router-link>
         </div>
@@ -303,42 +304,98 @@ export default {
 
 <style scoped>
 .student-exams-container {
-  padding: 2rem;
   max-width: auto;
   margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.exams-header {
-  margin-bottom: 2rem;
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
 }
 
-.exams-header h1 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #333;
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
 }
 
 .subtitle {
   color: #666;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
-/* Loading State */
-.loading-state {
+/* Loading, Error, Empty States */
+.loading-state, .error-state, .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 3rem;
   background: #f9f9f9;
-  border-radius: 8px;
+  border-radius: 10px;
   text-align: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.loading-state .material-icons-round,
+.error-state .material-icons-round,
+.empty-state .material-icons-round {
+  font-size: 3rem;
+  margin-bottom: 1rem;
 }
 
 .loading-state .material-icons-round {
-  font-size: 3rem;
-  color: #673ab7;
-  margin-bottom: 1rem;
+  color: #159750;
+}
+
+.error-state {
+  background: #fff3f3;
+}
+
+.error-state .material-icons-round {
+  color: #f44336;
 }
 
 .rotating {
@@ -350,24 +407,6 @@ export default {
   100% { transform: rotate(360deg); }
 }
 
-/* Error State */
-.error-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  background: #fff3f3;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.error-state .material-icons-round {
-  font-size: 3rem;
-  color: #f44336;
-  margin-bottom: 1rem;
-}
-
 .retry-btn {
   display: flex;
   align-items: center;
@@ -376,8 +415,8 @@ export default {
   background: #f44336;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-weight: 500;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
   margin-top: 1rem;
   transition: all 0.2s;
@@ -386,24 +425,7 @@ export default {
 .retry-btn:hover {
   background: #e53935;
   transform: translateY(-2px);
-}
-
-/* Empty State */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  background: #f9f9f9;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.empty-state .material-icons-round {
-  font-size: 3rem;
-  color: #9e9e9e;
-  margin-bottom: 1rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .hint {
@@ -415,100 +437,163 @@ export default {
 .exams-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  gap: 20px;
 }
 
 .exam-card {
   display: flex;
   flex-direction: column;
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s;
-  position: relative;
-  border-top: 4px solid #673ab7;
 }
 
 .exam-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-.exam-card.started {
-  border-top-color: #4caf50;
+.exam-header {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
 }
 
-.exam-card.stopped {
-  border-top-color: #f44336;
-}
-
-.exam-card.pending {
-  border-top-color: #ff9800;
-}
-
-.exam-status {
+/* Main paint swipe */
+.exam-header::after {
+  content: '';
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
 }
 
-.status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
+/* Secondary paint swipe */
+.exam-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
 }
 
-.status-badge.started {
-  background: #e8f5e9;
-  color: #2e7d32;
+/* Additional texture layers */
+.exam-header .texture-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
 }
 
-.status-badge.stopped {
-  background: #ffebee;
-  color: #c62828;
+/* Hover animations */
+.exam-header:hover::after {
+  transform: skewX(-20deg) translateX(10px);
+  transition: transform 0.3s ease;
 }
 
-.status-badge.pending {
-  background: #fff3e0;
-  color: #ef6c00;
+.exam-header:hover::before {
+  transform: skewX(-35deg) translateX(-10px);
+  transition: transform 0.3s ease;
+}
+
+.exam-header h2 {
+  margin: 0 0 10px 0;
+  color: #f1f1f1;
+  font-size: 1.5rem;
+}
+
+.exam-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.exam-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1rem;
+  color: #fafafa;
+  font-weight: 600;
+}
+
+.status-started {
+  color: #4CAF50;
+}
+
+.status-pending {
+  color: #FF9800;
+}
+
+.status-stopped {
+  color: #F44336;
 }
 
 .exam-body {
-  padding: 1.5rem;
+  padding: 20px;
   flex: 1;
-}
-
-.exam-title {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: #333;
 }
 
 .exam-info {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .info-item {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
+  gap: 12px;
+  padding: 8px 0;
   color: #666;
 }
 
 .info-content {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 4px;
 }
 
 .info-label {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   color: #9e9e9e;
   font-weight: 500;
   text-transform: uppercase;
@@ -516,18 +601,18 @@ export default {
 }
 
 .info-value {
-  font-size: 0.95rem;
+  font-size: 1rem;
   color: #424242;
 }
 
 .info-item .material-icons-round {
   font-size: 1.25rem;
-  color: #673ab7;
+  color: #159750;
   margin-top: 0.25rem;
 }
 
 .exam-actions {
-  padding: 1rem 1.5rem;
+  padding: 15px 20px;
   background: #f5f5f5;
   border-top: 1px solid #eee;
 }
@@ -536,13 +621,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: #673ab7;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #4CAF50;
   color: white;
   border: none;
-  border-radius: 4px;
-  font-weight: 500;
+  border-radius: 6px;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s;
@@ -550,8 +635,9 @@ export default {
 }
 
 .take-btn:hover:not(.disabled) {
-  background: #5e35b1;
+  background: #45a049;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .take-btn.disabled {
@@ -560,13 +646,43 @@ export default {
   cursor: not-allowed;
 }
 
+.take-btn i {
+  font-size: 1.2rem;
+}
+
 @media (max-width: 768px) {
   .student-exams-container {
-    padding: 1rem;
+    padding: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
   }
   
   .exams-grid {
     grid-template-columns: 1fr;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
   }
 }
 </style> 

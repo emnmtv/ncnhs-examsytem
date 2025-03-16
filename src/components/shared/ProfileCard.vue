@@ -1,59 +1,121 @@
 <template>
   <div class="profile-card">
     <div class="profile-header">
-      <div class="avatar" :style="{ backgroundColor: getAvatarColor() }">
-        {{ getInitials() }}
-      </div>
-      <div class="header-info">
-        <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
-        <span class="role-badge" :class="profile.role">{{ profile.role }}</span>
-      </div>
-    </div>
-    <div class="profile-stats">
-      <div class="stat-item">
-        <span class="material-icons-round">calendar_today</span>
-        <div class="stat-info">
-          <span class="stat-label">Member Since</span>
-          <span class="stat-value">{{ formatDate(profile.createdAt) }}</span>
+      <div class="texture-layer"></div>
+      <div class="avatar-container">
+        <div class="avatar" :style="{ backgroundColor: getAvatarColor() }">
+          {{ getInitials() }}
         </div>
       </div>
-      <div class="stat-item">
-        <span class="material-icons-round">email</span>
-        <div class="stat-info">
-          <span class="stat-label">Email</span>
-          <span class="stat-value">{{ profile.email }}</span>
+      <div class="profile-info">
+        <h2>{{ profile.firstName }} {{ profile.lastName }}</h2>
+        <div class="profile-meta">
+          <span class="profile-meta-item">
+            <i class="fas fa-user"></i> {{ formatRole(profile.role) }}
+          </span>
+          <span v-if="profile.role === 'student'" class="profile-meta-item">
+            <i class="fas fa-graduation-cap"></i> Grade {{ profile.gradeLevel || 'N/A' }}
+          </span>
+          <span v-if="profile.role === 'student'" class="profile-meta-item">
+            <i class="fas fa-users"></i> {{ profile.section || 'No Section' }}
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="profile-body">
+      <div class="detail-item">
+        <span class="detail-icon"><i class="fas fa-envelope"></i></span>
+        <div class="detail-content">
+          <span class="detail-label">Email</span>
+          <span class="detail-value">{{ profile.email }}</span>
+        </div>
+      </div>
+      
+      <div class="detail-item" v-if="profile.lrn">
+        <span class="detail-icon"><i class="fas fa-id-card"></i></span>
+        <div class="detail-content">
+          <span class="detail-label">LRN</span>
+          <span class="detail-value">{{ profile.lrn }}</span>
+        </div>
+      </div>
+      
+      <div class="detail-item" v-if="profile.address">
+        <span class="detail-icon"><i class="fas fa-home"></i></span>
+        <div class="detail-content">
+          <span class="detail-label">Address</span>
+          <span class="detail-value">{{ profile.address || 'Not provided' }}</span>
+        </div>
+      </div>
+      
+      <div class="detail-item">
+        <span class="detail-icon"><i class="fas fa-calendar-alt"></i></span>
+        <div class="detail-content">
+          <span class="detail-label">Joined</span>
+          <span class="detail-value">{{ formatDate(profile.createdAt) }}</span>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { defineProps } from 'vue';
-
-const props = defineProps({
-  profile: {
-    type: Object,
-    required: true
+<script>
+export default {
+  name: 'ProfileCard',
+  props: {
+    profile: {
+      type: Object,
+      required: true
+    }
+  },
+  mounted() {
+    // Load FontAwesome if not already loaded
+    if (!document.getElementById('fontawesome-css')) {
+      const link = document.createElement('link');
+      link.id = 'fontawesome-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+      document.head.appendChild(link);
+    }
+  },
+  methods: {
+    getInitials() {
+      if (!this.profile.firstName || !this.profile.lastName) return '?';
+      return `${this.profile.firstName[0]}${this.profile.lastName[0]}`;
+    },
+    getAvatarColor() {
+      const colors = [
+        '#4CAF50', '#2196F3', '#FF9800', '#E91E63', 
+        '#9C27B0', '#009688', '#673AB7', '#F44336'
+      ];
+      
+      // Simple hash function to get consistent color for a user
+      const name = `${this.profile.firstName}${this.profile.lastName}`;
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      
+      const index = Math.abs(hash) % colors.length;
+      return colors[index];
+    },
+    formatDate(dateString) {
+      if (!dateString) return 'Unknown';
+      
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    },
+    formatRole(role) {
+      if (!role) return 'User';
+      
+      // Capitalize first letter
+      return role.charAt(0).toUpperCase() + role.slice(1);
+    }
   }
-});
-
-const getInitials = () => {
-  return `${props.profile.firstName[0]}${props.profile.lastName[0]}`;
-};
-
-const getAvatarColor = () => {
-  const colors = ['#4CAF50', '#2196F3', '#9C27B0', '#FF9800'];
-  const hash = props.profile.firstName.length + props.profile.lastName.length;
-  return colors[hash % colors.length];
-};
-
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
 };
 </script>
 
@@ -61,120 +123,225 @@ const formatDate = (date) => {
 .profile-card {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   overflow: hidden;
-  margin-bottom: 2rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s;
+}
+
+.profile-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .profile-header {
-  padding: 2rem;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 30px 20px;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  gap: 20px;
+}
+
+/* Main paint swipe */
+.profile-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Secondary paint swipe */
+.profile-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
+}
+
+/* Additional texture layers */
+.profile-header .texture-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.avatar-container {
+  position: relative;
+  z-index: 1;
 }
 
 .avatar {
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
   border-radius: 50%;
+  background-color: #4CAF50;
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
-  font-weight: bold;
+  font-size: 2.5rem;
+  font-weight: 700;
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.profile-info {
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-info h2 {
+  margin: 0 0 10px 0;
   color: white;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.header-info h2 {
-  margin: 0;
-  color: #333;
-  font-size: 1.5rem;
+.profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
-.role-badge {
-  display: inline-block;
-  padding: 0.4rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-top: 0.5rem;
-}
-
-.role-badge.student {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.role-badge.teacher {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.role-badge.admin {
-  background: #fce4ec;
-  color: #c2185b;
-}
-
-.profile-stats {
-  padding: 1.5rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-}
-
-.stat-item {
+.profile-meta-item {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  gap: 6px;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.1);
+  padding: 5px 12px;
+  border-radius: 20px;
 }
 
-.stat-item:hover {
-  background: #e9ecef;
-  transform: translateY(-2px);
+.profile-meta-item i {
+  font-size: 0.9rem;
 }
 
-.stat-item .material-icons-round {
-  color: #6c757d;
-  font-size: 1.5rem;
+.profile-body {
+  padding: 20px;
 }
 
-.stat-info {
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: #e8f5e9;
+  color: #4CAF50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.detail-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.stat-label {
-  font-size: 0.85rem;
-  color: #6c757d;
+.detail-label {
+  font-size: 0.8rem;
+  color: #9e9e9e;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
 }
 
-.stat-value {
-  font-weight: 500;
-  color: #333;
+.detail-value {
+  font-size: 1rem;
+  color: #424242;
 }
 
 @media (max-width: 768px) {
   .profile-header {
     flex-direction: column;
     text-align: center;
-    padding: 1.5rem;
+    padding: 20px;
   }
-
+  
   .avatar {
-    width: 100px;
-    height: 100px;
-    font-size: 2.2rem;
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+    margin: 0 auto;
   }
-
-  .profile-stats {
-    grid-template-columns: 1fr;
-    padding: 1rem;
+  
+  .profile-info h2 {
+    font-size: 1.5rem;
+  }
+  
+  .profile-meta {
+    justify-content: center;
+  }
+  
+  .profile-meta-item {
+    font-size: 0.9rem;
+  }
+  
+  .detail-item {
+    padding: 12px 0;
+  }
+  
+  .detail-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
   }
 }
 </style> 

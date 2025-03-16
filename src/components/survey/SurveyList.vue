@@ -1,7 +1,17 @@
 <template>
   <div class="survey-list-container">
-    <div class="header">
-      <h1>My Surveys</h1>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>My Surveys<span class="material-icons">poll</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Create and manage your surveys</p>
+        </div>
+      </div>
+      <div class="header-background">SURVEYS</div>
+    </div>
+
+    <div class="header-actions">
       <router-link to="/create-survey" class="create-btn">
         <span class="material-icons-round">add</span>
         Create New Survey
@@ -39,31 +49,42 @@
     <div v-else class="surveys-grid">
       <div v-for="survey in surveys" :key="survey.id" class="survey-card">
         <div class="survey-header">
-          <h3>{{ survey.title }}</h3>
-          <div class="status-badge" :class="{ active: survey.isActive }">
-            {{ survey.isActive ? 'Active' : 'Inactive' }}
+          <div class="texture-layer"></div>
+          <h2>{{ survey.title }}</h2>
+          <div class="survey-meta">
+            <span class="survey-meta-item">
+              <i class="fas fa-key"></i> {{ survey.code }}
+            </span>
+            <span class="survey-meta-item" :class="survey.isActive ? 'status-active' : 'status-inactive'">
+              <i class="fas fa-circle"></i> {{ survey.isActive ? 'Active' : 'Inactive' }}
+            </span>
           </div>
         </div>
 
-        <div class="survey-details">
+        <div class="survey-body">
           <p v-if="survey.description" class="description">{{ survey.description }}</p>
-          <div class="meta-info">
-            <p>
-              <span class="material-icons-round">code</span>
-              Code: <strong>{{ survey.code }}</strong>
-            </p>
-            <p>
+          <div class="survey-info">
+            <div class="info-item">
               <span class="material-icons-round">question_answer</span>
-              Questions: {{ survey.questions.length }}
-            </p>
-            <p>
+              <div class="info-content">
+                <span class="info-label">Questions</span>
+                <span class="info-value">{{ survey.questions.length }} items</span>
+              </div>
+            </div>
+            <div class="info-item">
               <span class="material-icons-round">people</span>
-              Responses: {{ survey.responses.length }}
-            </p>
-            <p>
+              <div class="info-content">
+                <span class="info-label">Responses</span>
+                <span class="info-value">{{ survey.responses.length }}</span>
+              </div>
+            </div>
+            <div class="info-item">
               <span class="material-icons-round">calendar_today</span>
-              Created: {{ formatDate(survey.createdAt) }}
-            </p>
+              <div class="info-content">
+                <span class="info-label">Created</span>
+                <span class="info-value">{{ formatDate(survey.createdAt) }}</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -213,21 +234,72 @@ export default {
 
 <style scoped>
 .survey-list-container {
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.header {
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
 }
 
-.header h1 {
-  font-size: 2rem;
-  color: #333;
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 2rem;
 }
 
 .create-btn {
@@ -248,6 +320,7 @@ export default {
 .create-btn:hover {
   background: #43A047;
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .surveys-grid {
@@ -259,102 +332,199 @@ export default {
 .survey-card {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  transition: all 0.2s;
+  transition: all 0.3s;
   display: flex;
   flex-direction: column;
 }
 
 .survey-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .survey-header {
-  padding: 1.5rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Main paint swipe */
+.survey-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Secondary paint swipe */
+.survey-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
+}
+
+/* Additional texture layers */
+.survey-header .texture-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.survey-header h2 {
+  margin: 0 0 10px 0;
+  color: white;
+  font-size: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.survey-meta {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
 }
 
-.survey-header h3 {
-  font-size: 1.25rem;
-  color: #333;
-  margin: 0;
-}
-
-.status-badge {
-  padding: 4px 12px;
+.survey-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.1);
+  padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
 }
 
-.status-badge.active {
-  background: #e8f5e9;
-  color: #2e7d32;
+.status-active {
+  color: #4CAF50;
 }
 
-.status-badge:not(.active) {
-  background: #ffebee;
-  color: #c62828;
+.status-inactive {
+  color: #F44336;
 }
 
-.survey-details {
-  padding: 1.5rem;
+.survey-body {
+  padding: 20px;
   flex: 1;
 }
 
 .description {
   color: #666;
   margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
-.meta-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-}
-
-.meta-info p {
+.survey-info {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
   color: #666;
 }
 
-.meta-info .material-icons-round {
-  font-size: 20px;
+.info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 0.8rem;
   color: #9e9e9e;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 1rem;
+  color: #424242;
+}
+
+.info-item .material-icons-round {
+  font-size: 1.25rem;
+  color: #159750;
+  margin-top: 0.25rem;
 }
 
 .survey-actions {
-  padding: 1rem 1.5rem;
-  background: #f8f9fa;
+  padding: 15px;
+  background: #f5f5f5;
   border-top: 1px solid #eee;
   display: flex;
-  gap: 0.75rem;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
 .action-btn {
-  flex: 1 1 calc(50% - 0.375rem);
+  flex: 1;
+  min-width: calc(50% - 4px);
   padding: 8px;
   border: none;
   border-radius: 6px;
   font-weight: 500;
+  font-size: 0.9rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 6px;
   transition: all 0.2s;
-  min-width: 120px;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .view-btn {
@@ -410,14 +580,15 @@ export default {
   padding: 3rem;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
 }
 
 .loading-state .material-icons-round,
 .error-state .material-icons-round,
 .empty-state .material-icons-round {
   font-size: 3rem;
-  color: #9e9e9e;
+  color: #159750;
   margin-bottom: 1rem;
 }
 
@@ -432,6 +603,13 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.error-state .retry-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .empty-state .subtitle {
@@ -448,62 +626,79 @@ export default {
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 1200px) {
-  .surveys-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
 @media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
+  .survey-list-container {
+    padding: 10px;
   }
-
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
+  }
+  
+  .header-actions {
+    justify-content: center;
+  }
+  
   .create-btn {
     width: 100%;
     justify-content: center;
   }
-
+  
   .surveys-grid {
     grid-template-columns: 1fr;
   }
-
+  
   .survey-actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .action-btn {
-    flex: 1 1 calc(50% - 0.25rem);
-    min-width: 140px;
     padding: 10px;
+    gap: 6px;
+  }
+  
+  .action-btn {
+    min-width: calc(50% - 3px);
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .action-btn .material-icons-round {
+    font-size: 18px;
   }
 }
 
 @media (max-width: 480px) {
   .survey-actions {
     flex-direction: column;
+    gap: 5px;
   }
 
   .action-btn {
     width: 100%;
-    flex: 1 1 100%;
+    min-width: 100%;
+    padding: 8px;
+    font-size: 0.9rem;
+    justify-content: flex-start;
+  }
+  
+  .action-btn .material-icons-round {
+    width: 24px;
   }
 
-  .meta-info {
-    grid-template-columns: 1fr;
-  }
-
-  .survey-header {
+  .survey-meta {
     flex-direction: column;
-    align-items: stretch;
-  }
-
-  .status-badge {
-    align-self: flex-start;
+    align-items: flex-start;
   }
 }
 </style> 

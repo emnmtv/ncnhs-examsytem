@@ -13,7 +13,9 @@
       <div class="header-container">
         <div class="header-content">
           <h1>Join Exam<span class="material-icons">computer</span></h1>
+         
           <div class="divider"></div> <!-- Add this line -->
+          
           <div class="header-text">
             
             
@@ -175,6 +177,10 @@ export default {
       link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
       document.head.appendChild(link);
     }
+    
+    // Add window focus/blur handlers
+    window.addEventListener('focus', this.handleWindowFocus);
+    window.addEventListener('blur', this.handleWindowBlur);
   },
   created() {
     // Check for exam in progress when component is created
@@ -185,33 +191,43 @@ export default {
       if (!this.socket) {
         this.socket = socketManager.getSocket();
         
-        // Add exam status update listener
-        this.socket.on('examStatusUpdate', ({ status }) => {
-          if (this.exam) {
-            this.exam.status = status;
-            
-            // Update UI based on status
-            if (status === 'started') {
-              Swal.fire({
-                title: 'Exam Started',
-                text: 'The exam has begun. Good luck!',
-                icon: 'info',
-                timer: 2000,
-                showConfirmButton: false
-              });
+        if (this.socket) {
+          // Set up reconnection handler
+          this.socket.on('connect', () => {
+            console.log('Socket reconnected - restoring exam state');
+            if (this.testCode) {
+              this.fetchExamQuestions();
             }
-          }
-        });
+          });
 
-        this.socket.on('studentJoined', (students) => {
-          console.log('Students joined:', students);
-          this.students = students;
-        });
+          // Add exam status update listener
+          this.socket.on('examStatusUpdate', ({ status }) => {
+            if (this.exam) {
+              this.exam.status = status;
+              
+              // Update UI based on status
+              if (status === 'started') {
+                Swal.fire({
+                  title: 'Exam Started',
+                  text: 'The exam has begun. Good luck!',
+                  icon: 'info',
+                  timer: 2000,
+                  showConfirmButton: false
+                });
+              }
+            }
+          });
 
-        this.socket.on('studentLeft', (students) => {
-          console.log('Students left:', students);
-          this.students = students;
-        });
+          this.socket.on('studentJoined', (students) => {
+            console.log('Students joined:', students);
+            this.students = students;
+          });
+
+          this.socket.on('studentLeft', (students) => {
+            console.log('Students left:', students);
+            this.students = students;
+          });
+        }
       }
     },
     
@@ -466,9 +482,31 @@ export default {
       
       // Also reset the students array to ensure it's freshly populated
       this.students = [];
+    },
+    
+    handleWindowFocus() {
+      console.log('Window focused - checking connection');
+      if (!this.socket?.connected) {
+        console.log('Socket disconnected - attempting to reconnect');
+        this.initializeSocket();
+        
+        // Re-fetch exam data if we were in an exam
+        if (this.testCode) {
+          this.fetchExamQuestions();
+        }
+      }
+    },
+
+    handleWindowBlur() {
+      // Optionally handle window blur
+      console.log('Window blurred');
     }
   },
   beforeUnmount() {
+    // Remove window event listeners
+    window.removeEventListener('focus', this.handleWindowFocus);
+    window.removeEventListener('blur', this.handleWindowBlur);
+    
     // Remove only the listeners, don't disconnect the socket
     if (this.socket) {
       this.socket.off('examStatusUpdate');

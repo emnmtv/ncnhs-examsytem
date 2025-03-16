@@ -1,8 +1,14 @@
 <template>
   <div class="create-exam-container">
-    <div class="create-exam-header">
-      <h1>{{ isEditing ? 'Edit Exam' : 'Create New Exam' }}</h1>
-      <p class="subtitle">Design your exam with various question types</p>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>{{ isEditing ? 'Edit Exam' : 'Create New Exam' }}<span class="material-icons">assignment_add</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Design your exam with various question types</p>
+        </div>
+      </div>
+      <div class="header-background">{{ isEditing ? 'EDIT' : 'CREATE' }}</div>
     </div>
 
     <!-- Add validation feedback -->
@@ -267,8 +273,9 @@
                       type="text" 
                       placeholder="Enter the correct answer" 
                       required 
+                      class="uppercase-input"
                     />
-                    <small>Case-insensitive, exact match required for grading</small>
+                    <small>Case-insensitive, exact match required for grading (automatically uppercase)</small>
                   </div>
                 </div>
               </div>
@@ -615,21 +622,11 @@ export default {
       questions.value.push(newQuestion);
     };
 
-    // Remove the watchQuestionTypes function and the watch for questions.length
-    // Instead, add a watch for each question's type directly
-
+    // Watch all questions to ensure enumeration answers are uppercase
     watch(questions, (newQuestions) => {
       newQuestions.forEach(question => {
-        if (!question._watched) {
-          // Add a flag to prevent multiple watchers
-          question._watched = true;
-          
-          // Watch this specific question's type
-          watch(() => question.type, (newType, oldType) => {
-            if (newType !== oldType) {
-              handleQuestionTypeChange(question);
-            }
-          });
+        if (question.type === 'enumeration' && question.correctAnswer) {
+          question.correctAnswer = question.correctAnswer.toUpperCase();
         }
       });
     }, { deep: true });
@@ -747,21 +744,73 @@ export default {
 </script>
 
 <style scoped>
+/* Update the container width */
 .create-exam-container {
-  max-width: 1000px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.create-exam-header {
-  text-align: center;
+/* Keep the form width constrained for better readability */
+.exam-form {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* Fix the header background */
+.header-container {
+  position: relative;
   margin-bottom: 30px;
 }
 
-h1 {
-  color: #333;
-  margin-bottom: 10px;
-  font-size: 2rem;
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 10%;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
 }
 
 .subtitle {
@@ -769,40 +818,75 @@ h1 {
   font-size: 1.1rem;
 }
 
-.exam-form {
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-}
-
+/* Update card styling to match other components */
 .card {
   background-color: white;
-  border-radius: 12px;
-  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  transition: box-shadow 0.3s;
+  transition: all 0.3s;
 }
 
 .card:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .card-header {
-  background-color: #f5f5f5;
-  padding: 15px 20px;
-  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  border-bottom: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layer to card headers */
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
 }
 
 .card-header h2 {
   margin: 0;
-  font-size: 1.3rem;
-  color: #333;
+  font-size: 1.5rem;
+  color: white;
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.card-header .question-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
 }
 
 .card-body {
@@ -874,66 +958,85 @@ small {
 }
 
 .question-item {
-  background-color: #f9f9f9;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background-color: white;
+  border: none;
+  border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .question-item:hover {
-  border-color: #bdbdbd;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
 .question-header {
-  background-color: #e8f5e9;
-  padding: 12px 15px;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  padding: 15px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #c8e6c9;
+  border-bottom: none;
+  color: white;
+  position: relative;
+  overflow: hidden;
 }
 
-.question-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #2E7D32;
+/* Add texture layer to question headers */
+.question-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.question-number {
+  font-weight: 600;
+  position: relative;
+  z-index: 1;
 }
 
 .question-actions {
   display: flex;
   gap: 8px;
+  position: relative;
+  z-index: 1;
 }
 
-.icon-button {
-  background: none;
+.question-actions button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
   border: none;
-  font-size: 1rem;
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.duplicate-btn {
-  color: #1976D2;
-}
-
-.duplicate-btn:hover {
-  background-color: rgba(25, 118, 210, 0.1);
-}
-
-.delete-btn {
-  color: #f44336;
-}
-
-.delete-btn:hover {
-  background-color: rgba(244, 67, 54, 0.1);
+.question-actions button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
 .question-content {
@@ -1116,29 +1219,27 @@ small {
 
 /* Add Question Button */
 .add-question-button {
-  width: 100%;
-  padding: 15px;
-  background-color: #e8f5e9;
-  border: 2px dashed #4CAF50;
-  border-radius: 8px;
-  color: #2E7D32;
-  cursor: pointer;
-  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  width: 100%;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border: 2px dashed #ccc;
+  border-radius: 16px;
+  color: #666;
   font-size: 1.1rem;
+  font-weight: 500;
+  cursor: pointer;
   transition: all 0.3s;
 }
 
 .add-question-button:hover {
-  background-color: #c8e6c9;
+  background-color: #e0e0e0;
+  border-color: #999;
   transform: translateY(-2px);
-}
-
-.add-question-button i {
-  font-size: 1.2rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Form Actions */
@@ -1146,10 +1247,10 @@ small {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 30px;
   padding: 20px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .action-buttons {
@@ -1157,67 +1258,52 @@ small {
   gap: 15px;
 }
 
-.reset-button {
-  padding: 12px 20px;
-  background-color: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  color: #666;
-  cursor: pointer;
-  font-weight: 500;
+.reset-button,
+.draft-button,
+.publish-button {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: all 0.2s;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.reset-button {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
 }
 
 .reset-button:hover {
-  background-color: #f5f5f5;
-  border-color: #bdbdbd;
+  background-color: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .draft-button {
-  padding: 12px 20px;
   background-color: #e3f2fd;
-  border: 1px solid #bbdefb;
-  border-radius: 6px;
   color: #1976d2;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
 }
 
 .draft-button:hover {
   background-color: #bbdefb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .publish-button {
-  padding: 12px 25px;
   background-color: #4CAF50;
-  border: none;
-  border-radius: 6px;
   color: white;
-  cursor: pointer;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-  font-size: 1rem;
 }
 
-.publish-button:hover:not(:disabled) {
-  background-color: #43a047;
+.publish-button:hover {
+  background-color: #43A047;
   transform: translateY(-2px);
-}
-
-.publish-button:disabled {
-  background-color: #a5d6a7;
-  cursor: not-allowed;
-  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Transitions */
@@ -1297,6 +1383,24 @@ small {
   .true-false-options {
     flex-direction: column;
     gap: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+  
+  .divider {
+    margin: 0.5rem 0;
   }
 }
 
