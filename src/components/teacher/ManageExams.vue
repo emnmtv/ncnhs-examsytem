@@ -11,22 +11,22 @@
       <div class="header-background">EXAMS</div>
     </div>
 
-    <div class="header-actions">
-      <button class="template-btn" @click="downloadTemplate">
-        <i class="fas fa-file-download"></i> Download Template
-      </button>
-      <label class="import-btn">
-        <i class="fas fa-file-upload"></i> Import Exam
-        <input 
-          type="file" 
-          accept=".xlsx" 
-          @change="handleImport" 
-          style="display: none"
-        >
-      </label>
-      <router-link to="/create-exam" class="create-btn">
-        <i class="fas fa-plus"></i> Create New Exam
-      </router-link>
+      <div class="header-actions">
+        <button class="template-btn" @click="downloadTemplate">
+          <i class="fas fa-file-download"></i> Download Template
+        </button>
+        <label class="import-btn">
+          <i class="fas fa-file-upload"></i> Import Exam
+          <input 
+            type="file" 
+            accept=".xlsx" 
+            @change="handleImport" 
+            style="display: none"
+          >
+        </label>
+        <router-link to="/create-exam" class="create-btn">
+          <i class="fas fa-plus"></i> Create New Exam
+        </router-link>
     </div>
 
     <!-- Loading State -->
@@ -81,8 +81,8 @@
               <div class="info-content">
                 <span class="info-label">Questions</span>
                 <span class="info-value">{{ exam.questions.length }} items</span>
-              </div>
-            </div>
+        </div>
+          </div>
             <div class="info-item">
               <span class="material-icons-round">people</span>
               <div class="info-content">
@@ -1736,7 +1736,7 @@ input:checked + .slider:before {
     width: 95%;
     max-height: 90vh;
   }
-  
+
   .form-row {
     flex-direction: column;
     gap: 10px;
