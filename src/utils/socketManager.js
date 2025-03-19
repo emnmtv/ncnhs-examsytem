@@ -40,8 +40,6 @@ class SocketManager {
     console.log('Initializing new socket connection...');
     
     this.socket = io('http://192.168.0.104:3300', {
-      path: '/socke.io',
-      transports: ['websocket','polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,

@@ -923,22 +923,59 @@ input:checked + .slider:before {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .print-controls {
+  .exam-paper-preview {
+    padding: 0px;
+    margin: 0;
+  }
+  .logo-container {
+    width: 60px;
+    height: 60px;
+    margin-right: 0;
+  }
+  .school-info {
+    width: 100%;
+  }
+  .school-name {
+    font-size: 16px;
+  }
+  .info-group {
     flex-direction: column;
-    gap: 1rem;
-    align-items: stretch;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .print-controls {
+    margin-bottom: 1rem;
+    width: 100%;
+    display: flex;
+    gap: 8px;
   }
 
   .export-controls {
-    width: 100%;
-    flex-direction: column;
+    display: flex;
+    gap: 8px;
+    width: auto;
+    flex-direction: row;
   }
 
   .back-btn, 
   .print-btn, 
   .download-btn {
-    width: 100%;
+    width: 50.33%;
+    padding: 10px 8px;
+    font-size: 0.9rem;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
     justify-content: center;
+    gap: 6px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .back-btn span, 
+  .print-btn span, 
+  .download-btn span {
+    font-size: 1.1rem;
   }
 
   .prepared-by {

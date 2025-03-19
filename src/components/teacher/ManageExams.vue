@@ -1008,7 +1008,8 @@ export default {
   background: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
+  0 4px 16px -2px rgba(0, 0, 0, 0.08);
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
@@ -1732,6 +1733,9 @@ input:checked + .slider:before {
 
 /* Responsive styles for the modal */
 @media (max-width: 768px) {
+  .manage-exams {
+    padding: 10px 5px; /* Further reduce padding on mobile */
+  }
   .access-modal {
     width: 95%;
     max-height: 90vh;
@@ -1758,6 +1762,34 @@ input:checked + .slider:before {
     gap: 10px;
   }
   
+  .template-btn, .import-btn, .create-btn {
+    width: calc(32% - 8px);
+    padding: 10px 8px;
+    font-size: 0.9rem;
+    text-align: center;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .template-btn i, 
+  .import-btn i, 
+  .create-btn i {
+    font-size: 1.1rem;
+  }
+  .header-background {
+  position: absolute;
+  top: 60%;
+  right: 1rem;
+  transform: translateY(-50%);
+  font-size: 3rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
   .toggle-wrapper {
     align-self: flex-start;
   }

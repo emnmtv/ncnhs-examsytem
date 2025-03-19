@@ -1,6 +1,6 @@
 // Export the BASE_URL at the top of the file
 export const BASE_URL = 'http://192.168.0.104:3300/auth';
-
+// export const BASE_URL = 'https://ncnhs.loophole.site/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
   try {
@@ -1182,6 +1182,13 @@ export const getFullImageUrl = (imageUrl) => {
   const serverUrl = BASE_URL.replace('/auth', '');
   return `${serverUrl}${imageUrl}`;
 };
+
+// export const getFullImageUrl = (imageUrl) => {
+//   if (!imageUrl) return '';
+  
+//   // Ensure it's using HTTPS and correct domain
+//   return imageUrl.replace('http://192.168.0.111:3300', 'https://ncnhs.loophole.site');
+// };
 
 // Add this function to fetch available sections
 export const getAvailableSections = async (grade) => {

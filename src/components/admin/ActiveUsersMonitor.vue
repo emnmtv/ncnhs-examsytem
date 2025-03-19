@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import socketManager from '@/utils/socketManager';
 
 // State
@@ -326,41 +326,26 @@ onMounted(() => {
   console.log('ActiveUsersMonitor: Component mounted');
   initializeSocket();
   
-  // Set up refresh interval (every 30 seconds)
+  // Request active users immediately when component mounts
+  socketManager.requestActiveUsers();
+  
+  // Set up the subscription to active users updates
+  const unsubscribe = socketManager.onActiveUsersUpdate((users) => {
+    activeUsers.value = users;
+  });
+
+  // Optional: Set up a refresh interval
   const refreshInterval = setInterval(() => {
-    if (isConnected.value) {
-      console.log('ActiveUsersMonitor: Auto-refreshing active users');
-      requestActiveUsers();
-    } else {
-      console.warn('ActiveUsersMonitor: Auto-refresh skipped - socket disconnected');
-      // Try to reconnect if disconnected
-      initializeSocket();
-    }
-  }, 30000);
-  
-  // Add page visibility handler
-  const handleVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
-      console.log('ActiveUsersMonitor: Page became visible - checking connection');
-      if (!socket.value?.connected) {
-        console.log('ActiveUsersMonitor: Socket disconnected - reconnecting');
-        initializeSocket();
-      } else {
-        // Even if connected, request latest data
-        requestActiveUsers();
-      }
-    }
-  };
-  
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-  
-  // Clean up on unmount
-  onUnmounted(() => {
+    socketManager.requestActiveUsers();
+  }, 30000); // Refresh every 30 seconds
+
+  // Clean up on component unmount
+  onBeforeUnmount(() => {
     console.log('ActiveUsersMonitor: Component unmounting');
+    unsubscribe();
     clearInterval(refreshInterval);
     cleanupSocket();
     clearReconnectTimer();
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
   });
 });
 
