@@ -315,6 +315,14 @@ class SocketManager {
       });
     }
   }
+
+  // Add this method to stop an exam
+  stopExam(testCode) {
+    this.emitEvent('examStatusChanged', {
+      testCode,
+      status: 'stopped'
+    });
+  }
 }
 
 export default new SocketManager(); 

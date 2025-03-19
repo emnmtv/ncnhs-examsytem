@@ -169,7 +169,25 @@ const routes = [
     name: 'AdminProfile',
     component: AdminProfile,
     meta: { requiresAuth: true, roles: ['admin'] }
-  }
+  },
+  {
+    path: '/admin-exam-monitor',
+    name: 'AdminExamMonitor',
+    component: () => import('../components/admin/AdminExamMonitor.vue'),
+    meta: { 
+      requiresAuth: true,
+      allowedRoles: ['admin']
+    }
+  },
+  {
+    path: '/exam-mps/:examId',
+    name: 'ExamMPS',
+    component: () => import('@/components/teacher/ExamMPSView.vue'),
+    meta: { 
+      requiresAuth: true,
+      allowedRoles: ['teacher', 'admin']
+    }
+  },
 ];
 
 

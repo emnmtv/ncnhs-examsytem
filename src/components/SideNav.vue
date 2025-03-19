@@ -96,6 +96,8 @@ const navigationItems = {
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },
     { name: 'Profile', path: '/admin-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
+    { name: 'Exam Monitor', path: '/admin-exam-monitor', icon: 'admin_panel_settings' },
+
   ],
   teacher: [
     { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },

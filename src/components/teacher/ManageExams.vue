@@ -178,6 +178,15 @@
           >
             <i class="fas fa-file-alt"></i> Paper
           </button>
+
+          <button 
+            v-if="exam.scores.length > 0"
+            @click="viewMPS(exam)" 
+            class="action-btn mps-btn"
+            title="View MPS Analysis"
+          >
+            <i class="fas fa-chart-line"></i> MPS
+          </button>
         </div>
       </div>
     </div>
@@ -761,6 +770,10 @@ export default {
       router.push(`/exam-paper/${exam.id}`);
     };
 
+    const viewMPS = (exam) => {
+      router.push(`/exam-mps/${exam.id}`);
+    };
+
     // Clean up socket listeners on component unmount
     onUnmounted(() => {
       if (socket.value) {
@@ -812,7 +825,8 @@ export default {
       removeAccessSection,
       saveAccessSettings,
       isClosing,
-      viewPrintableExam
+      viewPrintableExam,
+      viewMPS
     };
   }
 };

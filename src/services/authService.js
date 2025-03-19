@@ -1235,3 +1235,45 @@ export const getStudentExamHistory = async () => {
     throw error;
   }
 };
+
+// Add this function to fetch all exams for admin monitoring
+export const getAllExamsForAdmin = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/admin/exams`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch exams for admin monitoring');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching exams for admin monitoring:', error);
+    throw error;
+  }
+};
+
+// Add this function to fetch Mean Percentage Score (MPS) data for an exam
+export const getExamMPS = async (examId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/exam/${examId}/mps`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch MPS data');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching exam MPS data:', error);
+    throw error;
+  }
+};

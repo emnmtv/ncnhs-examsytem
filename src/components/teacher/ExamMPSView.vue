@@ -1,0 +1,1569 @@
+<template>
+  <div class="mps-container">
+    <div class="header-container">
+      <div class="header-content">
+        <div class="header-title">
+          <h1>Mean Percentage Score<span class="material-icons">analytics</span></h1>
+          <button @click="$router.back()" class="back-btn">
+            <span class="material-icons">arrow_back</span> Back
+          </button>
+        </div>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Analyze student performance across sections</p>
+        </div>
+      </div>
+      <div class="header-background">MPS</div>
+    </div>
+
+    <div class="header-actions">
+      <button class="action-btn print-btn" @click="printReport">
+        <i class="fas fa-print"></i> Print Report
+      </button>
+      <button class="action-btn export-btn" @click="exportData">
+        <i class="fas fa-file-export"></i> Export Data
+      </button>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="loading-state">
+      <span class="material-icons-round rotating">sync</span>
+      <p>Loading MPS data...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <span class="material-icons-round">error_outline</span>
+      <p>{{ error }}</p>
+      <button @click="loadMPSData" class="retry-btn">
+        <span class="material-icons-round">refresh</span>
+        Retry
+      </button>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="!mpsData" class="empty-state">
+      <span class="material-icons-round">analytics</span>
+      <p>No MPS data available</p>
+      <p class="empty-subtext">There are no scores recorded for this exam yet.</p>
+    </div>
+
+    <!-- MPS Data Display -->
+    <div v-else class="mps-data">
+      <!-- Exam Summary Card -->
+      <div class="exam-info-card">
+        <div class="exam-title">{{ mpsData.exam.title }}</div>
+        <div class="exam-code">Test Code: {{ mpsData.exam.testCode }}</div>
+        <div class="exam-stats">
+          <div class="stat-item">
+            <div class="stat-label">Overall MPS</div>
+            <div class="stat-value" :class="getScoreClass(mpsData.overallMPS)">
+              {{ mpsData.overallMPS.toFixed(1) }}%
+            </div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Total Students</div>
+            <div class="stat-value">{{ mpsData.totalStudents }}</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Highest Score</div>
+            <div class="stat-value excellent">{{ mpsData.overallStats.highestScore.toFixed(1) }}%</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-label">Lowest Score</div>
+            <div class="stat-value needs-improvement">{{ mpsData.overallStats.lowestScore.toFixed(1) }}%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Score Distribution Card -->
+      <div class="distribution-card">
+        <h2>Score Distribution</h2>
+        <div class="distribution-grid">
+          <div class="dist-category excellent">
+            <div class="dist-info">
+              <span class="dist-label">Excellent (90-100%)</span>
+              <span class="dist-count">{{ mpsData.overallStats.scoreDistribution.excellent }}</span>
+            </div>
+            <div class="dist-bar-container">
+              <div class="dist-bar" 
+                :style="{width: getDistributionPercentage('excellent') + '%'}">
+              </div>
+            </div>
+          </div>
+          
+          <div class="dist-category good">
+            <div class="dist-info">
+              <span class="dist-label">Good (80-89%)</span>
+              <span class="dist-count">{{ mpsData.overallStats.scoreDistribution.good }}</span>
+            </div>
+            <div class="dist-bar-container">
+              <div class="dist-bar" 
+                :style="{width: getDistributionPercentage('good') + '%'}">
+              </div>
+            </div>
+          </div>
+          
+          <div class="dist-category satisfactory">
+            <div class="dist-info">
+              <span class="dist-label">Satisfactory (70-79%)</span>
+              <span class="dist-count">{{ mpsData.overallStats.scoreDistribution.satisfactory }}</span>
+            </div>
+            <div class="dist-bar-container">
+              <div class="dist-bar" 
+                :style="{width: getDistributionPercentage('satisfactory') + '%'}">
+              </div>
+            </div>
+          </div>
+          
+          <div class="dist-category fair">
+            <div class="dist-info">
+              <span class="dist-label">Fair (60-69%)</span>
+              <span class="dist-count">{{ mpsData.overallStats.scoreDistribution.fair }}</span>
+            </div>
+            <div class="dist-bar-container">
+              <div class="dist-bar" 
+                :style="{width: getDistributionPercentage('fair') + '%'}">
+              </div>
+            </div>
+          </div>
+          
+          <div class="dist-category needs-improvement">
+            <div class="dist-info">
+              <span class="dist-label">Poor (Below 60%)</span>
+              <span class="dist-count">{{ mpsData.overallStats.scoreDistribution.poor }}</span>
+            </div>
+            <div class="dist-bar-container">
+              <div class="dist-bar" 
+                :style="{width: getDistributionPercentage('poor') + '%'}">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View Controls -->
+      <div class="view-controls">
+        <button 
+          class="view-toggle-btn" 
+          :class="{ active: viewMode === 'chart' }"
+          @click="switchView('chart')"
+        >
+          <span class="material-icons">bar_chart</span>
+          Chart View
+        </button>
+        <button 
+          class="view-toggle-btn" 
+          :class="{ active: viewMode === 'table' }"
+          @click="switchView('table')"
+        >
+          <span class="material-icons">table_rows</span>
+          Table View
+        </button>
+      </div>
+
+      <!-- Add this after the View Controls buttons and before the chart container -->
+      <div v-if="viewMode === 'chart'" class="settings-card">
+        <div class="card-header">
+          <h2>
+            <span class="material-icons">tune</span>
+            Chart Settings
+          </h2>
+        </div>
+        
+        <div class="settings-content">
+          <div class="settings-section">
+            <h3>Chart Type</h3>
+            <div class="chart-type-buttons">
+              <button 
+                v-for="option in chartTypeOptions" 
+                :key="option.value"
+                @click="chartType = option.value"
+                :class="['chart-type-btn', { active: chartType === option.value }]"
+                :title="option.label"
+              >
+                <span class="material-icons">{{ option.icon }}</span>
+                <span class="btn-label">{{ option.label }}</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="settings-section">
+            <h3>Appearance</h3>
+            <div class="appearance-options">
+              <div class="theme-selector">
+                <label for="themeSelect">Color Theme</label>
+                <select id="themeSelect" v-model="colorTheme" class="theme-select">
+                  <option v-for="option in colorThemeOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              
+              <div class="options-grid">
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="showStudentLine">
+                    <span>Student Count Line</span>
+                  </label>
+                </div>
+                
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="chartSettings.showLegend">
+                    <span>Show Legend</span>
+                  </label>
+                </div>
+                
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="chartSettings.showGridLines">
+                    <span>Grid Lines</span>
+                  </label>
+                </div>
+                
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="chartSettings.enableAnimations">
+                    <span>Animations</span>
+                  </label>
+                </div>
+                
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="chartSettings.rounded">
+                    <span>Rounded Bars</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart View -->
+      <div v-if="viewMode === 'chart'" class="chart-container">
+        <h2>Section Performance</h2>
+        <div class="chart-wrapper">
+          <canvas ref="mpsChart" width="400" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Table View -->
+      <div v-else class="table-view">
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Section</th>
+                <th>MPS</th>
+                <th>Students</th>
+                <th>Highest</th>
+                <th>Lowest</th>
+                <th>
+                  Score Distribution
+                  <div class="distribution-legend">
+                    <span class="legend-item excellent">E</span>
+                    <span class="legend-item good">G</span>
+                    <span class="legend-item satisfactory">S</span>
+                    <span class="legend-item fair">F</span>
+                    <span class="legend-item needs-improvement">P</span>
+                  </div>
+                </th>
+                <th>Performance</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(section, index) in mpsData.sectionMPS" :key="index">
+                <td class="section-cell">{{ section.section }}</td>
+                <td class="mps-cell" :class="getScoreClass(section.mps)">
+                  <strong>{{ section.mps.toFixed(1) }}%</strong>
+                </td>
+                <td>{{ section.studentCount }}</td>
+                <td class="excellent">{{ section.highestScore.toFixed(1) }}%</td>
+                <td class="needs-improvement">{{ section.lowestScore.toFixed(1) }}%</td>
+                <td>
+                  <div class="distribution-badges">
+                    <span class="badge excellent">{{ section.distribution.excellent }}</span>
+                    <span class="badge good">{{ section.distribution.good }}</span>
+                    <span class="badge satisfactory">{{ section.distribution.satisfactory }}</span>
+                    <span class="badge fair">{{ section.distribution.fair }}</span>
+                    <span class="badge needs-improvement">{{ section.distribution.poor }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="performance-bar-container">
+                    <div 
+                      class="performance-bar" 
+                      :class="getScoreClass(section.mps)"
+                      :style="{ width: `${section.mps}%` }"
+                    ></div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { getExamMPS } from '@/services/authService';
+import Chart from 'chart.js/auto';
+
+const route = useRoute();
+const loading = ref(true);
+const error = ref(null);
+const mpsData = ref(null);
+const mpsChart = ref(null);
+let chartInstance = null;
+const viewMode = ref('chart');
+
+// Get exam ID from route params
+const examId = ref(route.params.examId);
+
+// Compute total students for percentage calculations
+const totalStudents = computed(() => {
+  if (!mpsData.value) return 0;
+  return mpsData.value.totalStudents;
+});
+
+// Calculate distribution percentage for progress bars
+const getDistributionPercentage = (category) => {
+  if (!mpsData.value) return 0;
+  
+  const count = mpsData.value.overallStats.scoreDistribution[category] || 0;
+  return (count / totalStudents.value) * 100;
+};
+
+// Add these new refs after the existing ones
+const chartType = ref('bar'); // Default chart type
+const showStudentLine = ref(true); // Toggle for student count line
+const colorTheme = ref('default'); // Color theme for charts
+const chartSettings = ref({
+  showLegend: true,
+  showGridLines: true,
+  enableAnimations: true,
+  rounded: true
+});
+
+// Add chart type options
+const chartTypeOptions = [
+  { value: 'bar', label: 'Bar Chart', icon: 'bar_chart' },
+  { value: 'horizontalBar', label: 'Horizontal Bar', icon: 'stacked_bar_chart' },
+  { value: 'line', label: 'Line Chart', icon: 'show_chart' },
+  { value: 'radar', label: 'Radar Chart', icon: 'radar' },
+  { value: 'pie', label: 'Pie Chart', icon: 'pie_chart' }
+];
+
+// Color theme options
+const colorThemeOptions = [
+  { value: 'default', label: 'Default Theme' },
+  { value: 'pastel', label: 'Pastel Colors' },
+  { value: 'bright', label: 'Bright Colors' },
+  { value: 'cool', label: 'Cool Tones' },
+  { value: 'warm', label: 'Warm Tones' }
+];
+
+// Get colors based on selected theme
+const getChartColors = (scores, theme) => {
+  if (theme === 'pastel') {
+    return {
+      background: scores.map(() => 'rgba(171, 217, 233, 0.7)'),
+      border: scores.map(() => 'rgba(87, 160, 211, 1)')
+    };
+  } else if (theme === 'bright') {
+    return {
+      background: scores.map(() => 'rgba(255, 99, 132, 0.7)'),
+      border: scores.map(() => 'rgba(255, 99, 132, 1)')
+    };
+  } else if (theme === 'cool') {
+    return {
+      background: scores.map(() => 'rgba(103, 71, 183, 0.7)'),
+      border: scores.map(() => 'rgba(103, 71, 183, 1)')
+    };
+  } else if (theme === 'warm') {
+    return {
+      background: scores.map(() => 'rgba(255, 159, 64, 0.7)'),
+      border: scores.map(() => 'rgba(255, 159, 64, 1)')
+    };
+  } else {
+    // Default theme - score-based colors
+    return {
+      background: scores.map(score => {
+        if (score >= 90) return 'rgba(76, 175, 80, 0.7)';
+        if (score >= 80) return 'rgba(33, 150, 243, 0.7)';
+        if (score >= 70) return 'rgba(255, 193, 7, 0.7)';
+        if (score >= 60) return 'rgba(255, 152, 0, 0.7)';
+        return 'rgba(244, 67, 54, 0.7)';
+      }),
+      border: scores.map(score => {
+        if (score >= 90) return 'rgb(76, 175, 80)';
+        if (score >= 80) return 'rgb(33, 150, 243)';
+        if (score >= 70) return 'rgb(255, 193, 7)';
+        if (score >= 60) return 'rgb(255, 152, 0)';
+        return 'rgb(244, 67, 54)';
+      })
+    };
+  }
+};
+
+// Load MPS data
+const loadMPSData = async () => {
+  loading.value = true;
+  error.value = null;
+  
+  try {
+    const data = await getExamMPS(examId.value);
+    mpsData.value = data;
+    
+    // Use double nextTick to ensure DOM is fully updated
+    nextTick(() => {
+      nextTick(() => {
+        console.log('Data loaded, attempting to render chart');
+        renderChart();
+      });
+    });
+  } catch (err) {
+    console.error('Error loading MPS data:', err);
+    error.value = err.message || 'Failed to load MPS data';
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Switch between chart and table views
+const switchView = (view) => {
+  viewMode.value = view;
+  
+  if (view === 'chart') {
+    // Give DOM time to update before rendering chart
+    nextTick(() => {
+      nextTick(() => {
+        console.log('Switched to chart view, re-rendering chart');
+        renderChart();
+      });
+    });
+  }
+};
+
+// Update the renderChart function
+const renderChart = () => {
+  console.log('Rendering chart, chart element exists:', !!mpsChart.value);
+  
+  if (!mpsData.value || !mpsData.value.sectionMPS.length) {
+    console.log('No data available to render chart');
+    return;
+  }
+  
+  if (!mpsChart.value) {
+    console.log('Chart canvas not available yet');
+    return;
+  }
+  
+  try {
+    // Destroy existing chart if it exists
+    if (chartInstance) {
+      console.log('Destroying previous chart instance');
+      chartInstance.destroy();
+    }
+    
+    const ctx = mpsChart.value.getContext('2d');
+    if (!ctx) {
+      console.error('Failed to get canvas context');
+      return;
+    }
+    
+    console.log('Creating new chart with type:', chartType.value);
+    
+    // Prepare data for chart
+    const sections = mpsData.value.sectionMPS.map(s => s.section);
+    const scores = mpsData.value.sectionMPS.map(s => s.mps);
+    const studentCounts = mpsData.value.sectionMPS.map(s => s.studentCount);
+    
+    // Get colors based on theme
+    const colors = getChartColors(scores, colorTheme.value);
+    
+    // Create datasets based on chart type
+    let datasets = [];
+    
+    // Main dataset (MPS scores)
+    const mainDataset = {
+      label: 'Mean Percentage Score',
+      data: scores,
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      borderWidth: 2
+    };
+    
+    // Apply chart-specific settings
+    if (['bar', 'horizontalBar'].includes(chartType.value)) {
+      if (chartSettings.value.rounded) {
+        mainDataset.borderRadius = 8;
+        mainDataset.borderSkipped = false;
+      }
+      mainDataset.barPercentage = 0.6;
+      mainDataset.categoryPercentage = 0.8;
+    }
+    
+    datasets.push(mainDataset);
+    
+    // Add student count line if enabled and chart type is appropriate
+    if (showStudentLine.value && ['bar', 'line'].includes(chartType.value)) {
+      datasets.push({
+        label: 'Number of Students',
+        data: studentCounts,
+        type: 'line',
+        borderColor: 'rgba(153, 102, 255, 1)',
+        backgroundColor: 'rgba(153, 102, 255, 0.1)',
+        borderWidth: 3,
+        pointBackgroundColor: 'rgba(153, 102, 255, 1)',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        fill: true,
+        tension: 0.4,
+        yAxisID: 'y1'
+      });
+    }
+    
+    // Chart options
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {
+        duration: chartSettings.value.enableAnimations ? 1000 : 0
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: chartSettings.value.showLegend,
+          position: 'top',
+          align: 'center',
+          labels: {
+            boxWidth: 15,
+            usePointStyle: true,
+            padding: 20,
+            font: {
+              size: 12
+            }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(255, 255, 255, 0.9)',
+          titleColor: '#333',
+          titleFont: {
+            size: 14,
+            weight: 'bold'
+          },
+          bodyColor: '#666',
+          bodyFont: {
+            size: 13
+          },
+          borderColor: 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 1,
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: function(context) {
+              const datasetLabel = context.dataset.label || '';
+              const value = context.parsed.y || context.parsed || 0;
+              if (datasetLabel === 'Mean Percentage Score') {
+                return `${datasetLabel}: ${typeof value === 'number' ? value.toFixed(1) : value}%`;
+              }
+              return `${datasetLabel}: ${value}`;
+            }
+          }
+        }
+      }
+    };
+    
+    // Add scales for appropriate chart types
+    if (!['pie', 'doughnut', 'radar'].includes(chartType.value)) {
+      chartOptions.scales = {
+        y: {
+          beginAtZero: true,
+          max: chartType.value !== 'horizontalBar' ? 100 : undefined,
+          grid: {
+            display: chartSettings.value.showGridLines,
+            color: 'rgba(0, 0, 0, 0.05)',
+            drawBorder: false
+          },
+          ticks: {
+            callback: value => `${value}%`,
+            font: {
+              size: 12
+            }
+          },
+          title: {
+            display: true,
+            text: 'Mean Percentage Score (%)',
+            color: '#666',
+            font: {
+              size: 14,
+              weight: 'bold'
+            }
+          }
+        },
+        x: {
+          grid: {
+            display: chartSettings.value.showGridLines && chartType.value !== 'bar',
+            color: 'rgba(0, 0, 0, 0.05)',
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              size: 12
+            }
+          }
+        }
+      };
+      
+      // Add secondary y-axis for student count if needed
+      if (showStudentLine.value && ['bar', 'line'].includes(chartType.value)) {
+        chartOptions.scales.y1 = {
+          beginAtZero: true,
+          position: 'right',
+          grid: {
+            display: false,
+            drawBorder: false
+          },
+          ticks: {
+            font: {
+              size: 12
+            }
+          },
+          title: {
+            display: true,
+            text: 'Number of Students',
+            color: '#666',
+            font: {
+              size: 14,
+              weight: 'bold'
+            }
+          }
+        };
+      }
+    }
+    
+    // Handle horizontal bar chart
+    let actualChartType = chartType.value;
+    if (chartType.value === 'horizontalBar') {
+      actualChartType = 'bar';
+      chartOptions.indexAxis = 'y';
+    }
+    
+    // Create the chart
+    chartInstance = new Chart(ctx, {
+      type: actualChartType,
+      data: {
+        labels: sections,
+        datasets: datasets
+      },
+      options: chartOptions
+    });
+  } catch (err) {
+    console.error('Error rendering chart:', err);
+  }
+};
+
+// Get CSS class based on score
+const getScoreClass = (score) => {
+  if (score >= 90) return 'excellent';
+  if (score >= 80) return 'good';
+  if (score >= 70) return 'satisfactory';
+  if (score >= 60) return 'fair';
+  return 'needs-improvement';
+};
+
+// Export data as CSV
+const exportData = () => {
+  if (!mpsData.value) return;
+  
+  const rows = [
+    ['Section', 'MPS (%)', 'Students', 'Highest Score (%)', 'Lowest Score (%)', 'Excellent', 'Good', 'Satisfactory', 'Fair', 'Poor'],
+    ...mpsData.value.sectionMPS.map(section => [
+      section.section,
+      section.mps.toFixed(1),
+      section.studentCount,
+      section.highestScore.toFixed(1),
+      section.lowestScore.toFixed(1),
+      section.distribution.excellent,
+      section.distribution.good,
+      section.distribution.satisfactory,
+      section.distribution.fair,
+      section.distribution.poor
+    ])
+  ];
+  
+  // Add overall summary row
+  rows.push([
+    'OVERALL',
+    mpsData.value.overallMPS.toFixed(1),
+    mpsData.value.totalStudents,
+    mpsData.value.overallStats.highestScore.toFixed(1),
+    mpsData.value.overallStats.lowestScore.toFixed(1),
+    mpsData.value.overallStats.scoreDistribution.excellent,
+    mpsData.value.overallStats.scoreDistribution.good,
+    mpsData.value.overallStats.scoreDistribution.satisfactory,
+    mpsData.value.overallStats.scoreDistribution.fair,
+    mpsData.value.overallStats.scoreDistribution.poor
+  ]);
+  
+  // Convert to CSV
+  const csvContent = rows.map(row => row.join(',')).join('\n');
+  
+  // Create download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `MPS_${mpsData.value.exam.testCode}.csv`);
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Print the report
+const printReport = () => {
+  window.print();
+};
+
+// Watch for changes in exam ID
+watch(examId, () => {
+  loadMPSData();
+});
+
+// Watch for view mode changes
+watch(viewMode, (newMode) => {
+  if (newMode === 'chart') {
+    nextTick(() => {
+      renderChart();
+    });
+  }
+});
+
+// Watch for changes in chart settings
+watch([chartType, showStudentLine, colorTheme], () => {
+  if (viewMode.value === 'chart') {
+    console.log('Chart settings changed, re-rendering');
+    nextTick(() => {
+      renderChart();
+    });
+  }
+}, { immediate: false });
+
+// Add a separate deep watcher for the chartSettings object
+watch(() => chartSettings.value, () => {
+  if (viewMode.value === 'chart') {
+    console.log('Chart settings object changed, re-rendering');
+    nextTick(() => {
+      renderChart();
+    });
+  }
+}, { deep: true, immediate: false });
+
+// Load data on component mount
+onMounted(() => {
+  console.log('Component mounted, loading data');
+  loadMPSData();
+  
+  // Add window resize handler to redraw chart when window is resized
+  window.addEventListener('resize', () => {
+    if (viewMode.value === 'chart' && mpsChart.value && mpsData.value) {
+      nextTick(() => {
+        renderChart();
+      });
+    }
+  });
+});
+</script>
+
+<style scoped>
+.mps-container {
+  max-width: auto;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
+}
+
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+  overflow: hidden;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
+}
+
+.header-background {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto; 
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.action-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.print-btn {
+  background-color: #e8f5e9;
+  color: #2E7D32;
+}
+
+.print-btn:hover {
+  background-color: #c8e6c9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-btn {
+  background-color: #fff3e0;
+  color: #E65100;
+}
+
+.export-btn:hover {
+  background-color: #ffe0b2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading, Error, Empty States */
+.loading-state, .error-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.loading-state .material-icons-round, 
+.error-state .material-icons-round, 
+.empty-state .material-icons-round {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.loading-state .material-icons-round {
+  color: #159750;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state .material-icons-round {
+  color: #f44336;
+}
+
+.empty-state .material-icons-round {
+  color: #9e9e9e;
+}
+
+.retry-btn {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.retry-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.empty-subtext {
+  font-size: 0.9rem;
+  color: #757575;
+  margin-top: 0.5rem;
+}
+
+/* MPS Data Display */
+.mps-data {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Exam Info Card */
+.exam-info-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.exam-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.exam-code {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.exam-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-item {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.stat-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+/* Distribution Card */
+.distribution-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.distribution-card h2 {
+  margin: 0 0 24px 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.distribution-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dist-category {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dist-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dist-label {
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.dist-count {
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
+.dist-bar-container {
+  height: 10px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.dist-bar {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 1s ease-out;
+}
+
+/* View Controls */
+.view-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 0;
+  background: white;
+  border-radius: 16px 16px 0 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  background: none;
+  font-weight: 500;
+  cursor: pointer;
+  color: #666;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.view-toggle-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.view-toggle-btn.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* Chart Container */
+.chart-container {
+  background: white;
+  border-radius: 0 0 16px 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: 0;
+}
+
+.chart-container h2 {
+  font-size: 1.2rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.chart-wrapper {
+  height: 400px;
+  position: relative;
+}
+
+/* Table View */
+.table-view {
+  background: white;
+  border-radius: 0 0 16px 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-top: -12px;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+th, td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+th {
+  font-weight: 600;
+  color: #333;
+  background-color: #f9f9f9;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.section-cell {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.mps-cell {
+  font-size: 1.1rem;
+}
+
+.distribution-badges {
+  display: flex;
+  gap: 8px;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 24px;
+  padding: 2px 4px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.performance-bar-container {
+  width: 100%;
+  background-color: #f0f0f0;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.performance-bar {
+  height: 100%;
+  border-radius: 5px;
+}
+
+.distribution-legend {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.legend-item {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+  line-height: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* Color Classes */
+.excellent {
+  color: #2E7D32;
+}
+.good {
+  color: #1565C0;
+}
+.satisfactory {
+  color: #FFA000;
+}
+.fair {
+  color: #F57C00;
+}
+.needs-improvement {
+  color: #D32F2F;
+}
+
+.excellent .dist-count, .badge.excellent, .legend-item.excellent {
+  background-color: rgba(46, 125, 50, 0.1);
+  color: #2E7D32;
+}
+.good .dist-count, .badge.good, .legend-item.good {
+  background-color: rgba(21, 101, 192, 0.1);
+  color: #1565C0;
+}
+.satisfactory .dist-count, .badge.satisfactory, .legend-item.satisfactory {
+  background-color: rgba(255, 160, 0, 0.1);
+  color: #FFA000;
+}
+.fair .dist-count, .badge.fair, .legend-item.fair {
+  background-color: rgba(245, 124, 0, 0.1);
+  color: #F57C00;
+}
+.needs-improvement .dist-count, .badge.needs-improvement, .legend-item.needs-improvement {
+  background-color: rgba(211, 47, 47, 0.1);
+  color: #D32F2F;
+}
+
+.excellent .dist-bar {
+  background-color: #4CAF50;
+}
+.good .dist-bar {
+  background-color: #2196F3;
+}
+.satisfactory .dist-bar {
+  background-color: #FFC107;
+}
+.fair .dist-bar {
+  background-color: #FF9800;
+}
+.needs-improvement .dist-bar {
+  background-color: #F44336;
+}
+
+/* Back button */
+.back-btn {
+  background-color: #f5f5f5;
+  color: #333;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.back-btn:hover {
+  background-color: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.back-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Print Styles */
+@media print {
+  .mps-container {
+    padding: 0;
+  }
+  
+  .header-container {
+    box-shadow: none;
+  }
+  
+  .back-btn, .action-btn, .view-toggle-btn {
+    display: none !important;
+  }
+  
+  .header-actions, .view-controls {
+    display: none !important;
+  }
+  
+  .exam-info-card, .distribution-card, .chart-container, .table-view {
+    box-shadow: none;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 30px;
+  }
+  
+  .chart-wrapper {
+    height: 350px;
+  }
+  
+  .table-container {
+    overflow: visible;
+  }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .mps-container {
+    padding: 10px 5px;
+  }
+  
+  .header-background {
+    font-size: 4rem;
+    top: 60%;
+    right: 1rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .back-btn {
+    align-self: flex-start;
+  }
+  
+  .exam-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .view-controls {
+    flex-wrap: wrap;
+  }
+  
+  .chart-wrapper {
+    height: 300px;
+  }
+  
+  .distribution-badges {
+    gap: 4px;
+  }
+  
+  .badge {
+    min-width: 20px;
+    font-size: 0.75rem;
+    padding: 2px;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* Chart Settings Card - replacing previous chart-settings-panel styles */
+.settings-card {
+  background: white;
+  border-radius: 16px;
+  margin: 20px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  background-color: #f9f9f9;
+}
+
+.card-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0;
+}
+
+.card-header .material-icons {
+  color: #159750;
+}
+
+.settings-content {
+  padding: 20px 24px;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-section h3 {
+  font-size: 1rem;
+  color: #555;
+  margin: 0 0 12px 0;
+  font-weight: 500;
+}
+
+.chart-type-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.chart-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #555;
+}
+
+.chart-type-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.chart-type-btn.active {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.btn-label {
+  font-size: 0.9rem;
+}
+
+.divider {
+  height: 1px;
+  background-color: #f0f0f0;
+  margin: 20px 0;
+}
+
+.appearance-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.theme-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-selector label {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.theme-select {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  font-size: 0.95rem;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.toggle-option {
+  display: flex;
+  align-items: center;
+}
+
+.toggle-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #555;
+}
+
+.toggle-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #159750;
+}
+
+/* Responsive design adjustments */
+@media (max-width: 768px) {
+  .chart-type-buttons {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .options-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .toggle-option label {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .chart-type-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .btn-label {
+    font-size: 0.8rem;
+  }
+  
+  .options-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style> 
