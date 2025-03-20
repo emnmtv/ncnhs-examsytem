@@ -622,20 +622,21 @@ const loadAllUsers = async () => {
   }
 };
 
-const generateCredentials = (lastName) => {
-  if (!lastName) return { email: '', password: '' };
+const generateCredentials = (firstName, lastName) => {
+  if (!firstName || !lastName) return { email: '', password: '' };
   
+  const sanitizedFirstName = firstName.toLowerCase().trim().replace(/\s+/g, '');
   const sanitizedLastName = lastName.toLowerCase().trim().replace(/\s+/g, '');
   return {
-    email: `${sanitizedLastName}@ncnhs.edu.ph`,
+    email: `${sanitizedFirstName}${sanitizedLastName}@ncnhs.edu.ph`,
     password: `${sanitizedLastName}2025`
   };
 };
 
-// Update the form data when lastName changes
+// Update the updateCredentials function to use both first and last name
 const updateCredentials = () => {
-  if (formData.value.lastName) {
-    const { email, password } = generateCredentials(formData.value.lastName);
+  if (formData.value.firstName && formData.value.lastName) {
+    const { email, password } = generateCredentials(formData.value.firstName, formData.value.lastName);
     formData.value.email = email;
     formData.value.password = password;
   }
@@ -678,11 +679,11 @@ const getInitialFormData = (type) => {
 const handleSubmit = async () => {
   try {
     let registrationData = {
-      firstName: formData.value.firstName,
-      lastName: formData.value.lastName,
+      firstName: formData.value.firstName.toUpperCase(),
+      lastName: formData.value.lastName.toUpperCase(),
       email: formData.value.email,
       password: formData.value.password,
-      address: formData.value.address || '',
+      address: formData.value.address ? formData.value.address.toUpperCase() : '',
       role: modalType.value
     };
 
@@ -692,7 +693,7 @@ const handleSubmit = async () => {
         ...registrationData,
         lrn: formData.value.lrn,
         gradeLevel: formData.value.gradeLevel,
-        section: formData.value.section
+        section: formData.value.section.toUpperCase()
       };
     }
 
@@ -700,8 +701,8 @@ const handleSubmit = async () => {
     if (modalType.value === 'teacher') {
       registrationData = {
         ...registrationData,
-        department: formData.value.department,
-        domain: formData.value.domain
+        department: formData.value.department ? formData.value.department.toUpperCase() : '',
+        domain: formData.value.domain ? formData.value.domain.toUpperCase() : ''
       };
     }
 
@@ -820,12 +821,15 @@ const saveGradeSection = async () => {
       throw new Error('Grade must be between 7 and 12');
     }
     
+    // Convert section to uppercase before saving
+    const uppercaseSection = currentGradeSection.value.section.toUpperCase();
+    
     if (currentGradeSection.value.id) {
       // Update existing grade section
       await updateGradeSection(
         currentGradeSection.value.id,
-        currentGradeSection.value.grade,
-        currentGradeSection.value.section
+        grade,
+        uppercaseSection
       );
       Swal.fire({
         icon: 'success',
@@ -836,8 +840,8 @@ const saveGradeSection = async () => {
     } else {
       // Create new grade section
       await createGradeSection(
-        currentGradeSection.value.grade,
-        currentGradeSection.value.section
+        grade,
+        uppercaseSection
       );
       Swal.fire({
         icon: 'success',
@@ -961,9 +965,25 @@ const editFormData = ref({
 // Update user function
 const handleUpdateUser = async () => {
   try {
-    const updateData = { ...editFormData.value };
+    const updateData = { 
+      ...editFormData.value,
+      firstName: editFormData.value.firstName.toUpperCase(),
+      lastName: editFormData.value.lastName.toUpperCase(),
+      address: editFormData.value.address ? editFormData.value.address.toUpperCase() : '',
+    };
+
+    // Handle role-specific fields
+    if (updateData.role === 'student') {
+      updateData.section = updateData.section ? updateData.section.toUpperCase() : '';
+    }
+    
+    if (updateData.role === 'teacher') {
+      updateData.department = updateData.department ? updateData.department.toUpperCase() : '';
+      updateData.domain = updateData.domain ? updateData.domain.toUpperCase() : '';
+    }
+
     if (!updateData.password) {
-      delete updateData.password; // Don't send password if not changed
+      delete updateData.password;
     }
 
     await updateUser(editFormData.value.id, updateData);
