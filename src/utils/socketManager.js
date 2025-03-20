@@ -38,8 +38,10 @@ class SocketManager {
     }
 
     console.log('Initializing new socket connection...');
-    
+    // https://ncnhs.loophole.site
     this.socket = io('http://192.168.0.104:3300', {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
