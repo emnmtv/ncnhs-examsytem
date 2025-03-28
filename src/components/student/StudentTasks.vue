@@ -42,10 +42,12 @@
               <div class="task-title">{{ task.title }}</div>
               <div class="task-meta">
                 <span class="due-date">
-                  Due Date: {{ formatDate(task.dueDate) }}
+                  Due: {{ formatDate(task.dueDate) }}
+                  <span class="exact-date">({{ formatExactDate(task.dueDate) }})</span>
                 </span>
                 <span class="date-submitted" v-if="task.submission">
-                  Date Submitted: {{ formatDate(task.submission.submittedAt) }}
+                  Submitted: {{ formatDate(task.submission.submittedAt) }}
+                  <span class="exact-date">({{ formatExactDate(task.submission.submittedAt) }})</span>
                 </span>
                 <span class="on-time" :class="getTimeStatus(task)">
                   {{ getTimeStatusText(task) }}
@@ -111,6 +113,18 @@ const loadTasks = async () => {
 
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
+};
+
+const formatExactDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 const getTaskStatus = (task) => {
@@ -341,6 +355,7 @@ const getTimeStatusText = (task) => {
 .due-date, .date-submitted {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
   padding: 4px 12px;
   background: #f1f3f4;
@@ -453,5 +468,12 @@ const getTimeStatusText = (task) => {
     font-size: 0.9rem;
     padding: 6px 16px;
   }
+}
+
+/* Add these new styles */
+.exact-date {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 0.25rem;
 }
 </style>

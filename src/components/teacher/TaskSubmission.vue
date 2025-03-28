@@ -32,37 +32,46 @@
 
     <div v-else class="content-container">
       <div class="task-info-card">
-        <h2>{{ task?.title }}</h2>
-        <div class="task-meta">
-          <div class="meta-item">
-            <span class="material-icons">event</span>
-            Due: {{ formatDate(task?.dueDate) }}
+        <div class="task-header">
+          <div class="task-title-section">
+            <h2>{{ task?.title }}</h2>
+            <div class="task-meta-badges">
+              <span class="meta-badge due-date">
+                <span class="material-icons">event</span>
+                Due: {{ formatDate(task?.dueDate) }}
+                <span class="exact-date">({{ formatExactDate(task?.dueDate) }})</span>
+              </span>
+              <span class="meta-badge score">
+                <span class="material-icons">stars</span>
+                {{ task?.totalScore }} points
+              </span>
+            </div>
           </div>
-          <div class="meta-item">
-            <span class="material-icons">stars</span>
-            Score: {{ task?.totalScore }} points
-          </div>
-          <div class="meta-item" v-if="task.fileUrl">
-            <div class="file-preview">
-              <div class="file-item">
-                <img :src="getFileIcon(task.fileName)" :alt="getFileType(task.fileName)" class="file-icon">
-                <span class="file-name">{{ task.fileName }}</span>
-                <a :href="getFullFileUrl(task.fileUrl)" 
+        </div>
+        
+        <p class="task-description">{{ task?.description || 'No description provided' }}</p>
+        
+        <div v-if="task.files && task.files.length > 0" class="task-files-list">
+          <div class="files-label">Attachments:</div>
+          <div class="files-buttons">
+            <div v-for="file in task.files" :key="file.id" class="file-button">
+              <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
+              <span class="file-name">{{ file.fileName }}</span>
+              <div class="button-actions">
+                <a :href="getFullFileUrl(file.fileUrl)" 
                    target="_blank" 
-                   class="view-btn">
+                   class="action-link view">
                   <span class="material-icons">visibility</span>
-                  View
                 </a>
-                <a :href="getFullFileUrl(task.fileUrl)" 
+                <a :href="getFullFileUrl(file.fileUrl)" 
                    download
-                   class="download-btn">
+                   class="action-link download">
                   <span class="material-icons">download</span>
                 </a>
               </div>
             </div>
           </div>
         </div>
-        <p class="task-description">{{ task?.description || 'No description provided' }}</p>
       </div>
 
       <div class="visibility-container">
@@ -166,22 +175,41 @@
                   </span>
                 </td>
                 <td>
-                  <div v-if="student.submission" class="submission-file">
-                    <img :src="getFileIcon(student.submission.fileName)" :alt="getFileType(student.submission.fileName)" class="file-icon">
-                    <span class="file-name">{{ student.submission.fileName }}</span>
-                    <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                       target="_blank" 
-                       class="view-btn">
-                      <span class="material-icons">visibility</span>
-                      View
-                    </a>
-                    <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                       download
-                       class="download-btn">
-                      <span class="material-icons">download</span>
-                    </a>
+                  <div class="submission-files">
+                    <div v-if="student.submission">
+                      <button v-if="student.submission.files.length > 1" 
+                              @click="openFilesModal(student.submission)"
+                              class="view-files-btn">
+                        <span class="material-icons">folder_open</span>
+                        View {{ student.submission.files.length }} Files
+                      </button>
+                      
+                      <div v-else-if="student.submission.files.length === 1" class="file-item">
+                        <img :src="getFileIcon(student.submission.files[0].fileName)" 
+                             :alt="getFileType(student.submission.files[0].fileName)" 
+                             class="file-icon">
+                        <span class="file-name">{{ student.submission.files[0].fileName }}</span>
+                        <div class="file-actions">
+                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                             target="_blank" 
+                             class="action-link view">
+                            <span class="material-icons">visibility</span>
+                            View
+                          </a>
+                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                             download
+                             class="action-link download">
+                            <span class="material-icons">download</span>
+                          </a>
+                        </div>
+                      </div>
+                      
+                      <div v-else class="no-files">
+                        <span class="material-icons">info</span>
+                        No files submitted
+                      </div>
+                    </div>
                   </div>
-                  <span v-else>-</span>
                 </td>
                 <td>
                   <div v-if="hasSubmission(student)" class="table-score-input">
@@ -252,20 +280,40 @@
                       <p v-if="hasSubmission(student)">
                         <strong>Score:</strong> {{ getStudentScore(student) }}
                       </p>
-                      <div v-if="student.submission" class="submission-file">
-                        <img :src="getFileIcon(student.submission.fileName)" :alt="getFileType(student.submission.fileName)" class="file-icon">
-                        <span class="file-name">{{ student.submission.fileName }}</span>
-                        <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                           target="_blank" 
-                           class="view-btn">
-                          <span class="material-icons">visibility</span>
-                          View
-                        </a>
-                        <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                           download
-                           class="download-btn">
-                          <span class="material-icons">download</span>
-                        </a>
+                      <div class="submission-files">
+                        <div v-if="student.submission">
+                          <button v-if="student.submission.files.length > 1" 
+                                  @click="openFilesModal(student.submission)"
+                                  class="view-files-btn">
+                            <span class="material-icons">folder_open</span>
+                            View {{ student.submission.files.length }} Files
+                          </button>
+                          
+                          <div v-else-if="student.submission.files.length === 1" class="file-item">
+                            <img :src="getFileIcon(student.submission.files[0].fileName)" 
+                                 :alt="getFileType(student.submission.files[0].fileName)" 
+                                 class="file-icon">
+                            <span class="file-name">{{ student.submission.files[0].fileName }}</span>
+                            <div class="file-actions">
+                              <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                                 target="_blank" 
+                                 class="action-link view">
+                                <span class="material-icons">visibility</span>
+                                View
+                              </a>
+                              <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                                 download
+                                 class="action-link download">
+                                <span class="material-icons">download</span>
+                              </a>
+                            </div>
+                          </div>
+                          
+                          <div v-else class="no-files">
+                            <span class="material-icons">info</span>
+                            No files submitted
+                          </div>
+                        </div>
                       </div>
                     </div>
                     <div class="card-actions">
@@ -340,20 +388,40 @@
                   <p v-if="hasSubmission(student)">
                     <strong>Score:</strong> {{ getStudentScore(student) }}
                   </p>
-                  <div v-if="student.submission" class="submission-file">
-                    <img :src="getFileIcon(student.submission.fileName)" :alt="getFileType(student.submission.fileName)" class="file-icon">
-                    <span class="file-name">{{ student.submission.fileName }}</span>
-                    <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                       target="_blank" 
-                       class="view-btn">
-                      <span class="material-icons">visibility</span>
-                      View
-                    </a>
-                    <a :href="getFullFileUrl(student.submission.fileUrl)" 
-                       download
-                       class="download-btn">
-                      <span class="material-icons">download</span>
-                    </a>
+                  <div class="submission-files">
+                    <div v-if="student.submission">
+                      <button v-if="student.submission.files.length > 1" 
+                              @click="openFilesModal(student.submission)"
+                              class="view-files-btn">
+                        <span class="material-icons">folder_open</span>
+                        View {{ student.submission.files.length }} Files
+                      </button>
+                      
+                      <div v-else-if="student.submission.files.length === 1" class="file-item">
+                        <img :src="getFileIcon(student.submission.files[0].fileName)" 
+                             :alt="getFileType(student.submission.files[0].fileName)" 
+                             class="file-icon">
+                        <span class="file-name">{{ student.submission.files[0].fileName }}</span>
+                        <div class="file-actions">
+                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                             target="_blank" 
+                             class="action-link view">
+                            <span class="material-icons">visibility</span>
+                            View
+                          </a>
+                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
+                             download
+                             class="action-link download">
+                            <span class="material-icons">download</span>
+                          </a>
+                        </div>
+                      </div>
+                      
+                      <div v-else class="no-files">
+                        <span class="material-icons">info</span>
+                        No files submitted
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="card-actions">
@@ -470,6 +538,106 @@
         </div>
       </div>
     </div>
+
+    <!-- Add this modal for viewing multiple files -->
+    <div v-if="showFilesModal" class="files-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Student Submission</h3>
+          <button class="close-btn" @click="closeFilesModal">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="student-info-panel">
+            <div class="student-avatar">
+              <span class="avatar-text">{{ getInitials(selectedSubmission?.student) }}</span>
+            </div>
+            <div class="student-details">
+              <h4>{{ selectedSubmission?.student?.lastName }}, {{ selectedSubmission?.student?.firstName }}</h4>
+              <div class="student-meta">
+                <div class="meta-item">
+                  <span class="material-icons">badge</span>
+                  <span>LRN: {{ selectedSubmission?.student?.lrn }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="material-icons">school</span>
+                  <span>Grade {{ selectedSubmission?.student?.gradeLevel }}-{{ selectedSubmission?.student?.section }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="material-icons">event</span>
+                  <span>Submitted: {{ formatSubmissionDate(selectedSubmission) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="files-header">
+            <h4>Submitted Files ({{ selectedSubmission?.files?.length || 0 }})</h4>
+          </div>
+          
+          <div class="files-grid">
+            <div v-for="file in selectedSubmission.files" 
+                 :key="file.id" 
+                 class="file-item">
+              <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
+              <span class="file-name">{{ file.fileName }}</span>
+              <div class="file-actions">
+                <a :href="getFullFileUrl(file.fileUrl)" 
+                   target="_blank" 
+                   class="action-link view">
+                  <span class="material-icons">visibility</span>
+                  View
+                </a>
+                <a :href="getFullFileUrl(file.fileUrl)" 
+                   download
+                   class="action-link download">
+                  <span class="material-icons">download</span>
+                  Download
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div class="scoring-section">
+            <h4>Scoring</h4>
+            <div class="score-form">
+              <div class="score-input-group">
+                <label for="modal-score">Score:</label>
+                <div class="score-input-wrapper">
+                  <input 
+                    type="number" 
+                    id="modal-score"
+                    v-model="submissionScores[selectedSubmission?.student?.id]" 
+                    :min="0" 
+                    :max="task.totalScore"
+                    class="score-input-field"
+                  >
+                  <span class="total-score">/ {{ task.totalScore }}</span>
+                </div>
+              </div>
+              <div class="comment-input-group">
+                <label for="modal-comment">Comment:</label>
+                <textarea 
+                  id="modal-comment"
+                  v-model="submissionComments[selectedSubmission?.student?.id]" 
+                  placeholder="Add feedback for the student..."
+                  class="comment-input-field"
+                  rows="3"
+                ></textarea>
+              </div>
+              <button 
+                @click="submitScoreFromModal()" 
+                class="save-score-btn"
+              >
+                <span class="material-icons">save</span>
+                Save Score
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -526,6 +694,10 @@ const viewMode = ref('cards');
 const statusFilter = ref('all');
 const submissionScores = ref({});
 const submissionComments = ref({});
+
+// Add these new refs for the modal
+const showFilesModal = ref(false);
+const selectedSubmission = ref(null);
 
 // Filter visible students based on search
 const filteredStudents = computed(() => {
@@ -597,6 +769,19 @@ const filteredAvailableStudents = computed(() => {
 // Format date for display
 const formatDate = (date) => {
   return formatDistanceToNow(new Date(date), { addSuffix: true });
+};
+
+// Add this function to format the exact date and time
+const formatExactDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 };
 
 // Toggle select all available students
@@ -931,6 +1116,36 @@ const getFileType = (fileName) => {
   }
 };
 
+// Add these new functions for the modal
+const openFilesModal = (submission) => {
+  selectedSubmission.value = submission;
+  showFilesModal.value = true;
+};
+
+const closeFilesModal = () => {
+  showFilesModal.value = false;
+  selectedSubmission.value = null;
+};
+
+// Get student initials for avatar
+const getInitials = (student) => {
+  if (!student) return '';
+  return `${student.firstName.charAt(0)}${student.lastName.charAt(0)}`.toUpperCase();
+};
+
+// Submit score from the modal
+const submitScoreFromModal = () => {
+  if (!selectedSubmission.value || !selectedSubmission.value.student) return;
+  
+  const student = {
+    id: selectedSubmission.value.student.id,
+    submission: selectedSubmission.value
+  };
+  
+  submitScore(student);
+  // Don't close the modal to allow for multiple score updates
+};
+
 onMounted(() => {
   loadTaskData();
 });
@@ -1145,8 +1360,6 @@ onMounted(() => {
   color: #666;
   line-height: 1.5;
 }
-
-
 
 .visibility-header {
   display: flex;
@@ -1880,5 +2093,332 @@ td input[type="checkbox"] {
   background: #f8f9fa;
   border-radius: 4px;
   margin-bottom: 15px;
+}
+
+.task-header {
+  margin-bottom: 1.5rem;
+}
+
+.task-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.task-meta-badges {
+  display: flex;
+  gap: 1rem;
+}
+
+.meta-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.meta-badge.due-date {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 0.5rem 1rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.meta-badge.score {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.task-files-list {
+  margin-top: 1rem;
+}
+
+.files-label {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+}
+
+.files-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+}
+
+.file-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 5px;
+  font-size: 0.875rem;
+  max-width: 300px;
+  transition: all 0.2s;
+}
+
+.file-button:hover {
+  background: #f1f3f4;
+  border-color: #dadce0;
+}
+
+.file-button .file-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.file-button .file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.button-actions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.action-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  color: #5f6368;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.action-link:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.action-link.view {
+  color: #1a73e8;
+}
+
+.action-link.download {
+  color: #5f6368;
+}
+
+.action-link .material-icons {
+  font-size: 18px;
+}
+
+.exact-date {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 0.25rem;
+}
+
+/* Add these styles for the modal */
+.files-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #5f6368;
+}
+
+.modal-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.view-files-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f1f3f4;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #1a73e8;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.view-files-btn:hover {
+  background-color: #e8f0fe;
+}
+
+.no-files {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #5f6368;
+  font-size: 14px;
+}
+
+.student-info-panel {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.student-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: #1a73e8;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.student-details {
+  flex: 1;
+}
+
+.student-details h4 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #202124;
+}
+
+.student-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #5f6368;
+  font-size: 14px;
+}
+
+.meta-item .material-icons {
+  font-size: 16px;
+}
+
+.files-header {
+  margin-bottom: 16px;
+}
+
+.files-header h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #202124;
+}
+
+.scoring-section {
+  margin-top: 16px;
+}
+
+.scoring-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: #202124;
+}
+
+.score-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.score-input-group, .comment-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score-input-group label, .comment-input-group label {
+  font-size: 14px;
+  color: #5f6368;
+}
+
+.score-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-score-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background-color 0.2s;
+}
+
+.save-score-btn:hover {
+  background-color: #1765cc;
 }
 </style>

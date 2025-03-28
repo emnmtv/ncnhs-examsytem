@@ -70,32 +70,48 @@
 
         <!-- File Attachment -->
         <div class="form-group">
-          <label>Attachment (Optional)</label>
+          <label>Attachments (Optional)</label>
           <div class="file-input">
             <input 
               type="file"
               ref="fileInput"
               @change="handleFileChange"
+              multiple
               style="display: none"
             >
-            <button 
-              type="button" 
-              @click="$refs.fileInput.click()"
-              class="file-select-btn"
-            >
-              <span class="material-icons">attach_file</span>
-              Select File
-            </button>
-            <div v-if="selectedFile" class="selected-file">
-              <img :src="getFileIcon(selectedFile.name)" :alt="getFileType(selectedFile.name)" class="file-icon">
-              <span class="file-name">{{ selectedFile.name }}</span>
+            <div class="file-actions">
               <button 
-                type="button"
-                @click="removeFile" 
-                class="remove-file"
+                type="button" 
+                @click="$refs.fileInput.click()"
+                class="file-select-btn"
               >
-                <span class="material-icons">close</span>
+                <span class="material-icons">attach_file</span>
+                Select Files
               </button>
+              <button 
+                v-if="selectedFiles.length > 0"
+                type="button"
+                @click="selectedFiles = []"
+                class="clear-files-btn"
+              >
+                <span class="material-icons">clear_all</span>
+                Clear All
+              </button>
+            </div>
+            <div class="selected-files-list">
+              <div v-for="(file, index) in selectedFiles" 
+                   :key="index" 
+                   class="selected-file">
+                <img :src="getFileIcon(file.name)" :alt="getFileType(file.name)" class="file-icon">
+                <span class="file-name">{{ file.name }}</span>
+                <button 
+                  type="button"
+                  @click="removeFile(index)" 
+                  class="remove-file"
+                >
+                  <span class="material-icons">close</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -203,7 +219,7 @@ const taskData = ref({
 });
 
 const fileInput = ref(null);
-const selectedFile = ref(null);
+const selectedFiles = ref([]);
 
 // Get minimum date (current date and time)
 const minDate = computed(() => {
@@ -277,21 +293,25 @@ watch(selectedSubject, (newSubject) => {
 
 // Handle file selection
 const handleFileChange = (event) => {
-  const file = event.target.files[0];
-  if (file) {
+  const newFiles = Array.from(event.target.files);
+  const validFiles = newFiles.filter(file => {
     if (file.size > 300 * 1024 * 1024) { // 300MB limit
-      alert('File size must be less than 300MB');
-      event.target.value = '';
-      return;
+      alert(`File ${file.name} is larger than 300MB`);
+      return false;
     }
-    selectedFile.value = file;
-  }
+    return true;
+  });
+  
+  // Append new files to existing ones instead of replacing
+  selectedFiles.value = [...selectedFiles.value, ...validFiles];
+  
+  // Clear the input so the same file can be selected again if needed
+  if (fileInput.value) fileInput.value.value = '';
 };
 
 // Remove selected file
-const removeFile = () => {
-  selectedFile.value = null;
-  if (fileInput.value) fileInput.value.value = '';
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1);
 };
 
 // Get file icon based on file name
@@ -389,22 +409,17 @@ const handleSubmit = async () => {
       return;
     }
 
-    // Create FormData object
     const formData = new FormData();
     formData.append('title', taskData.value.title);
     formData.append('description', taskData.value.description || '');
     formData.append('dueDate', taskData.value.dueDate);
     formData.append('totalScore', taskData.value.totalScore);
-    
-    // Important: Convert studentLRNs array to JSON string
     formData.append('studentLRNs', JSON.stringify(selectedStudents.value.map(lrn => parseInt(lrn))));
     
-    // Add file if selected
-    if (selectedFile.value) {
-      formData.append('file', selectedFile.value);
-      // Also store the original filename
-      formData.append('fileName', selectedFile.value.name);
-    }
+    // Append multiple files
+    selectedFiles.value.forEach(file => {
+      formData.append('files', file);
+    });
 
     await createSubjectTask(selectedSubject.value.id, formData);
     router.push(`/subject/${selectedSubject.value.id}/tasks`);
@@ -712,5 +727,34 @@ textarea {
   border-bottom: 1px solid #e0e0e0;
   margin-bottom: 0.5rem;
   background-color: #f5f5f5;
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.clear-files-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.clear-files-btn:hover {
+  background: #fecaca;
+}
+
+.selected-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 </style>

@@ -1727,7 +1727,7 @@ export const createSubjectTask = async (subjectId, formData) => {
       headers: {
         "Authorization": `Bearer ${token}`
       },
-      body: formData  // Send the FormData directly
+      body: formData  // FormData will automatically set the correct Content-Type
     });
 
     if (!response.ok) {
@@ -1771,32 +1771,27 @@ export const getSubjectTasks = async (subjectId) => {
 /**
  * Submit a task
  */
-export const submitTask = async (taskId, file) => {
+export const submitTask = async (taskId, formData) => {
   try {
-    const token = localStorage.getItem("jwtToken");
-    if (!token) throw new Error("No token found");
-
-    const formData = new FormData();
-    if (file) {
-      formData.append('file', file);
-    }
-
+    console.log('Submitting task with files:', formData.getAll('files').length);
+    
     const response = await fetch(`${BASE_URL}/tasks/${taskId}/submit`, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${token}`
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+        // Note: Do NOT set Content-Type header when sending FormData
       },
       body: formData
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to submit task");
+      throw new Error(errorData.error || 'Failed to submit task');
     }
 
     return await response.json();
   } catch (error) {
-    console.error("Error submitting task:", error);
+    console.error('Error submitting task:', error);
     throw error;
   }
 };
@@ -2082,17 +2077,15 @@ export const getStudentTaskDetails = async (taskId) => {
 };
 
 // Add this function to edit submissions
-export const editSubmission = async (submissionId, file) => {
+export const editSubmission = async (submissionId, formData) => {
   try {
-    const formData = new FormData();
-    if (file) {
-      formData.append('file', file);
-    }
-
+    console.log('Editing submission with files:', formData.getAll('files').length);
+    
     const response = await fetch(`${BASE_URL}/submissions/${submissionId}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+        // Note: Do NOT set Content-Type header when sending FormData
       },
       body: formData
     });
@@ -2105,6 +2098,28 @@ export const editSubmission = async (submissionId, file) => {
     return await response.json();
   } catch (error) {
     console.error('Error editing submission:', error);
+    throw error;
+  }
+};
+
+// Add this function to delete a file
+export const deleteFile = async (fileId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/files/${fileId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete file');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting file:', error);
     throw error;
   }
 };
