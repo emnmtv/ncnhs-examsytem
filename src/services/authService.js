@@ -1,5 +1,5 @@
 // Export the BASE_URL at the top of the file
-export const BASE_URL = 'http://192.168.0.104:3300/auth';
+export const BASE_URL = 'http://192.168.0.100:3300/auth';
 // export const BASE_URL = 'https://ncnhs.loophole.site/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
@@ -1274,6 +1274,837 @@ export const getExamMPS = async (examId) => {
     return await response.json();
   } catch (error) {
     console.error('Error fetching exam MPS data:', error);
+    throw error;
+  }
+};
+
+// Subject management functions
+
+/**
+ * Create a new subject
+ */
+export const createSubject = async (subjectData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Creating subject', subjectData);
+
+    const response = await fetch(`${BASE_URL}/subjects`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(subjectData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Subject created successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Subject creation error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update an existing subject
+ */
+export const updateSubject = async (id, subjectData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Updating subject', { id, ...subjectData });
+
+    const response = await fetch(`${BASE_URL}/subjects/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(subjectData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Subject updated successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Subject update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a subject
+ */
+export const deleteSubject = async (id) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Deleting subject', { id });
+
+    const response = await fetch(`${BASE_URL}/subjects/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to delete subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Subject deleted successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Subject deletion error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all subjects
+ */
+export const getAllSubjects = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching all subjects');
+
+    const response = await fetch(`${BASE_URL}/subjects`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch subjects");
+    }
+
+    const { subjects } = await response.json();
+    console.log('AuthService: Subjects fetched successfully', subjects);
+    return subjects;
+  } catch (error) {
+    console.error("AuthService: Subject fetching error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get a subject by ID
+ */
+export const getSubjectById = async (id) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching subject', { id });
+
+    const response = await fetch(`${BASE_URL}/subjects/${id}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch subject");
+    }
+
+    const { subject } = await response.json();
+    console.log('AuthService: Subject fetched successfully', subject);
+    return subject;
+  } catch (error) {
+    console.error("AuthService: Subject fetching error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Assign a teacher to a subject
+ */
+export const assignTeacherToSubject = async (teacherId, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Assigning teacher to subject', { teacherId, subjectId });
+
+    const response = await fetch(`${BASE_URL}/teacher-subject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ teacherId, subjectId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to assign teacher to subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Teacher assigned to subject successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Teacher assignment error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a teacher from a subject
+ */
+export const removeTeacherFromSubject = async (teacherId, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Removing teacher from subject', { teacherId, subjectId });
+
+    const response = await fetch(`${BASE_URL}/teacher-subject/${teacherId}/${subjectId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to remove teacher from subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Teacher removed from subject successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Teacher removal error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get subjects assigned to a teacher
+ */
+export const getTeacherSubjects = async (teacherId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching teacher subjects', { teacherId });
+
+    const response = await fetch(`${BASE_URL}/teacher/${teacherId}/subjects`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch teacher subjects");
+    }
+
+    const { subjects } = await response.json();
+    console.log('AuthService: Teacher subjects fetched successfully', subjects);
+    return subjects;
+  } catch (error) {
+    console.error("AuthService: Teacher subjects fetching error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Assign a subject to a grade section
+ */
+export const assignSubjectToSection = async (grade, section, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Assigning subject to section', { grade, section, subjectId });
+
+    const response = await fetch(`${BASE_URL}/section-subject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ grade, section, subjectId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to assign subject to section");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Subject assigned to section successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Subject section assignment error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a subject from a grade section
+ */
+export const removeSubjectFromSection = async (grade, section, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Removing subject from section', { grade, section, subjectId });
+
+    const response = await fetch(`${BASE_URL}/section-subject/${grade}/${section}/${subjectId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to remove subject from section");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Subject removed from section successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Subject section removal error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get subjects assigned to a grade section
+ */
+export const getSectionSubjects = async (grade, section) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching section subjects', { grade, section });
+
+    const response = await fetch(`${BASE_URL}/section/${grade}/${section}/subjects`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch section subjects");
+    }
+
+    const { subjects } = await response.json();
+    console.log('AuthService: Section subjects fetched successfully', subjects);
+    return subjects;
+  } catch (error) {
+    console.error("AuthService: Section subjects fetching error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update a subject's schedule
+ */
+export const updateSubjectSchedule = async (subjectId, scheduleData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/subjects/${subjectId}/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(scheduleData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update schedule");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating schedule:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get subjects assigned to the logged-in teacher
+ */
+export const getTeacherAssignedSubjects = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/teacher/subjects/assigned`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch assigned subjects");
+    }
+
+    const { subjects } = await response.json();
+    return subjects;
+  } catch (error) {
+    console.error("Error fetching assigned subjects:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get subjects for the logged-in student
+ */
+export const getStudentSubjects = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/student/subjects`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch student subjects");
+    }
+
+    const { subjects } = await response.json();
+    return subjects;
+  } catch (error) {
+    console.error("Error fetching student subjects:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new task for a subject
+ */
+export const createSubjectTask = async (subjectId, formData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/subjects/${subjectId}/tasks`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
+      body: formData  // Send the FormData directly
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create task");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error creating task:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all tasks for a subject
+ */
+export const getSubjectTasks = async (subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/subjects/${subjectId}/tasks`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch tasks");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    throw error;
+  }
+};
+
+/**
+ * Submit a task
+ */
+export const submitTask = async (taskId, file) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const formData = new FormData();
+    if (file) {
+      formData.append('file', file);
+    }
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/submit`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to submit task");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error submitting task:", error);
+    throw error;
+  }
+};
+
+/**
+ * Add students to task visibility
+ */
+export const addTaskVisibility = async (taskId, studentLRNs) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/visibility`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ studentLRNs })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update task visibility");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error updating task visibility:", error);
+    throw error;
+  }
+};
+
+/**
+ * Remove students from task visibility
+ */
+export const removeTaskVisibility = async (taskId, studentLRNs) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/visibility`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ studentLRNs })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to remove task visibility");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error removing task visibility:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get students who can see the task
+ */
+export const getTaskVisibility = async (taskId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/visibility`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch task visibility");
+    }
+
+    const { visibility } = await response.json();
+    return visibility;
+  } catch (error) {
+    console.error("Error fetching task visibility:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get students by grade and section
+ */
+export const getStudentsBySection = async (grade, section) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/students/grade/${grade}/section/${section}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch students");
+    }
+
+    const { students } = await response.json();
+    return students;
+  } catch (error) {
+    console.error("Error fetching students by section:", error);
+    throw error;
+  }
+};
+
+// Add this helper function to get the base API URL without the /auth part
+export const getBaseApiUrl = () => {
+  const baseUrl = BASE_URL.replace('/auth', '');
+  return baseUrl;
+};
+
+/**
+ * Delete a subject task
+ */
+export const deleteSubjectTask = async (taskId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to delete task");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error deleting task:", error);
+    throw error;
+  }
+};
+
+/**
+ * Score a task submission
+ */
+export const scoreSubmission = async (submissionId, { score, comment }) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/submissions/${submissionId}/score`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ score, comment })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to score submission");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error scoring submission:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get submissions for a task
+ */
+export const getTaskSubmissions = async (taskId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/submissions`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch task submissions");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching task submissions:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get sections for a subject
+ */
+export const getSectionsBySubject = async (subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/subjects/${subjectId}/sections`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch subject sections");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching subject sections:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get tasks for a student
+ */
+export const getStudentTasks = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/student/tasks`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch student tasks");
+    }
+
+    const { tasks } = await response.json();
+    return tasks;
+  } catch (error) {
+    console.error("Error fetching student tasks:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get task details for a student
+ */
+export const getStudentTaskDetails = async (taskId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/student/tasks/${taskId}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch task details");
+    }
+
+    const { task } = await response.json();
+    return task;
+  } catch (error) {
+    console.error("Error fetching task details:", error);
+    throw error;
+  }
+};
+
+// Add this function to edit submissions
+export const editSubmission = async (submissionId, file) => {
+  try {
+    const formData = new FormData();
+    if (file) {
+      formData.append('file', file);
+    }
+
+    const response = await fetch(`${BASE_URL}/submissions/${submissionId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to edit submission');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error editing submission:', error);
     throw error;
   }
 };

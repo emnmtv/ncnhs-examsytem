@@ -90,30 +90,38 @@ const toggleNav = () => {
 
 const navigationItems = {
   admin: [
-    { name: 'Dashboard', path: '/admin-dashboard', icon: 'dashboard' },
     { name: 'Manage Users', path: '/manage-users', icon: 'group' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },
+    { name: 'Exam Monitor', path: '/admin-exam-monitor', icon: 'admin_panel_settings' },
+    { name: 'Manage Subjects', path: '/manage-subjects', icon: 'subject' },
+    // {name:'Game', path:'/game', icon:'controller'},
     { name: 'Profile', path: '/admin-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
-    { name: 'Exam Monitor', path: '/admin-exam-monitor', icon: 'admin_panel_settings' },
-
+    
+  
   ],
   teacher: [
-    { name: 'Dashboard', path: '/teacher-dashboard', icon: 'dashboard' },
+  { name: 'Classes', path: '/teacher-subjects', icon: 'subject' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
     { name: 'Manage Exams', path: '/manage-exams', icon: 'bar_chart' },
     { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
     { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
+    
+    // {name:'Game', path:'/game', icon:''},
     { name: 'Profile', path: '/teacher-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
   student: [
-    { name: 'Dashboard', path: '/dashboard', icon: 'dashboard' },
+    { name: 'Classes', path: '/student-subjects', icon: 'subject' },
+    {name:'My Task', path:'/student/tasks', icon:'task'},
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },
+   
     { name: 'Exams', path: '/student-exams', icon: 'assignment' },
     { name: 'Exam History', path: '/exam-history', icon: 'history' },
+    
+    // {name:'Game', path:'/game', icon:'controller'},
     { name: 'Profile', path: '/student-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
     

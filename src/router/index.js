@@ -25,6 +25,16 @@ import ActiveUsersMonitor from '@/components/admin/ActiveUsersMonitor.vue'
 import ExamHistory from '@/components/student/ExamHistory.vue'
 import ExamHistoryDetail from '@/components/student/ExamHistoryDetail.vue'
 import AdminProfile from '@/components/admin/AdminProfile.vue'
+import ManageSubjects from '@/components/admin/ManageSubjects.vue'
+import TeacherSubjects from '@/components/teacher/TeacherSubjects.vue'
+import StudentSubjects from '@/components/student/StudentSubjects.vue'
+import CreateTask from '@/components/teacher/CreateTask.vue'
+import SubjectTasks from '@/components/teacher/SubjectTasks.vue'
+import TaskSubmission from "@/components/teacher/TaskSubmission.vue";
+import GameCanvas from '@/components/game/GameCanvas.vue';
+import StudentTasks from '@/components/student/StudentTasks.vue';
+import TaskDetails from '@/components/student/TaskDetails.vue';
+
 const routes = [
   { 
     path: "/", 
@@ -187,6 +197,60 @@ const routes = [
       requiresAuth: true,
       allowedRoles: ['teacher', 'admin']
     }
+  },
+  {
+    path: '/manage-subjects',
+    name: 'ManageSubjects',
+    component: ManageSubjects,
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/teacher-subjects',
+    name: 'TeacherSubjects',
+    component: TeacherSubjects,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/student-subjects',
+    name: 'StudentSubjects',
+    component: StudentSubjects,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  {
+    path: '/create-task/:subjectId?',
+    name: 'CreateTask',
+    component: CreateTask,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/subject/:subjectId/tasks',
+    name: 'SubjectTasks',
+    component: SubjectTasks,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/subject/:subjectId/task/:taskId/submissions',
+    name: 'TaskSubmission',
+    component: TaskSubmission,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/game',
+    name: 'Game',
+    component: GameCanvas,
+    meta: { requiresAuth: true } // Optional: require authentication to play
+  },
+  {
+    path: '/student/tasks',
+    name: 'StudentTasks',
+    component: StudentTasks,
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+  {
+    path: '/student/tasks/:taskId',
+    name: 'TaskDetails',
+    component: TaskDetails,
+    meta: { requiresAuth: true, roles: ['student'] }
   },
 ];
 

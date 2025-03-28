@@ -108,7 +108,7 @@ const togglePassword = () => {
       <!-- Right side - Login Form -->
       <div class="login-form-container" :class="{ 'slide-in': pageLoaded }">
         <div class="login-header">
-          <img src="@/assets/logo.png" alt="NCNHS Logo" class="logo" />
+          <img src="@/assets/ncnhs-icon.png" alt="NCNHS Logo" class="logo" />
           <h2>User Login</h2>
           <p class="subtitle">Sign in to continue to your account</p>
         </div>
