@@ -12,9 +12,18 @@
           </span>
         </div>
       </div>
-      <button @click="$router.back()" class="back-btn">
-        <i class="fas fa-arrow-left"></i> Back
-      </button>
+      <div class="header-actions">
+        <button 
+          @click="storeSelectedQuestions" 
+          class="store-btn" 
+          :disabled="selectedQuestions.length === 0"
+        >
+          <i class="fas fa-save"></i> Store in Question Bank
+        </button>
+        <button @click="$router.back()" class="back-btn">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading">
@@ -34,7 +43,16 @@
       <div class="questions-list">
         <div v-for="(question, index) in exam?.questions" :key="index" class="question-card">
           <div class="question-header">
-            <span class="question-number">Question {{ index + 1 }}</span>
+            <div class="question-header-left">
+              <input 
+                type="checkbox" 
+                :id="`question-${index}`"
+                v-model="selectedQuestions"
+                :value="question"
+                class="question-checkbox"
+              >
+              <span class="question-number">Question {{ index + 1 }}</span>
+            </div>
             <span class="question-type">{{ formatQuestionType(question.questionType) }}</span>
           </div>
           
@@ -95,13 +113,44 @@
         </div>
       </div>
     </div>
+
+    <!-- Add Folder Selection Modal -->
+    <div v-if="showFolderModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Select Folder</h2>
+          <button class="close-btn" @click="closeFolderModal">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Choose a folder (optional)</label>
+            <select v-model="selectedFolder" class="folder-select">
+              <option value="">No Folder</option>
+              <option v-for="folder in folders" :key="folder.id" :value="folder.id">
+                {{ folder.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="modal-actions">
+            <button class="cancel-btn" @click="closeFolderModal">Cancel</button>
+            <button class="store-btn" @click="confirmStore">
+              Store Questions
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref,  onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchTeacherExams, getFullImageUrl } from '../../services/authService';
+import { fetchTeacherExams, getFullImageUrl, createQuestionBankItem, getQuestionBankFolders } from '../../services/authService';
 
 export default {
   name: 'PreviewExam',
@@ -111,6 +160,10 @@ export default {
     const exam = ref(null);
     const loading = ref(true);
     const error = ref(null);
+    const selectedQuestions = ref([]);
+    const folders = ref([]);
+    const selectedFolder = ref('');
+    const showFolderModal = ref(false);
 
     const loadExam = async () => {
       try {
@@ -129,6 +182,19 @@ export default {
         loading.value = false;
       }
     };
+
+    const loadFolders = async () => {
+      try {
+        const response = await getQuestionBankFolders();
+        folders.value = response.folders;
+      } catch (error) {
+        console.error('Error loading folders:', error);
+      }
+    };
+
+    onMounted(async () => {
+      await Promise.all([loadExam(), loadFolders()]);
+    });
 
     const formatQuestionType = (type) => {
       const types = {
@@ -166,7 +232,56 @@ export default {
       return getFullImageUrl(imageUrl);
     };
 
-    onMounted(loadExam);
+    const storeSelectedQuestions = async () => {
+      try {
+        loading.value = true;
+        error.value = null;
+
+        // Show folder selection modal
+        showFolderModal.value = true;
+      } catch (err) {
+        error.value = err.message;
+        console.error('Error storing questions:', err);
+        alert('Failed to store questions in the bank. Please try again.');
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const confirmStore = async () => {
+      try {
+        for (const question of selectedQuestions.value) {
+          const questionData = {
+            questionText: question.questionText,
+            questionType: question.questionType,
+            options: question.options,
+            correctAnswer: question.correctAnswer,
+            imageUrl: question.imageUrl,
+            difficulty: 'medium', // Default difficulty
+            subject: exam.value.classCode, // Using class code as subject
+            folderId: selectedFolder.value || null, // Use selected folder or null
+            sourceTestCode: exam.value.testCode,
+            sourceClassCode: exam.value.classCode,
+            sourceExamTitle: exam.value.examTitle
+          };
+
+          await createQuestionBankItem(questionData);
+        }
+
+        // Clear selection after successful storage
+        selectedQuestions.value = [];
+        closeFolderModal();
+        alert('Questions successfully stored in the question bank!');
+      } catch (error) {
+        console.error('Error storing questions:', error);
+        alert('Failed to store questions in the bank. Please try again.');
+      }
+    };
+
+    const closeFolderModal = () => {
+      showFolderModal.value = false;
+      selectedFolder.value = '';
+    };
 
     return {
       exam,
@@ -176,7 +291,14 @@ export default {
       formatQuestionType,
       parseOptions,
       formatAnswer,
-      getImageUrl
+      getImageUrl,
+      selectedQuestions,
+      storeSelectedQuestions,
+      folders,
+      selectedFolder,
+      showFolderModal,
+      confirmStore,
+      closeFolderModal
     };
   }
 };
@@ -217,9 +339,13 @@ export default {
   gap: 5px;
 }
 
-.back-btn {
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.back-btn, .store-btn {
   padding: 8px 16px;
-  background: #f0f0f0;
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -229,8 +355,26 @@ export default {
   transition: background-color 0.3s;
 }
 
+.back-btn {
+  background: #f0f0f0;
+}
+
+.store-btn {
+  background: #4caf50;
+  color: white;
+}
+
+.store-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+}
+
 .back-btn:hover {
   background: #e0e0e0;
+}
+
+.store-btn:not(:disabled):hover {
+  background: #45a049;
 }
 
 .question-card {
@@ -246,6 +390,18 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+}
+
+.question-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.question-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .question-number {
@@ -343,5 +499,110 @@ export default {
 
 .retry-btn:hover {
   background: #1976d2;
+}
+
+/* Modal Styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.folder-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.folder-select:focus {
+  border-color: #4CAF50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cancel-btn,
+.store-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.store-btn {
+  background: #4CAF50;
+  color: white;
+}
+
+.store-btn:hover {
+  background: #388E3C;
 }
 </style> 

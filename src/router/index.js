@@ -34,7 +34,7 @@ import TaskSubmission from "@/components/teacher/TaskSubmission.vue";
 import GameCanvas from '@/components/game/GameCanvas.vue';
 import StudentTasks from '@/components/student/StudentTasks.vue';
 import TaskDetails from '@/components/student/TaskDetails.vue';
-
+import QuestionBank from '@/components/teacher/QuestionBank.vue';
 const routes = [
   { 
     path: "/", 
@@ -252,6 +252,18 @@ const routes = [
     component: TaskDetails,
     meta: { requiresAuth: true, roles: ['student'] }
   },
+  {
+    path: '/exam/:examId/student/:studentId/answers',
+    name: 'StudentAnswerDetails',
+    component: () => import('@/components/teacher/StudentAnswerDetails.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/question-bank',
+    name: 'QuestionBank',
+    component: QuestionBank,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  }
 ];
 
 

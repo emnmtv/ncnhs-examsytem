@@ -147,6 +147,15 @@
               <span class="value">{{ formatDate(result.submittedAt) }}</span>
             </div>
           </div>
+          <div class="result-actions">
+            <button 
+              class="view-answers-btn"
+              @click="viewStudentAnswers(result)"
+            >
+              <span class="material-icons">assignment</span>
+              View Answers
+            </button>
+          </div>
         </div>
       </div>
 
@@ -160,6 +169,7 @@
               <th>Score</th>
               <th>Percentage</th>
               <th>Submitted At</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -181,6 +191,15 @@
                 </span>
               </td>
               <td>{{ formatDate(result.submittedAt) }}</td>
+              <td>
+                <button 
+                  class="view-answers-btn"
+                  @click="viewStudentAnswers(result)"
+                >
+                  <span class="material-icons">assignment</span>
+                  View Answers
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -575,7 +594,7 @@
 
 <script>
 import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { fetchStudentScores, fetchExamAnalysis } from '../../services/authService';
 
 export default {
@@ -583,6 +602,7 @@ export default {
   
   setup() {
     const route = useRoute();
+    const router = useRouter();
     const results = ref([]);
     const loading = ref(true);
     const error = ref(null);
@@ -889,6 +909,16 @@ export default {
       });
     });
 
+    const viewStudentAnswers = (result) => {
+      router.push({
+        name: 'StudentAnswerDetails',
+        params: {
+          examId: route.params.examId,
+          studentId: result.user.id
+        }
+      });
+    };
+
     onMounted(() => {
       checkMobile();
       window.addEventListener('resize', checkMobile);
@@ -938,7 +968,8 @@ export default {
       getAnalysisPageNumbers,
       showPagination,
       showAnalysisPagination,
-      isMobile
+      isMobile,
+      viewStudentAnswers
     };
   }
 };
@@ -1885,7 +1916,7 @@ tr:hover {
   /* Always show the active page and its immediate neighbors */
   .pagination .page-number.active,
   .pagination .page-number.active + button,
-  .pagination .page-number.active - button {
+  .pagination .page-number.active ~ button:first-of-type {
     display: flex;
   }
   
@@ -2200,5 +2231,29 @@ tr:hover {
     padding: 3px 5px;
     gap: 3px;
   }
+}
+
+.view-answers-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+
+.view-answers-btn:hover {
+  background: #1976d2;
+}
+
+.result-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style> 

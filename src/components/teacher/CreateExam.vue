@@ -282,14 +282,25 @@
             </div>
           </transition-group>
           
-          <button 
-            type="button" 
-            class="add-question-button"
-            @click="addQuestion"
-          >
-            <span class="material-icons-round">add_circle</span>
-            Add New Question
-          </button>
+          <div class="questions-actions">
+            <button 
+              type="button" 
+              class="add-question-button"
+              @click="addQuestion"
+            >
+              <span class="material-icons-round">add_circle</span>
+              Add New Question
+            </button>
+
+            <button 
+              type="button" 
+              class="import-question-button"
+              @click="showQuestionBankModal = true"
+            >
+              <span class="material-icons">library_books</span>
+              Import from Bank
+            </button>
+          </div>
         </div>
       </div>
 
@@ -325,13 +336,117 @@
         </div>
       </div>
     </form>
+
+    <!-- Replace Question Bank Modal with Side Panel -->
+    <div 
+      class="side-panel"
+      :class="{ 'is-open': showQuestionBankModal }"
+    >
+      <div class="side-panel-header">
+        <h2>
+          <span class="material-icons">library_books</span>
+          Question Bank
+        </h2>
+        <button class="close-btn" @click="closeQuestionBankModal">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="side-panel-content">
+        <!-- Filters -->
+        <div class="filters-section">
+          <div class="search-box">
+            <input 
+              v-model="bankSearchQuery" 
+              type="text" 
+              placeholder="Search questions..."
+            >
+            <span class="material-icons">search</span>
+          </div>
+
+          <div class="filter-group">
+            <select v-model="selectedBankFolder">
+              <option value="">All Folders</option>
+              <option v-for="folder in bankFolders" :key="folder.id" :value="folder.id">
+                {{ folder.name }}
+              </option>
+            </select>
+
+            <select v-model="selectedBankSubject">
+              <option value="">All Subjects</option>
+              <option v-for="subject in bankSubjects" :key="subject" :value="subject">
+                {{ subject }}
+              </option>
+            </select>
+
+            <select v-model="selectedBankDifficulty">
+              <option value="">All Difficulties</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Questions List -->
+        <div class="bank-questions-list">
+          <div 
+            v-for="question in filteredBankQuestions" 
+            :key="question.id" 
+            class="bank-question-card"
+            :class="{ selected: selectedBankQuestions.includes(question.id) }"
+            @click="toggleQuestionSelection(question)"
+          >
+            <div class="question-header">
+              <span class="question-type">{{ formatQuestionType(question.questionType) }}</span>
+              <span class="difficulty-badge" :class="question.difficulty">
+                {{ question.difficulty }}
+              </span>
+            </div>
+
+            <div class="question-content">
+              <p class="question-text">{{ question.questionText }}</p>
+              
+              <div v-if="question.imageUrl" class="question-image">
+                <img :src="getImageUrl(question.imageUrl)" alt="Question image">
+              </div>
+
+              <div class="question-meta">
+                <span v-if="question.folder" class="folder">
+                  <span class="material-icons">folder</span>
+                  {{ question.folder.name }}
+                </span>
+                <span v-if="question.subject" class="subject">
+                  <span class="material-icons">subject</span>
+                  {{ question.subject }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-panel-footer">
+        <div class="selection-info">
+          {{ selectedBankQuestions.length }} questions selected
+        </div>
+        <button 
+          class="import-btn" 
+          @click="importSelectedQuestions"
+          :disabled="selectedBankQuestions.length === 0"
+        >
+          <span class="material-icons">add_circle</span>
+          Import Selected
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl } from '../../services/authService';
+import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems } from '../../services/authService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -351,6 +466,13 @@ export default {
     const questions = ref([]);
     const loading = ref(false);
     const error = ref(null);
+    const showQuestionBankModal = ref(false);
+    const bankQuestions = ref([]);
+    const selectedBankQuestions = ref([]);
+    const bankSearchQuery = ref('');
+    const selectedBankFolder = ref('');
+    const selectedBankSubject = ref('');
+    const selectedBankDifficulty = ref('');
 
     // Add watchers to convert inputs to uppercase
     watch(() => examData.value.testCode, (newValue) => {
@@ -392,7 +514,7 @@ export default {
               type: q.questionType,
               options: Array.isArray(q.options) ? q.options : [],
               correctAnswer: q.correctAnswer,
-              imageUrl: q.imageUrl || null // Add imageUrl from loaded question
+              imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null // Fix image URL format
             }));
           }
         } catch (error) {
@@ -400,6 +522,7 @@ export default {
           Swal.fire('Error', 'Failed to load exam data', 'error');
         }
       }
+      loadBankQuestions();
     });
 
     // Handle image upload
@@ -468,8 +591,8 @@ export default {
             
             // Use the service to upload the image
             const data = await uploadImage(resizedImage);
-            // Store the image URL returned by the server
-            question.imageUrl = data.imageUrl;
+            // Store the image URL with /uploads/ prefix
+            question.imageUrl = '/uploads/' + data.imageUrl.split('/').pop();
             Swal.close();
           } catch (error) {
             console.error('Image upload error:', error);
@@ -719,6 +842,96 @@ export default {
       return getFullImageUrl(imageUrl);
     };
 
+    const loadBankQuestions = async () => {
+      try {
+        const response = await getQuestionBankItems();
+        bankQuestions.value = response.questions;
+      } catch (error) {
+        console.error('Error loading bank questions:', error);
+        Swal.fire('Error', 'Failed to load questions from bank', 'error');
+      }
+    };
+
+    const bankFolders = computed(() => {
+      const folders = new Set(bankQuestions.value
+        .filter(q => q.folder)
+        .map(q => ({ id: q.folder.id, name: q.folder.name })));
+      return Array.from(folders);
+    });
+
+    const bankSubjects = computed(() => {
+      const subjects = new Set(bankQuestions.value
+        .filter(q => q.subject)
+        .map(q => q.subject));
+      return Array.from(subjects);
+    });
+
+    const filteredBankQuestions = computed(() => {
+      return bankQuestions.value.filter(q => {
+        const matchesSearch = !bankSearchQuery.value || 
+          q.questionText.toLowerCase().includes(bankSearchQuery.value.toLowerCase());
+        
+        const matchesFolder = !selectedBankFolder.value || 
+          (q.folder && q.folder.id === selectedBankFolder.value);
+        
+        const matchesSubject = !selectedBankSubject.value || 
+          q.subject === selectedBankSubject.value;
+        
+        const matchesDifficulty = !selectedBankDifficulty.value || 
+          q.difficulty === selectedBankDifficulty.value;
+
+        return matchesSearch && matchesFolder && matchesSubject && matchesDifficulty;
+      });
+    });
+
+    const toggleQuestionSelection = (question) => {
+      const index = selectedBankQuestions.value.indexOf(question.id);
+      if (index === -1) {
+        selectedBankQuestions.value.push(question.id);
+      } else {
+        selectedBankQuestions.value.splice(index, 1);
+      }
+    };
+
+    const importSelectedQuestions = () => {
+      const selectedQuestions = bankQuestions.value.filter(q => 
+        selectedBankQuestions.value.includes(q.id)
+      );
+
+      // Add selected questions to the exam
+      selectedQuestions.forEach(q => {
+        questions.value.push({
+          text: q.questionText,
+          type: q.questionType,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          imageUrl: q.imageUrl
+        });
+      });
+
+      closeQuestionBankModal();
+      Swal.fire('Success', `${selectedQuestions.length} questions imported`, 'success');
+    };
+
+    const closeQuestionBankModal = () => {
+      showQuestionBankModal.value = false;
+      selectedBankQuestions.value = [];
+      bankSearchQuery.value = '';
+      selectedBankFolder.value = '';
+      selectedBankSubject.value = '';
+      selectedBankDifficulty.value = '';
+    };
+
+    const formatQuestionType = (type) => {
+      const types = {
+        multiple_choice: 'Multiple Choice',
+        multipleChoice: 'Multiple Choice',
+        true_false: 'True/False',
+        enumeration: 'Enumeration'
+      };
+      return types[type] || type;
+    };
+
     return {
       examData,
       questions,
@@ -737,7 +950,21 @@ export default {
       handleQuestionTypeChange,
       handleImageUpload,
       removeImage,
-      getImageUrl
+      getImageUrl,
+      showQuestionBankModal,
+      bankQuestions,
+      selectedBankQuestions,
+      bankSearchQuery,
+      selectedBankFolder,
+      selectedBankSubject,
+      selectedBankDifficulty,
+      bankFolders,
+      bankSubjects,
+      filteredBankQuestions,
+      toggleQuestionSelection,
+      importSelectedQuestions,
+      closeQuestionBankModal,
+      formatQuestionType
     };
   }
 };
@@ -1640,5 +1867,406 @@ small {
 
 .remove-image-btn:hover {
   background-color: rgba(244, 67, 54, 0.8);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.import-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.import-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.wide-modal .modal-content {
+  max-width: 900px;
+}
+
+.bank-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.bank-question-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 15px;
+}
+
+.bank-question-card .question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bank-question-card .question-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.bank-question-card .question-image {
+  position: relative;
+  width: 100%;
+  margin: 10px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.bank-question-card .question-image img {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  display: block;
+  background: #f5f5f5;
+}
+
+.bank-question-card .question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.bank-question-card:hover {
+  border-color: #2196F3;
+  transform: translateX(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.bank-question-card.selected {
+  border-color: #4CAF50;
+  background: #f1f8e9;
+}
+
+.difficulty-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.difficulty-badge.easy {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.difficulty-badge.medium {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty-badge.hard {
+  background: #fbe9e7;
+  color: #d84315;
+}
+
+.selection-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.filters-section {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.search-box {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 40px 10px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.search-box .material-icons {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.filter-group {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-group select {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Side Panel Styles */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: -500px;
+  width: 500px;
+  height: 100vh;
+  background: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+  z-index: 1000;
+}
+
+.side-panel.is-open {
+  right: 0;
+}
+
+.side-panel-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-panel-header h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+}
+
+.side-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.side-panel-footer {
+  padding: 15px 20px;
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bank-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.bank-question-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 15px;
+}
+
+.bank-question-card .question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.bank-question-card .question-text {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.bank-question-card .question-image {
+  position: relative;
+  width: 100%;
+  margin: 10px 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.bank-question-card .question-image img {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  display: block;
+  background: #f5f5f5;
+}
+
+.bank-question-card .question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.bank-question-card:hover {
+  border-color: #2196F3;
+  transform: translateX(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.bank-question-card.selected {
+  border-color: #4CAF50;
+  background: #f1f8e9;
+}
+
+.difficulty-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.difficulty-badge.easy {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.difficulty-badge.medium {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty-badge.hard {
+  background: #fbe9e7;
+  color: #d84315;
+}
+
+.selection-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.filters-section {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-group select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.import-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.import-btn:hover:not(:disabled) {
+  background: #388E3C;
+}
+
+.import-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.selection-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Remove the modal styles */
+.modal,
+.modal-content,
+.wide-modal,
+.bank-questions-grid {
+  display: none;
+}
+
+.questions-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding: 20px;
+}
+
+.import-question-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.import-question-button {
+  background-color: #e3f2fd;
+  border: 2px dashed #2196F3;
+  color: #1976D2;
+}
+
+.import-question-button:hover {
+  background-color: #bbdefb;
+  border-color: #1976D2;
+  transform: translateY(-2px);
+}
+
+.material-icons,
+.material-icons-round {
+  font-size: 24px;
 }
 </style>

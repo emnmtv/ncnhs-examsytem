@@ -1,5 +1,5 @@
 // Export the BASE_URL at the top of the file
-export const BASE_URL = 'http://192.168.0.100:3300/auth';
+export const BASE_URL = 'http://192.168.0.100:3303/auth';
 // export const BASE_URL = 'https://ncnhs.loophole.site/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
@@ -2120,6 +2120,297 @@ export const deleteFile = async (fileId) => {
     return await response.json();
   } catch (error) {
     console.error('Error deleting file:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get student's exam answers with details
+ */
+export const getStudentExamAnswers = async (examId, studentId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching student exam answers', { examId, studentId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/student/${studentId}/answers`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch exam answers");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam answers fetched successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Exam answers fetch error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update an exam answer's correctness
+ */
+export const updateStudentExamAnswer = async (answerId, isCorrect) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Updating exam answer', { answerId, isCorrect });
+
+    const response = await fetch(`${BASE_URL}/exam-answer/${answerId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ isCorrect })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update exam answer");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam answer updated successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Exam answer update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update student's exam score manually
+ */
+export const updateStudentExamScore = async (examId, studentId, score) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Updating student exam score', { examId, studentId, score });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/student/${studentId}/score`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ score })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update exam score");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam score updated successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Exam score update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new question in the question bank
+ */
+export const createQuestionBankItem = async (questionData) => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify(questionData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create question');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating question bank item:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get questions from the question bank with optional filters
+ */
+export const getQuestionBankItems = async (filters = {}) => {
+  try {
+    // Convert filters object to query string
+    const queryParams = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) queryParams.append(key, value);
+    });
+
+    const response = await fetch(`${BASE_URL}/question-bank?${queryParams}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch questions');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching question bank items:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update a question in the question bank
+ */
+export const updateQuestionBankItem = async (questionId, updateData) => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank/${questionId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update question');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating question bank item:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a question from the question bank
+ */
+export const deleteQuestionBankItem = async (questionId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank/${questionId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete question');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting question bank item:', error);
+    throw error;
+  }
+};
+
+/**
+ * Import questions from question bank to an exam
+ */
+export const importQuestionsFromBank = async (examId, questionIds) => {
+  try {
+    const response = await fetch(`${BASE_URL}/exam/${examId}/import-questions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ questionIds })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to import questions');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error importing questions:', error);
+    throw error;
+  }
+};
+
+export const createQuestionBankFolder = async (folderData) => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank/folders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify(folderData)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create folder');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating folder:', error);
+    throw error;
+  }
+};
+
+export const getQuestionBankFolders = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank/folders`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to get folders');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting folders:', error);
+    throw error;
+  }
+};
+
+export const deleteQuestionBankFolder = async (folderId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/question-bank/folders/${folderId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete folder');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting folder:', error);
     throw error;
   }
 };

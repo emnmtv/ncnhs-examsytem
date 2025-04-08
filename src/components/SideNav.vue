@@ -106,6 +106,7 @@ const navigationItems = {
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
     { name: 'Manage Exams', path: '/manage-exams', icon: 'bar_chart' },
+    { name: 'Question Bank', path: '/question-bank', icon: 'question_answer' },
     { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
     { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
     
