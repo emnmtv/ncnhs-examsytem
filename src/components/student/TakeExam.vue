@@ -100,7 +100,10 @@
               :key="student.userId" 
               class="student-card"
             >
-              <div class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
+              <div v-if="student.profilePicture" class="avatar-container">
+                <img :src="getImageUrl(student.profilePicture)" class="avatar-image" alt="Profile" />
+              </div>
+              <div v-else class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
                 {{ getInitials(student.userName) }}
               </div>
               <div class="student-name">{{ student.userName }}</div>
@@ -979,5 +982,27 @@ export default {
   max-height: 300px;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.avatar-container {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin: 0 auto 10px;
+  overflow: hidden;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  /* ... existing media queries ... */
+  .avatar-container {
+    width: 40px;
+    height: 40px;
+  }
 }
 </style> 

@@ -1,6 +1,6 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { fetchUserProfile, updateProfile, getAvailableSections } from '@/services/authService';
+import { ref, onMounted, watch, computed } from 'vue';
+import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl ,deleteProfilePicture} from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -13,7 +13,22 @@ const profile = ref({
   gradeLevel: null,
   section: '',
   role: '',
-  createdAt: ''
+  createdAt: '',
+  profilePicture: null
+});
+
+// Add profile picture data
+const imageFile = ref(null);
+const imagePreview = ref(null);
+
+// Computed property for profile image URL
+const profileImageUrl = computed(() => {
+  if (imagePreview.value) {
+    return imagePreview.value;
+  } else if (profile.value.profilePicture) {
+    return getFullImageUrl(profile.value.profilePicture);
+  }
+  return null;
 });
 
 // Add password fields
@@ -40,6 +55,9 @@ const loadProfile = async () => {
     loading.value = true;
     const data = await fetchUserProfile();
     profile.value = data;
+    // Reset image preview when loading new profile data
+    imagePreview.value = null;
+    imageFile.value = null;
     if (data.gradeLevel) {
       const response = await getAvailableSections(data.gradeLevel);
       availableSections.value = response.sections;
@@ -55,6 +73,58 @@ const loadProfile = async () => {
     loading.value = false;
   }
 };
+
+// Handle image selection
+const handleImageChange = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validate file size (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({
+      icon: 'error',
+      title: 'File Too Large',
+      text: 'Profile picture must be less than 5MB',
+      confirmButtonColor: '#4CAF50'
+    });
+    event.target.value = null;
+    return;
+  }
+  
+  // Store the file for upload
+  imageFile.value = file;
+  
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// Remove profile picture
+const removeProfilePicture = async () => {
+  try {
+    await deleteProfilePicture();
+    imageFile.value = null;
+    imagePreview.value = null;
+    profile.value.profilePicture = null;
+    Swal.fire({
+      icon: 'success',
+      title: 'Profile Picture Removed',
+      text: 'Your profile picture has been removed successfully.',
+      confirmButtonColor: '#2196F3'
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to Remove Profile Picture',
+      text: err.message || 'Failed to remove profile picture',
+      confirmButtonColor: '#2196F3'
+    });
+  }
+};
+
 
 const handleUpdate = async () => {
   try {
@@ -87,7 +157,23 @@ const handleUpdate = async () => {
       showConfirmButton: false
     });
     
-    await updateProfile(profile.value);
+    // Prepare form data if there's an image to upload
+    let updatedProfile = { ...profile.value };
+    
+    if (imageFile.value) {
+      // If uploading a new image, convert it to base64 for API
+      const reader = new FileReader();
+      const imagePromise = new Promise((resolve) => {
+        reader.onload = () => {
+          updatedProfile.profilePicture = reader.result;
+          resolve();
+        };
+      });
+      reader.readAsDataURL(imageFile.value);
+      await imagePromise;
+    }
+    
+    await updateProfile(updatedProfile);
     
     // Close loading alert
     loadingAlert.close();
@@ -110,6 +196,9 @@ const handleUpdate = async () => {
     });
     
     isEditing.value = false;
+    
+    // Reload profile to get updated data from server
+    await loadProfile();
   } catch (err) {
     Swal.fire({
       icon: 'error',
@@ -140,6 +229,11 @@ const toggleEditMode = () => {
         passwordData.value.confirmPassword = '';
         showPassword.value = false;
         showConfirmPassword.value = false;
+        
+        // Reset image preview and file
+        imagePreview.value = null;
+        imageFile.value = null;
+        
         loadProfile(); // Reload original data
       }
     });
@@ -221,6 +315,36 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
         </div>
 
         <form @submit.prevent="handleUpdate" class="profile-form">
+          <!-- Profile Picture Section -->
+          <div v-if="isEditing" class="profile-picture-section">
+            <div class="picture-container">
+              <div class="profile-img-wrapper">
+                <img v-if="profileImageUrl" :src="profileImageUrl" alt="Profile picture" class="profile-img" />
+                <div v-else class="profile-img-placeholder">
+                  <span class="material-icons-round">account_circle</span>
+                </div>
+              </div>
+              <div class="picture-actions">
+                <label for="profile-picture-upload" class="upload-btn">
+                  <span class="material-icons-round">add_a_photo</span>
+                  Upload Photo
+                </label>
+                <input 
+                  type="file" 
+                  id="profile-picture-upload" 
+                  @change="handleImageChange" 
+                  accept="image/*" 
+                  class="file-input"
+                />
+                <button v-if="profileImageUrl" type="button" class="remove-btn" @click="removeProfilePicture">
+                  <span class="material-icons-round">delete</span>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <p class="picture-hint">Upload a square image for best results. Max size: 5MB.</p>
+          </div>
+          
           <div class="form-grid">
             <div class="form-group">
               <label>First Name</label>
@@ -416,7 +540,7 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 }
 
 .header-content h1 {
-  color: #159750;
+  color: #4CAF50;
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
@@ -425,7 +549,7 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
 }
 
 .header-content h1 .material-icons {
-  color: #159750;
+  color: #4CAF50;
   font-size: 2.5rem;
   font-weight: 700;
   padding-left: 1%;
@@ -518,6 +642,107 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Profile Picture Section */
+.profile-picture-section {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 2rem;
+}
+
+.picture-container {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.profile-img-wrapper {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e0e0e0;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+}
+
+.profile-img-placeholder .material-icons-round {
+  font-size: 4rem;
+}
+
+.picture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background: #388E3C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+  background: #e53935;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-input {
+  display: none;
+}
+
+.picture-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -552,8 +777,7 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   color: #666;
 }
 
-.input-wrapper input,
-.input-wrapper select {
+.input-wrapper input, .input-wrapper select {
   width: 100%;
   padding: 0.75rem 1rem 0.75rem 3rem;
   border: 2px solid #e0e0e0;
@@ -584,72 +808,23 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   color: #4CAF50;
 }
 
-.input-wrapper input.editable,
-.input-wrapper select.editable {
+.input-wrapper input.editable, .input-wrapper select.editable {
   background: white;
   cursor: text;
 }
 
-.input-wrapper input:not(.editable),
-.input-wrapper select:not(.editable) {
+.input-wrapper select.editable {
+  cursor: pointer;
+}
+
+.input-wrapper input:not(.editable), .input-wrapper select:not(.editable) {
   cursor: default;
 }
 
-.input-wrapper input.editable:focus,
-.input-wrapper select.editable:focus {
+.input-wrapper input.editable:focus, .input-wrapper select.editable:focus {
   border-color: #4CAF50;
   box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
   outline: none;
-}
-
-.form-actions {
-  margin-top: 2rem;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.save-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.save-btn:hover {
-  background: #43A047;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 400px;
-  gap: 1rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  padding: 2rem;
-}
-
-.rotating {
-  animation: rotate 2s linear infinite;
-  font-size: 3rem;
-  color: #159750;
-}
-
-@keyframes rotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 
 /* Password section styles */
@@ -697,6 +872,56 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   font-size: 0.8rem;
   color: #666;
   margin: 0.25rem 0 0 0;
+}
+
+.form-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.save-btn:hover {
+  background: #388E3C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+}
+
+.rotating {
+  animation: rotate 2s linear infinite;
+  font-size: 3rem;
+  color: #4CAF50;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
@@ -748,6 +973,22 @@ watch(() => profile.value.gradeLevel, async (newGrade) => {
   .save-btn {
     width: 100%;
     justify-content: center;
+  }
+  
+  /* Profile picture responsive styles */
+  .picture-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .profile-img-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .picture-actions {
+    width: 100%;
   }
 }
 </style>

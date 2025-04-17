@@ -1,5 +1,5 @@
 // Export the BASE_URL at the top of the file
-export const BASE_URL = 'http://192.168.0.100:3303/auth';
+export const BASE_URL = 'http://192.168.0.100:3300/auth';
 // export const BASE_URL = 'https://ncnhs.loophole.site/auth';
 // Helper function to decode JWT token
 const decodeToken = (token) => {
@@ -180,6 +180,27 @@ export const updateProfile = async (profileData) => {
     throw error;
   }
 };
+
+export const deleteProfilePicture = async () => {
+  const token = localStorage.getItem("jwtToken");
+  if (!token) throw new Error("No token found");
+
+  const response = await fetch(`${BASE_URL}/profile-picture`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`
+    },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || "Failed to delete profile picture");
+  }
+
+  return await response.json();
+};
+
 
 // Exam management functions with token-based auth
 export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false) => {

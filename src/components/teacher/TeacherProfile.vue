@@ -37,6 +37,68 @@
         </div>
 
         <form @submit.prevent="handleUpdate" class="profile-form">
+          <!-- Profile Picture Section -->
+          <div v-if="isEditing" class="profile-picture-section">
+            <div class="picture-container">
+              <div class="profile-img-wrapper">
+                <img v-if="profileImageUrl" :src="profileImageUrl" alt="Profile picture" class="profile-img" />
+                <div v-else class="profile-img-placeholder">
+                  <span class="material-icons-round">account_circle</span>
+                </div>
+              </div>
+              <div class="picture-actions">
+                <label for="profile-picture-upload" class="upload-btn">
+                  <span class="material-icons-round">add_a_photo</span>
+                  Upload Photo
+                </label>
+                <input 
+                  type="file" 
+                  id="profile-picture-upload" 
+                  @change="handleImageChange" 
+                  accept="image/*" 
+                  class="file-input"
+                />
+                <button type="button" class="camera-btn" @click="toggleCamera">
+                  <span class="material-icons-round">camera_alt</span>
+                  Use Camera
+                </button>
+                <button v-if="profileImageUrl" type="button" class="remove-btn" @click="removeProfilePicture">
+                  <span class="material-icons-round">delete</span>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <p class="picture-hint">Upload a square image for best results. Max size: 5MB.</p>
+            
+            <!-- Webcam capture component -->
+            <div v-if="showCamera" class="webcam-container">
+              <div class="webcam-header">
+                <h3>Take a profile picture</h3>
+                <button type="button" class="close-webcam" @click="closeCamera">
+                  <span class="material-icons-round">close</span>
+                </button>
+              </div>
+              <div class="webcam-view">
+                <video ref="video" width="400" height="300" autoplay></video>
+                <canvas ref="canvas" width="400" height="300" style="display: none;"></canvas>
+              </div>
+              <div class="webcam-actions">
+                <button type="button" class="capture-btn" @click="captureImage">
+                  <span class="material-icons-round">photo_camera</span>
+                  Take Photo
+                </button>
+                <button v-if="imageCaptured" type="button" class="retry-btn" @click="retryCapture">
+                  <span class="material-icons-round">refresh</span>
+                  Retry
+                </button>
+                <button v-if="imageCaptured" type="button" class="use-photo-btn" @click="useCapture">
+                  <span class="material-icons-round">check</span>
+                  Use Photo
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="form-grid">
             <div class="form-group">
               <label>First Name</label>
@@ -193,8 +255,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { fetchUserProfile, updateProfile } from '@/services/authService';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
+import { fetchUserProfile, updateProfile, getFullImageUrl ,deleteProfilePicture} from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -206,7 +268,22 @@ const profile = ref({
   domain: '',
   department: '',
   role: '',
-  createdAt: ''
+  createdAt: '',
+  profilePicture: null
+});
+
+// Add profile picture data
+const imageFile = ref(null);
+const imagePreview = ref(null);
+
+// Computed property for profile image URL
+const profileImageUrl = computed(() => {
+  if (imagePreview.value) {
+    return imagePreview.value;
+  } else if (profile.value.profilePicture) {
+    return getFullImageUrl(profile.value.profilePicture);
+  }
+  return null;
 });
 
 // Add password fields
@@ -223,6 +300,13 @@ const loading = ref(true);
 const isEditing = ref(false);
 const showPasswordFields = ref(false);
 
+// Add webcam related refs
+const video = ref(null);
+const canvas = ref(null);
+const showCamera = ref(false);
+const imageCaptured = ref(false);
+let stream = null;
+
 onMounted(async () => {
   await loadProfile();
 });
@@ -232,6 +316,9 @@ const loadProfile = async () => {
     loading.value = true;
     const data = await fetchUserProfile();
     profile.value = data;
+    // Reset image preview when loading new profile data
+    imagePreview.value = null;
+    imageFile.value = null;
   } catch (err) {
     Swal.fire({
       icon: 'error',
@@ -241,6 +328,57 @@ const loadProfile = async () => {
     });
   } finally {
     loading.value = false;
+  }
+};
+
+// Handle image selection
+const handleImageChange = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validate file size (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({
+      icon: 'error',
+      title: 'File Too Large',
+      text: 'Profile picture must be less than 5MB',
+      confirmButtonColor: '#2196F3'
+    });
+    event.target.value = null;
+    return;
+  }
+  
+  // Store the file for upload
+  imageFile.value = file;
+  
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// Remove profile picture
+const removeProfilePicture = async () => {
+  try {
+    await deleteProfilePicture();
+    imageFile.value = null;
+    imagePreview.value = null;
+    profile.value.profilePicture = null;
+    Swal.fire({
+      icon: 'success',
+      title: 'Profile Picture Removed',
+      text: 'Your profile picture has been removed successfully.',
+      confirmButtonColor: '#2196F3'
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to Remove Profile Picture',
+      text: err.message || 'Failed to remove profile picture',
+      confirmButtonColor: '#2196F3'
+    });
   }
 };
 
@@ -275,7 +413,23 @@ const handleUpdate = async () => {
       showConfirmButton: false
     });
     
-    await updateProfile(profile.value);
+    // Prepare form data if there's an image to upload
+    let updatedProfile = { ...profile.value };
+    
+    if (imageFile.value) {
+      // If uploading a new image, convert it to base64 for API
+      const reader = new FileReader();
+      const imagePromise = new Promise((resolve) => {
+        reader.onload = () => {
+          updatedProfile.profilePicture = reader.result;
+          resolve();
+        };
+      });
+      reader.readAsDataURL(imageFile.value);
+      await imagePromise;
+    }
+    
+    await updateProfile(updatedProfile);
     
     // Close loading alert
     loadingAlert.close();
@@ -298,6 +452,9 @@ const handleUpdate = async () => {
     });
     
     isEditing.value = false;
+    
+    // Reload profile to get updated data from server
+    await loadProfile();
   } catch (err) {
     Swal.fire({
       icon: 'error',
@@ -328,6 +485,11 @@ const toggleEditMode = () => {
         passwordData.value.confirmPassword = '';
         showPassword.value = false;
         showConfirmPassword.value = false;
+        
+        // Reset image preview and file
+        imagePreview.value = null;
+        imageFile.value = null;
+        
         loadProfile(); // Reload original data
       }
     });
@@ -354,6 +516,185 @@ const togglePasswordVisibility = (field) => {
     showConfirmPassword.value = !showConfirmPassword.value;
   }
 };
+
+// Camera methods
+const toggleCamera = () => {
+  if (showCamera.value) {
+    closeCamera();
+  } else {
+    // Show camera permission instruction first
+    Swal.fire({
+      title: 'Camera Access Required',
+      html: `
+        <div class="permission-guide">
+          <p>This feature requires camera access. Please allow when prompted.</p>
+          <div class="permission-steps">
+            <div class="step">
+              <span class="material-icons-round">info</span>
+              <p>Look for the camera permission popup in your browser</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">check_circle</span>
+              <p>Click "Allow" when prompted</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">settings</span>
+              <p>If no prompt appears, check your browser settings</p>
+            </div>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#4CAF50'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        openCamera();
+      }
+    });
+  }
+};
+
+const openCamera = async () => {
+  showCamera.value = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        width: { ideal: 400 },
+        height: { ideal: 300 },
+        facingMode: "user"
+      }, 
+      audio: false 
+    });
+    
+    if (video.value) {
+      video.value.srcObject = stream;
+    }
+  } catch (err) {
+    console.error('Error accessing camera:', err);
+    
+    // Check for specific permission errors
+    let errorMessage = 'Could not access your camera.';
+    let errorHelp = '';
+    
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      errorMessage = 'Camera access was denied.';
+      errorHelp = `
+        <div class="error-help">
+          <p>To fix this issue:</p>
+          <ol>
+            <li>Click on the camera icon in your browser's address bar</li>
+            <li>Select "Always allow" for this site</li>
+            <li>Refresh the page and try again</li>
+          </ol>
+          <div class="browser-specific">
+            <p><strong>Chrome/Edge users:</strong> Settings → Privacy and Security → Site Settings → Camera</p>
+            <p><strong>Firefox users:</strong> Settings → Privacy & Security → Permissions → Camera</p>
+            <p><strong>Safari users:</strong> Preferences → Websites → Camera</p>
+          </div>
+        </div>
+      `;
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      errorMessage = 'No camera device was found.';
+      errorHelp = 'Please connect a camera to your device and try again.';
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      errorMessage = 'Your camera is already in use by another application.';
+      errorHelp = 'Please close other applications that might be using your camera.';
+    }
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Camera Error',
+      html: `<p>${errorMessage}</p>${errorHelp}`,
+      confirmButtonText: 'Got It',
+      confirmButtonColor: '#4CAF50',
+      showCancelButton: false
+    });
+    
+    // Show fallback option
+    setTimeout(() => {
+      Swal.fire({
+        title: 'Alternative Option',
+        text: 'If you continue having camera issues, you can upload a photo instead.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Upload Photo Instead',
+        cancelButtonText: 'Try Camera Again',
+        confirmButtonColor: '#2196F3',
+        cancelButtonColor: '#4CAF50'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Trigger file input click
+          document.getElementById('profile-picture-upload').click();
+        } else {
+          // Try camera again
+          toggleCamera();
+        }
+      });
+    }, 5000); // Show after 5 seconds
+    
+    showCamera.value = false;
+  }
+};
+
+const closeCamera = () => {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  showCamera.value = false;
+  imageCaptured.value = false;
+};
+
+const captureImage = () => {
+  if (!video.value || !canvas.value) return;
+  
+  const context = canvas.value.getContext('2d');
+  // Draw the video frame to the canvas
+  context.drawImage(video.value, 0, 0, canvas.value.width, canvas.value.height);
+  
+  // Convert to data URL
+  const dataUrl = canvas.value.toDataURL('image/jpeg');
+  
+  // Pause the video to show the captured frame
+  video.value.pause();
+  
+  // Set the captured image as the preview
+  imagePreview.value = dataUrl;
+  imageCaptured.value = true;
+};
+
+const retryCapture = () => {
+  if (video.value) {
+    // Resume the video
+    video.value.play();
+  }
+  imageCaptured.value = false;
+};
+
+const useCapture = async () => {
+  if (!imagePreview.value) return;
+  
+  // Convert base64 to blob for upload
+  const response = await fetch(imagePreview.value);
+  const blob = await response.blob();
+  
+  // Create a File object from the blob
+  const file = new File([blob], "webcam-profile.jpg", { type: "image/jpeg" });
+  
+  // Set the file to be uploaded
+  imageFile.value = file;
+  
+  // Close the camera interface
+  closeCamera();
+};
+
+// Clean up camera on component unmount
+onUnmounted(() => {
+  closeCamera();
+});
 </script>
 
 <style scoped>
@@ -477,6 +818,107 @@ const togglePasswordVisibility = (field) => {
   background: #ffcdd2;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile Picture Section */
+.profile-picture-section {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 2rem;
+}
+
+.picture-container {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.profile-img-wrapper {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e0e0e0;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+}
+
+.profile-img-placeholder .material-icons-round {
+  font-size: 4rem;
+}
+
+.picture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background: #1976D2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+  background: #e53935;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-input {
+  display: none;
+}
+
+.picture-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
 }
 
 .form-grid {
@@ -706,5 +1148,181 @@ const togglePasswordVisibility = (field) => {
     width: 100%;
     justify-content: center;
   }
+  
+  /* Profile picture responsive styles */
+  .picture-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .profile-img-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .picture-actions {
+    width: 100%;
+  }
+}
+
+.webcam-container {
+  margin-top: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.webcam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.webcam-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.close-webcam {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.webcam-view {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.webcam-view video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.webcam-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+.capture-btn, .retry-btn, .use-photo-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.capture-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.retry-btn {
+  background-color: #FF9800;
+  color: white;
+}
+
+.use-photo-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.camera-btn {
+  background-color: #673AB7;
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.camera-btn:hover, .capture-btn:hover, .retry-btn:hover, .use-photo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .webcam-container {
+    padding: 10px;
+  }
+  
+  .webcam-view {
+    max-width: 100%;
+  }
+  
+  .webcam-actions {
+    flex-wrap: wrap;
+  }
+  
+  .capture-btn, .retry-btn, .use-photo-btn, .camera-btn {
+    flex: 1;
+    min-width: 100px;
+  }
+}
+
+.permission-guide {
+  text-align: left;
+  margin: 0 auto;
+}
+
+.permission-steps {
+  margin-top: 15px;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.step .material-icons-round {
+  color: #4CAF50;
+}
+
+.error-help {
+  text-align: left;
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.error-help ol {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.browser-specific {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.browser-specific p {
+  margin: 5px 0;
 }
 </style>

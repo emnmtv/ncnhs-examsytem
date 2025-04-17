@@ -132,7 +132,15 @@
       <!-- Grid View -->
       <div v-if="viewMode === 'grid'" class="users-grid">
         <div v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <div class="user-avatar">
+          <div v-if="user.profilePicture" class="user-avatar-container">
+            <img 
+              :src="getFullImageUrl(user.profilePicture)" 
+              alt="Profile" 
+              class="user-avatar-img"
+              @error="handleImageError($event, user)" 
+            />
+          </div>
+          <div v-else class="user-avatar">
             {{ user.firstName[0] }}{{ user.lastName[0] }}
           </div>
           <div class="user-info">
@@ -180,6 +188,7 @@
         <table>
           <thead>
             <tr>
+              <th>Profile</th>
               <th>Name</th>
               <th>Email</th>
               <th v-if="activeTab === 'students'">LRN</th>
@@ -192,6 +201,19 @@
           </thead>
           <tbody>
             <tr v-for="user in filteredUsers" :key="user.id">
+              <td>
+                <div v-if="user.profilePicture" class="table-avatar-container">
+                  <img 
+                    :src="getFullImageUrl(user.profilePicture)" 
+                    alt="Profile" 
+                    class="table-avatar-img"
+                    @error="handleImageError($event, user)"
+                  />
+                </div>
+                <div v-else class="table-avatar">
+                  {{ user.firstName[0] }}{{ user.lastName[0] }}
+                </div>
+              </td>
               <td>{{ user.firstName }} {{ user.lastName }}</td>
               <td>{{ user.email }}</td>
               <td v-if="activeTab === 'students'">{{ user.lrn || 'N/A' }}</td>
@@ -513,7 +535,8 @@ import {
   deleteGradeSection,
   updateUser,
   deleteUser,
-  getUserDetails
+  getUserDetails,
+  getFullImageUrl
 } from '@/services/authService';
 import Swal from 'sweetalert2';
 
@@ -1089,6 +1112,23 @@ const loadSections = async () => {
     console.error('Error loading sections:', error);
   }
 };
+
+// Add handler for image loading errors
+const handleImageError = (event, user) => {
+  // Hide the broken image
+  event.target.style.display = 'none';
+  
+  // Show the parent container as an avatar with initials
+  const container = event.target.parentElement;
+  container.classList.add(event.target.classList.contains('user-avatar-img') ? 'user-avatar' : 'table-avatar');
+  container.textContent = `${user.firstName[0]}${user.lastName[0]}`;
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+  container.style.backgroundColor = '#f5f5f5';
+  container.style.color = '#666';
+  container.style.fontWeight = 'bold';
+};
 </script>
 
 <style scoped>
@@ -1236,16 +1276,17 @@ const loadSections = async () => {
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
-.user-avatar {
+.user-avatar-container {
   width: 50px;
   height: 50px;
-  background: #f5f5f5;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  color: #666;
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-info {
@@ -1739,5 +1780,47 @@ const loadSections = async () => {
 
 .uppercase-input::placeholder {
   text-transform: none; /* Keep placeholders in normal case */
+}
+
+.table-avatar-container {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.table-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.table-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* Responsive adjustments for profile pictures */
+@media (max-width: 768px) {
+  .user-avatar-container, .user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .table-avatar-container, .table-avatar {
+    width: 30px;
+    height: 30px;
+  }
 }
 </style> 

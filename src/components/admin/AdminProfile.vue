@@ -37,6 +37,36 @@
         </div>
 
         <form @submit.prevent="handleUpdate" class="profile-form">
+          <!-- Profile Picture Section -->
+          <div v-if="isEditing" class="profile-picture-section">
+            <div class="picture-container">
+              <div class="profile-img-wrapper">
+                <img v-if="profileImageUrl" :src="profileImageUrl" alt="Profile picture" class="profile-img" />
+                <div v-else class="profile-img-placeholder">
+                  <span class="material-icons-round">account_circle</span>
+                </div>
+              </div>
+              <div class="picture-actions">
+                <label for="profile-picture-upload" class="upload-btn">
+                  <span class="material-icons-round">add_a_photo</span>
+                  Upload Photo
+                </label>
+                <input 
+                  type="file" 
+                  id="profile-picture-upload" 
+                  @change="handleImageChange" 
+                  accept="image/*" 
+                  class="file-input"
+                />
+                <button v-if="profileImageUrl" type="button" class="remove-btn" @click="removeProfilePicture">
+                  <span class="material-icons-round">delete</span>
+                  Remove
+                </button>
+              </div>
+            </div>
+            <p class="picture-hint">Upload a square image for best results. Max size: 5MB.</p>
+          </div>
+          
           <div class="form-grid">
             <div class="form-group">
               <label>First Name</label>
@@ -180,8 +210,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { fetchUserProfile, updateProfile } from '@/services/authService';
+import { ref, onMounted, computed } from 'vue';
+import { fetchUserProfile, updateProfile, getFullImageUrl, deleteProfilePicture } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -192,7 +222,22 @@ const profile = ref({
   address: '',
   department: '',
   role: 'admin',
-  createdAt: ''
+  createdAt: '',
+  profilePicture: null
+});
+
+// Add profile picture data
+const imageFile = ref(null);
+const imagePreview = ref(null);
+
+// Computed property for profile image URL
+const profileImageUrl = computed(() => {
+  if (imagePreview.value) {
+    return imagePreview.value;
+  } else if (profile.value.profilePicture) {
+    return getFullImageUrl(profile.value.profilePicture);
+  }
+  return null;
 });
 
 // Add password fields
@@ -218,6 +263,9 @@ const loadProfile = async () => {
     loading.value = true;
     const data = await fetchUserProfile();
     profile.value = data;
+    // Reset image preview when loading new profile data
+    imagePreview.value = null;
+    imageFile.value = null;
   } catch (err) {
     Swal.fire({
       icon: 'error',
@@ -230,17 +278,89 @@ const loadProfile = async () => {
   }
 };
 
+// Handle image selection
+const handleImageChange = (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validate file size (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    Swal.fire({
+      icon: 'error',
+      title: 'File Too Large',
+      text: 'Profile picture must be less than 5MB',
+      confirmButtonColor: '#4CAF50'
+    });
+    event.target.value = null;
+    return;
+  }
+  
+  // Store the file for upload
+  imageFile.value = file;
+  
+  // Create preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    imagePreview.value = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+// Remove profile picture
+const removeProfilePicture = async () => {
+  try {
+    await deleteProfilePicture();
+    imageFile.value = null;
+    imagePreview.value = null;
+    profile.value.profilePicture = null;
+    Swal.fire({
+      icon: 'success',
+      title: 'Profile Picture Removed',
+      text: 'Your profile picture has been removed successfully.',
+      confirmButtonColor: '#2196F3'
+    });
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to Remove Profile Picture',
+      text: err.message || 'Failed to remove profile picture',
+      confirmButtonColor: '#2196F3'
+    });
+  }
+};
+
+
 const toggleEditMode = () => {
   if (isEditing.value) {
-    // Reset form if canceling edit
-    loadProfile();
-    passwordData.value = {
-      password: '',
-      confirmPassword: ''
-    };
-    showPasswordFields.value = false;
+    // Confirm before canceling edit
+    Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4CAF50',
+      cancelButtonColor: '#f44336',
+      confirmButtonText: 'Yes, cancel',
+      cancelButtonText: 'Continue editing'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Reset form if canceling edit
+        isEditing.value = false;
+        showPasswordFields.value = false;
+        passwordData.value = {
+          password: '',
+          confirmPassword: ''
+        };
+        // Reset image preview and file
+        imagePreview.value = null;
+        imageFile.value = null;
+        
+        loadProfile(); // Reload original data
+      }
+    });
+  } else {
+    isEditing.value = true;
   }
-  isEditing.value = !isEditing.value;
 };
 
 const handleUpdate = async () => {
@@ -261,32 +381,48 @@ const handleUpdate = async () => {
     }
     
     // Prepare update data
-    const updateData = {
-      firstName: profile.value.firstName,
-      lastName: profile.value.lastName,
-      email: profile.value.email,
-      address: profile.value.address,
-      department: profile.value.department
-    };
+    let updatedProfile = { ...profile.value };
+    
+    if (imageFile.value) {
+      // If uploading a new image, convert it to base64 for API
+      const reader = new FileReader();
+      const imagePromise = new Promise((resolve) => {
+        reader.onload = () => {
+          updatedProfile.profilePicture = reader.result;
+          resolve();
+        };
+      });
+      reader.readAsDataURL(imageFile.value);
+      await imagePromise;
+    }
     
     // Add password if it's being changed
     if (showPasswordFields.value && passwordData.value.password) {
-      updateData.password = passwordData.value.password;
+      updatedProfile.password = passwordData.value.password;
     }
     
     // Call API to update profile
-    await updateProfile(updateData);
+    await updateProfile(updatedProfile);
     
     // Show success message
     Swal.fire({
       icon: 'success',
       title: 'Profile Updated',
       text: 'Your profile has been updated successfully.',
-      confirmButtonColor: '#4CAF50'
+      confirmButtonColor: '#4CAF50',
+      timer: 2000,
+      timerProgressBar: true
     });
     
     // Exit edit mode
     isEditing.value = false;
+    
+    // Reset password fields
+    passwordData.value.password = '';
+    passwordData.value.confirmPassword = '';
+    showPasswordFields.value = false;
+    showPassword.value = false;
+    showConfirmPassword.value = false;
     
     // Reload profile data
     await loadProfile();
@@ -435,6 +571,107 @@ const togglePasswordVisibility = (field) => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* Profile Picture Section */
+.profile-picture-section {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 2rem;
+}
+
+.picture-container {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.profile-img-wrapper {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #e0e0e0;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-color: #e0e0e0;
+  color: #9e9e9e;
+}
+
+.profile-img-placeholder .material-icons-round {
+  font-size: 4rem;
+}
+
+.picture-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #159750;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-btn:hover {
+  background: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+  background: #e53935;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.file-input {
+  display: none;
+}
+
+.picture-hint {
+  font-size: 0.8rem;
+  color: #666;
+  margin: 0.5rem 0 0 0;
+}
+
 .profile-form {
   display: flex;
   flex-direction: column;
@@ -497,21 +734,29 @@ const togglePasswordVisibility = (field) => {
 }
 
 .input-wrapper input.editable:focus {
-  border-color: #4CAF50;
-  box-shadow: 0 0 0 3px rgba(76,175,80,0.1);
   outline: none;
+}
+
+.input-wrapper:focus-within {
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
 }
 
 .toggle-password-btn {
   background: none;
   border: none;
-  cursor: pointer;
   color: #9e9e9e;
-  transition: color 0.3s;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
 }
 
 .toggle-password-btn:hover {
-  color: #4CAF50;
+  color: #159750;
 }
 
 .password-section {
@@ -523,9 +768,9 @@ const togglePasswordVisibility = (field) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
   padding: 0.5rem;
   border-radius: 8px;
+  cursor: pointer;
   transition: background-color 0.2s;
 }
 
@@ -547,22 +792,22 @@ const togglePasswordVisibility = (field) => {
 }
 
 .password-fields {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 1.5rem;
 }
 
 .password-hint {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
-  margin: 0.25rem 0 0 0;
+  margin-top: 0.25rem;
 }
 
 .form-actions {
-  margin-top: 2rem;
   display: flex;
   justify-content: flex-end;
+  margin-top: 1rem;
 }
 
 .save-btn {
@@ -570,7 +815,7 @@ const togglePasswordVisibility = (field) => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #4CAF50;
+  background: #159750;
   color: white;
   border: none;
   border-radius: 8px;
@@ -580,7 +825,7 @@ const togglePasswordVisibility = (field) => {
 }
 
 .save-btn:hover {
-  background: #43A047;
+  background: #107040;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -610,10 +855,6 @@ const togglePasswordVisibility = (field) => {
 }
 
 @media (max-width: 768px) {
-  .profile-page {
-    padding: 10px;
-  }
-  
   .header-content h1 {
     font-size: 2rem;
   }
@@ -623,41 +864,46 @@ const togglePasswordVisibility = (field) => {
   }
   
   .header-background {
-    font-size: 4rem;
-    top: 30%;
-    right: 0.3rem;
+    font-size: 5rem;
+    right: 1rem;
   }
   
-  .divider {
-    margin: 0.5rem 0;
-  }
-
   .edit-section {
     padding: 1.5rem;
   }
-
+  
   .section-header {
     flex-direction: column;
     gap: 1rem;
-    text-align: center;
   }
-
+  
   .edit-btn {
     width: 100%;
     justify-content: center;
   }
-
-  .form-grid {
+  
+  .form-grid, .password-fields {
     grid-template-columns: 1fr;
   }
-
-  .password-fields {
-    grid-template-columns: 1fr;
-  }
-
+  
   .save-btn {
     width: 100%;
-    justify-content: center;
+  }
+  
+  /* Profile picture responsive styles */
+  .picture-container {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  
+  .profile-img-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .picture-actions {
+    width: 100%;
   }
 }
 </style> 

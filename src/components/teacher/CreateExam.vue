@@ -26,13 +26,23 @@
           <div class="form-row">
             <div class="form-group">
               <label for="testCode">Test Code *</label>
-              <input 
-                v-model="examData.testCode" 
-                type="text" 
-                id="testCode" 
-                required
-                :class="{ 'error': error && !examData.testCode }"
-              />
+              <div class="input-with-button">
+                <input 
+                  v-model="examData.testCode" 
+                  type="text" 
+                  id="testCode" 
+                  required
+                  :class="{ 'error': error && !examData.testCode }"
+                />
+                <button 
+                  type="button" 
+                  class="generate-button"
+                  @click="generateTestCode"
+                  title="Generate random test code"
+                >
+                  <span class="material-icons">autorenew</span>
+                </button>
+              </div>
               <small v-if="error && !examData.testCode" class="error-text">
                 Test code is required
               </small>
@@ -473,25 +483,72 @@ export default {
     const selectedBankFolder = ref('');
     const selectedBankSubject = ref('');
     const selectedBankDifficulty = ref('');
+    const STORAGE_KEY = 'exam_creation_progress'; // Key for local storage
 
     // Add watchers to convert inputs to uppercase
     watch(() => examData.value.testCode, (newValue) => {
       if (newValue) {
         examData.value.testCode = newValue.toUpperCase();
       }
+      saveProgressToLocalStorage();
     });
 
     watch(() => examData.value.classCode, (newValue) => {
       if (newValue) {
         examData.value.classCode = newValue.toUpperCase();
       }
+      saveProgressToLocalStorage();
     });
 
     watch(() => examData.value.title, (newValue) => {
       if (newValue) {
         examData.value.title = newValue.toUpperCase();
       }
+      saveProgressToLocalStorage();
     });
+
+    // Watch for changes in questions array to save progress
+    watch(questions, () => {
+      saveProgressToLocalStorage();
+    }, { deep: true });
+
+    // Save exam creation progress to local storage
+    const saveProgressToLocalStorage = () => {
+      if (isEditing.value) return; // Don't save if editing an existing exam
+      
+      // Only save if there's meaningful data entered
+      const hasExamData = examData.value.testCode || examData.value.classCode || examData.value.title;
+      const hasQuestions = questions.value.length > 0;
+      
+      if (!hasExamData && !hasQuestions) return; // Don't save empty forms
+      
+      const progress = {
+        examData: examData.value,
+        questions: questions.value
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    };
+
+    // Load exam progress from local storage
+    const loadProgressFromLocalStorage = () => {
+      const savedProgress = localStorage.getItem(STORAGE_KEY);
+      if (savedProgress) {
+        try {
+          const progress = JSON.parse(savedProgress);
+          examData.value = progress.examData;
+          questions.value = progress.questions;
+          return true;
+        } catch (e) {
+          console.error('Error parsing saved progress:', e);
+        }
+      }
+      return false;
+    };
+
+    // Clear progress from local storage
+    const clearLocalStorageProgress = () => {
+      localStorage.removeItem(STORAGE_KEY);
+    };
 
     // Load exam data if editing
     onMounted(async () => {
@@ -520,6 +577,23 @@ export default {
         } catch (error) {
           console.error('Error loading exam:', error);
           Swal.fire('Error', 'Failed to load exam data', 'error');
+        }
+      } else {
+        // Try to load saved progress if not editing
+        const hasSavedProgress = loadProgressFromLocalStorage();
+        if (hasSavedProgress) {
+          Swal.fire({
+            title: 'Saved Progress Found',
+            text: 'Would you like to continue where you left off?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, continue',
+            cancelButtonText: 'No, start fresh'
+          }).then((result) => {
+            if (!result.isConfirmed) {
+              resetForm();
+            }
+          });
         }
       }
       loadBankQuestions();
@@ -667,6 +741,9 @@ export default {
             isDraft
           );
         }
+
+        // Clear saved progress after successful submission
+        clearLocalStorageProgress();
 
         // Show success message
         Swal.fire({
@@ -836,6 +913,9 @@ export default {
         userId: localStorage.getItem('userId')
       };
       questions.value = [];
+      
+      // Clear saved progress when form is reset
+      clearLocalStorageProgress();
     };
 
     const getImageUrl = (imageUrl) => {
@@ -853,10 +933,24 @@ export default {
     };
 
     const bankFolders = computed(() => {
-      const folders = new Set(bankQuestions.value
-        .filter(q => q.folder)
-        .map(q => ({ id: q.folder.id, name: q.folder.name })));
-      return Array.from(folders);
+      // Create a map to store unique folders by ID
+      const folderMap = new Map();
+      
+      // Process each question with a folder
+      bankQuestions.value
+        .filter(q => q.folder && q.folder.id)
+        .forEach(q => {
+          // Only add each folder once by using its ID as the map key
+          if (!folderMap.has(q.folder.id)) {
+            folderMap.set(q.folder.id, { 
+              id: q.folder.id, 
+              name: q.folder.name 
+            });
+          }
+        });
+      
+      // Convert the map values to an array
+      return Array.from(folderMap.values());
     });
 
     const bankSubjects = computed(() => {
@@ -932,6 +1026,22 @@ export default {
       return types[type] || type;
     };
 
+    const generateTestCode = () => {
+      // Generate a simple numeric code like Quizizz (6-8 digits)
+      const codeLength = Math.floor(Math.random() * 3) + 6; // Random length between 6-8 digits
+      let code = '';
+      
+      // First digit shouldn't be 0
+      code += Math.floor(Math.random() * 9) + 1;
+      
+      // Generate the rest of the digits
+      for (let i = 1; i < codeLength; i++) {
+        code += Math.floor(Math.random() * 10);
+      }
+      
+      examData.value.testCode = code;
+    };
+
     return {
       examData,
       questions,
@@ -964,7 +1074,11 @@ export default {
       toggleQuestionSelection,
       importSelectedQuestions,
       closeQuestionBankModal,
-      formatQuestionType
+      formatQuestionType,
+      saveProgressToLocalStorage,
+      loadProgressFromLocalStorage,
+      clearLocalStorageProgress,
+      generateTestCode
     };
   }
 };
@@ -2268,5 +2382,40 @@ small {
 .material-icons,
 .material-icons-round {
   font-size: 24px;
+}
+
+/* Add styles for the input with button */
+.input-with-button {
+  display: flex;
+  align-items: center;
+}
+
+.input-with-button input {
+  flex: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.generate-button {
+  height: 42px;
+  padding: 0 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.generate-button:hover {
+  background: #388E3C;
+}
+
+.generate-button .material-icons {
+  font-size: 20px;
 }
 </style>

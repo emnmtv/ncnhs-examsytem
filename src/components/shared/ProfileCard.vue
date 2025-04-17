@@ -3,7 +3,11 @@
     <div class="profile-header">
       <div class="texture-layer"></div>
       <div class="avatar-container">
-        <div class="avatar" :style="{ backgroundColor: getAvatarColor() }">
+        <!-- Use profile picture if available, otherwise show initials -->
+        <div v-if="profileImageUrl" class="avatar with-image">
+          <img :src="profileImageUrl" alt="Profile picture" class="profile-image" />
+        </div>
+        <div v-else class="avatar" :style="{ backgroundColor: getAvatarColor() }">
           {{ getInitials() }}
         </div>
       </div>
@@ -60,6 +64,9 @@
 </template>
 
 <script>
+import { computed } from 'vue';
+import { getFullImageUrl } from '@/services/authService';
+
 export default {
   name: 'ProfileCard',
   props: {
@@ -67,6 +74,19 @@ export default {
       type: Object,
       required: true
     }
+  },
+  setup(props) {
+    // Computed property for profile image URL
+    const profileImageUrl = computed(() => {
+      if (props.profile.profilePicture) {
+        return getFullImageUrl(props.profile.profilePicture);
+      }
+      return null;
+    });
+
+    return {
+      profileImageUrl
+    };
   },
   mounted() {
     // Load FontAwesome if not already loaded
@@ -222,6 +242,17 @@ export default {
   font-weight: 700;
   border: 4px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.avatar.with-image {
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .profile-info {
