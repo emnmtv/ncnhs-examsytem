@@ -488,9 +488,12 @@ export default {
 
 <style scoped>
 .question-bank-container {
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
   padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 .header-container {
@@ -504,23 +507,33 @@ export default {
 }
 
 .header-content h1 {
-  color: #2196F3;
+  color: #159750;
   font-size: 2.5rem;
   font-weight: 700;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
-  gap: 10px;
+}
+
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  padding-left: 1%;
 }
 
 .header-background {
   position: absolute;
-  top: 50%;
-  right: 0;
+  top: 20%;
+  right: 5rem;
   transform: translateY(-50%);
-  font-size: 4rem;
+  font-size: 8rem;
   font-weight: 900;
-  color: rgba(33, 150, 243, 0.1);
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -528,6 +541,8 @@ export default {
   height: 1px;
   background-color: #e0e0e0;
   margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto;
 }
 
 .subtitle {
@@ -535,13 +550,19 @@ export default {
   font-size: 1.1rem;
 }
 
+/* Update filters section */
 .filters-section {
   display: flex;
   gap: 20px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+/* Update search box */
 .search-box {
   flex: 1;
   min-width: 200px;
@@ -550,18 +571,17 @@ export default {
 
 .search-box input {
   width: 100%;
-  padding: 10px 40px 10px 15px;
+  padding: 12px 40px 12px 15px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   font-size: 1rem;
+  transition: all 0.3s;
 }
 
-.search-box .material-icons {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #666;
+.search-box input:focus {
+  border-color: #159750;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(21, 151, 80, 0.1);
 }
 
 .filter-group {
@@ -1191,25 +1211,36 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .form-row {
+  .question-bank-container {
+    padding: 10px 5px;
+  }
+
+  .header-background {
+    position: absolute;
+    top: 60%;
+    right: 1rem;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.03);
+    z-index: 0;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .filters-section {
     flex-direction: column;
-    gap: 10px;
+    padding: 15px;
   }
 
   .filter-group {
     flex-direction: column;
   }
 
-  .actions-row {
-    flex-direction: column;
-  }
-
-  .folder-input-group {
-    flex-direction: column;
-  }
-
-  .questions-grid {
-    grid-template-columns: 1fr;
+  .filter-group select {
+    width: 100%;
   }
 }
-</style> 
+</style>

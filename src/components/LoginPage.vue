@@ -53,13 +53,13 @@ const handleLogin = async () => {
       // Redirect based on role
       switch (response.role) {
         case 'admin':
-          router.push('/admin-dashboard');
+          router.push('/manage-users');
           break;
         case 'teacher':
-          router.push('/teacher-dashboard');
+          router.push('/create-exam');
           break;
         case 'student':
-          router.push('/dashboard');
+          router.push('/take-exam');
           break;
       }
     }
