@@ -81,6 +81,19 @@
               <div class="webcam-view">
                 <video ref="video" width="400" height="300" autoplay></video>
                 <canvas ref="canvas" width="400" height="300" style="display: none;"></canvas>
+                <div v-if="hasMultipleCameras" class="camera-select-container">
+                  <select 
+                    class="camera-select" 
+                    :value="selectedCameraId"
+                    @change="changeCamera($event.target.value)"
+                    aria-label="Select camera"
+                  >
+                    <option v-for="camera in availableCameras" :key="camera.id" :value="camera.id">
+                      {{ camera.label }}
+                    </option>
+                  </select>
+                  <span class="material-icons-round">videocam_switch</span>
+                </div>
               </div>
               <div class="webcam-actions">
                 <button type="button" class="capture-btn" @click="captureImage">
@@ -307,6 +320,11 @@ const showCamera = ref(false);
 const imageCaptured = ref(false);
 let stream = null;
 
+// First, update the data properties
+const hasMultipleCameras = ref(false);
+const availableCameras = ref([]);
+const selectedCameraId = ref('');
+
 onMounted(async () => {
   await loadProfile();
 });
@@ -517,60 +535,101 @@ const togglePasswordVisibility = (field) => {
   }
 };
 
-// Camera methods
-const toggleCamera = () => {
-  if (showCamera.value) {
-    closeCamera();
-  } else {
-    // Show camera permission instruction first
-    Swal.fire({
-      title: 'Camera Access Required',
-      html: `
-        <div class="permission-guide">
-          <p>This feature requires camera access. Please allow when prompted.</p>
-          <div class="permission-steps">
-            <div class="step">
-              <span class="material-icons-round">info</span>
-              <p>Look for the camera permission popup in your browser</p>
-            </div>
-            <div class="step">
-              <span class="material-icons-round">check_circle</span>
-              <p>Click "Allow" when prompted</p>
-            </div>
-            <div class="step">
-              <span class="material-icons-round">settings</span>
-              <p>If no prompt appears, check your browser settings</p>
-            </div>
-          </div>
-        </div>
-      `,
-      icon: 'info',
-      showCancelButton: true,
-      confirmButtonText: 'Continue',
-      cancelButtonText: 'Cancel',
-      confirmButtonColor: '#4CAF50'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        openCamera();
-      }
+// Add this new function to get all available cameras
+const getAvailableCameras = async () => {
+  try {
+    console.log('Getting available cameras...');
+    
+    // Request permission first to get accurate device labels
+    const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    initialStream.getTracks().forEach(track => track.stop());
+    
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+    console.log('Found video devices:', videoDevices.length);
+    
+    // Clear and populate the available cameras array
+    availableCameras.value = videoDevices.map((device, index) => {
+      const label = device.label || `Camera ${index + 1}`;
+      console.log(`Camera ${index + 1}: ${label} (${device.deviceId})`);
+      return {
+        id: device.deviceId,
+        label: label,
+        index: index
+      };
     });
+    
+    hasMultipleCameras.value = availableCameras.value.length > 1;
+    console.log('Multiple cameras detected:', hasMultipleCameras.value);
+    
+    // If no camera selected yet, select the first one
+    if (!selectedCameraId.value && availableCameras.value.length > 0) {
+      selectedCameraId.value = availableCameras.value[0].id;
+      console.log('Auto-selected first camera:', selectedCameraId.value);
+    }
+  } catch (err) {
+    console.error('Error enumerating cameras:', err);
+    hasMultipleCameras.value = false;
+    availableCameras.value = [];
   }
 };
 
+// Update the openCamera function to use the selected camera ID
 const openCamera = async () => {
   showCamera.value = true;
+  
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
-        width: { ideal: 400 },
-        height: { ideal: 300 },
-        facingMode: "user"
-      }, 
-      audio: false 
-    });
+    console.log('Opening camera...');
+    
+    // Close any existing stream
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    
+    // Check for available cameras
+    await getAvailableCameras();
+    
+    // Prepare constraints based on selected camera
+    let constraints;
+    
+    if (selectedCameraId.value) {
+      console.log('Using specific camera device ID:', selectedCameraId.value);
+      constraints = {
+        video: {
+          deviceId: { exact: selectedCameraId.value },
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+    } else {
+      console.log('No specific camera selected, using default');
+      constraints = {
+        video: {
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+    }
+    
+    console.log('Requesting camera with constraints:', JSON.stringify(constraints));
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    console.log('Camera stream acquired successfully');
+    console.log('Active video tracks:', stream.getVideoTracks().map(t => t.label));
     
     if (video.value) {
       video.value.srcObject = stream;
+      console.log('Video element updated with stream');
+      
+      // Add event listener to detect when video is playing
+      video.value.onloadedmetadata = () => {
+        console.log('Video metadata loaded, playing...');
+        video.value.play().catch(err => console.error('Failed to play video:', err));
+      };
     }
   } catch (err) {
     console.error('Error accessing camera:', err);
@@ -593,6 +652,7 @@ const openCamera = async () => {
             <p><strong>Chrome/Edge users:</strong> Settings → Privacy and Security → Site Settings → Camera</p>
             <p><strong>Firefox users:</strong> Settings → Privacy & Security → Permissions → Camera</p>
             <p><strong>Safari users:</strong> Preferences → Websites → Camera</p>
+            <p><strong>Mobile users:</strong> Check your device permissions in Settings</p>
           </div>
         </div>
       `;
@@ -602,6 +662,25 @@ const openCamera = async () => {
     } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
       errorMessage = 'Your camera is already in use by another application.';
       errorHelp = 'Please close other applications that might be using your camera.';
+    } else if (err.name === 'OverconstrainedError') {
+      errorMessage = 'The requested camera configuration is not supported.';
+      errorHelp = 'Your device may not support the selected camera mode.';
+      
+      // Try without specific deviceId
+      try {
+        console.log('Trying to open camera without specific constraints');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: false 
+        });
+        
+        if (video.value) {
+          video.value.srcObject = stream;
+          return; // If successful, return early
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback camera access also failed:', fallbackErr);
+      }
     }
     
     Swal.fire({
@@ -636,6 +715,104 @@ const openCamera = async () => {
     }, 5000); // Show after 5 seconds
     
     showCamera.value = false;
+  }
+};
+
+// Create a function to change camera
+const changeCamera = async (cameraId) => {
+  try {
+    console.log('Changing to camera with ID:', cameraId);
+    
+    // Update the selected camera
+    selectedCameraId.value = cameraId;
+    
+    // If already captured, reset
+    if (imageCaptured.value) {
+      retryCapture();
+    }
+    
+    // Stop current stream first
+    if (stream) {
+      console.log('Stopping current camera stream...');
+      stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      stream = null;
+    }
+    
+    // Add a small delay before reopening camera
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Use the specific camera ID
+    const constraints = {
+      video: {
+        deviceId: { exact: cameraId },
+        width: { ideal: 400 },
+        height: { ideal: 300 }
+      },
+      audio: false
+    };
+    
+    console.log('Requesting camera with constraints:', JSON.stringify(constraints));
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    console.log('New stream acquired:', stream.id);
+    console.log('Video tracks:', stream.getVideoTracks().map(t => t.label));
+    
+    if (video.value) {
+      video.value.srcObject = stream;
+      console.log('Video element updated with new stream');
+    }
+    
+    // Show a toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+    
+    const selectedCamera = availableCameras.value.find(camera => camera.id === cameraId);
+    
+    Toast.fire({
+      icon: 'success',
+      title: `Switched to ${selectedCamera ? selectedCamera.label : 'new camera'}`
+    });
+    
+  } catch (err) {
+    console.error('Error switching camera:', err);
+    
+    // Try fallback if device ID constraint fails
+    if (err.name === 'OverconstrainedError') {
+      console.log('Exact device ID constraint failed, trying default camera...');
+      
+      try {
+        // Fall back to default camera
+        const fallbackConstraints = { video: true, audio: false };
+        
+        console.log('Trying fallback constraints:', JSON.stringify(fallbackConstraints));
+        stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        
+        if (video.value) {
+          video.value.srcObject = stream;
+          console.log('Fallback stream applied successfully');
+        }
+        
+        return; // If we succeed with fallback, return early
+      } catch (fallbackErr) {
+        console.error('Fallback camera acquisition also failed:', fallbackErr);
+      }
+    }
+    
+    // If we got here, both attempts failed
+    Swal.fire({
+      icon: 'error',
+      title: 'Camera Switch Failed',
+      text: 'Unable to switch to the selected camera. It may no longer be available.',
+      confirmButtonColor: '#4CAF50'
+    });
   }
 };
 
@@ -695,6 +872,46 @@ const useCapture = async () => {
 onUnmounted(() => {
   closeCamera();
 });
+
+// Camera methods
+const toggleCamera = () => {
+  if (showCamera.value) {
+    closeCamera();
+  } else {
+    // Show camera permission instruction first
+    Swal.fire({
+      title: 'Camera Access Required',
+      html: `
+        <div class="permission-guide">
+          <p>This feature requires camera access. Please allow when prompted.</p>
+          <div class="permission-steps">
+            <div class="step">
+              <span class="material-icons-round">info</span>
+              <p>Look for the camera permission popup in your browser</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">check_circle</span>
+              <p>Click "Allow" when prompted</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">settings</span>
+              <p>If no prompt appears, check your browser settings</p>
+            </div>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#4CAF50'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        openCamera();
+      }
+    });
+  }
+};
 </script>
 
 <style scoped>
@@ -1324,5 +1541,79 @@ onUnmounted(() => {
 
 .browser-specific p {
   margin: 5px 0;
+}
+
+/* Add this new style for the switch camera button */
+.switch-camera-btn {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.switch-camera-btn:hover {
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}
+
+.camera-select-container {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  color: white;
+  padding: 5px 30px 5px 15px;
+  display: flex;
+  align-items: center;
+  min-width: 120px;
+  max-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.camera-select-container:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.camera-select {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 0;
+  cursor: pointer;
+  width: 100%;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.camera-select:focus {
+  outline: none;
+}
+
+.camera-select option {
+  background-color: #333;
+  color: white;
+  padding: 8px;
+}
+
+.camera-select-container .material-icons-round {
+  position: absolute;
+  right: 8px;
+  font-size: 18px;
+  color: white;
+  pointer-events: none;
 }
 </style>

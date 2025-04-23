@@ -58,6 +58,10 @@
                   accept="image/*" 
                   class="file-input"
                 />
+                <button type="button" class="camera-btn" @click="toggleCamera">
+                  <span class="material-icons-round">camera_alt</span>
+                  Use Camera
+                </button>
                 <button v-if="profileImageUrl" type="button" class="remove-btn" @click="removeProfilePicture">
                   <span class="material-icons-round">delete</span>
                   Remove
@@ -65,6 +69,47 @@
               </div>
             </div>
             <p class="picture-hint">Upload a square image for best results. Max size: 5MB.</p>
+            
+            <!-- Webcam capture component -->
+            <div v-if="showCamera" class="webcam-container">
+              <div class="webcam-header">
+                <h3>Take a profile picture</h3>
+                <button type="button" class="close-webcam" @click="closeCamera">
+                  <span class="material-icons-round">close</span>
+                </button>
+              </div>
+              <div class="webcam-view">
+                <video ref="video" width="400" height="300" autoplay></video>
+                <canvas ref="canvas" width="400" height="300" style="display: none;"></canvas>
+                <div v-if="hasMultipleCameras" class="camera-select-container">
+                  <select 
+                    class="camera-select" 
+                    :value="selectedCameraId"
+                    @change="changeCamera($event.target.value)"
+                    aria-label="Select camera"
+                  >
+                    <option v-for="camera in availableCameras" :key="camera.id" :value="camera.id">
+                      {{ camera.label }}
+                    </option>
+                  </select>
+                  <span class="material-icons-round">videocam_switch</span>
+                </div>
+              </div>
+              <div class="webcam-actions">
+                <button type="button" class="capture-btn" @click="captureImage">
+                  <span class="material-icons-round">photo_camera</span>
+                  Take Photo
+                </button>
+                <button v-if="imageCaptured" type="button" class="retry-btn" @click="retryCapture">
+                  <span class="material-icons-round">refresh</span>
+                  Retry
+                </button>
+                <button v-if="imageCaptured" type="button" class="use-photo-btn" @click="useCapture">
+                  <span class="material-icons-round">check</span>
+                  Use Photo
+                </button>
+              </div>
+            </div>
           </div>
           
           <div class="form-grid">
@@ -210,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { fetchUserProfile, updateProfile, getFullImageUrl, deleteProfilePicture } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
@@ -253,6 +298,18 @@ const showConfirmPassword = ref(false);
 const loading = ref(true);
 const isEditing = ref(false);
 const showPasswordFields = ref(false);
+
+// Add webcam related refs
+const video = ref(null);
+const canvas = ref(null);
+const showCamera = ref(false);
+const imageCaptured = ref(false);
+let stream = null;
+
+// Add camera selection refs
+const hasMultipleCameras = ref(false);
+const availableCameras = ref([]);
+const selectedCameraId = ref('');
 
 onMounted(async () => {
   await loadProfile();
@@ -445,6 +502,383 @@ const togglePasswordVisibility = (field) => {
     showConfirmPassword.value = !showConfirmPassword.value;
   }
 };
+
+// Add function to get all available cameras
+const getAvailableCameras = async () => {
+  try {
+    console.log('Getting available cameras...');
+    
+    // Request permission first to get accurate device labels
+    const initialStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    initialStream.getTracks().forEach(track => track.stop());
+    
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+    
+    console.log('Found video devices:', videoDevices.length);
+    
+    // Clear and populate the available cameras array
+    availableCameras.value = videoDevices.map((device, index) => {
+      const label = device.label || `Camera ${index + 1}`;
+      console.log(`Camera ${index + 1}: ${label} (${device.deviceId})`);
+      return {
+        id: device.deviceId,
+        label: label,
+        index: index
+      };
+    });
+    
+    hasMultipleCameras.value = availableCameras.value.length > 1;
+    console.log('Multiple cameras detected:', hasMultipleCameras.value);
+    
+    // If no camera selected yet, select the first one
+    if (!selectedCameraId.value && availableCameras.value.length > 0) {
+      selectedCameraId.value = availableCameras.value[0].id;
+      console.log('Auto-selected first camera:', selectedCameraId.value);
+    }
+  } catch (err) {
+    console.error('Error enumerating cameras:', err);
+    hasMultipleCameras.value = false;
+    availableCameras.value = [];
+  }
+};
+
+// Add camera methods
+const toggleCamera = () => {
+  if (showCamera.value) {
+    closeCamera();
+  } else {
+    // Show camera permission instruction first
+    Swal.fire({
+      title: 'Camera Access Required',
+      html: `
+        <div class="permission-guide">
+          <p>This feature requires camera access. Please allow when prompted.</p>
+          <div class="permission-steps">
+            <div class="step">
+              <span class="material-icons-round">info</span>
+              <p>Look for the camera permission popup in your browser</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">check_circle</span>
+              <p>Click "Allow" when prompted</p>
+            </div>
+            <div class="step">
+              <span class="material-icons-round">settings</span>
+              <p>If no prompt appears, check your browser settings</p>
+            </div>
+          </div>
+        </div>
+      `,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#4CAF50'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        openCamera();
+      }
+    });
+  }
+};
+
+const openCamera = async () => {
+  showCamera.value = true;
+  
+  try {
+    console.log('Opening camera...');
+    
+    // Close any existing stream
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      stream = null;
+    }
+    
+    // Check for available cameras
+    await getAvailableCameras();
+    
+    // Prepare constraints based on selected camera
+    let constraints;
+    
+    if (selectedCameraId.value) {
+      console.log('Using specific camera device ID:', selectedCameraId.value);
+      constraints = {
+        video: {
+          deviceId: { exact: selectedCameraId.value },
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+    } else {
+      console.log('No specific camera selected, using default');
+      constraints = {
+        video: {
+          width: { ideal: 400 },
+          height: { ideal: 300 }
+        },
+        audio: false
+      };
+    }
+    
+    console.log('Requesting camera with constraints:', JSON.stringify(constraints));
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    console.log('Camera stream acquired successfully');
+    console.log('Active video tracks:', stream.getVideoTracks().map(t => t.label));
+    
+    if (video.value) {
+      video.value.srcObject = stream;
+      console.log('Video element updated with stream');
+      
+      // Add event listener to detect when video is playing
+      video.value.onloadedmetadata = () => {
+        console.log('Video metadata loaded, playing...');
+        video.value.play().catch(err => console.error('Failed to play video:', err));
+      };
+    }
+  } catch (err) {
+    console.error('Error accessing camera:', err);
+    
+    // Check for specific permission errors
+    let errorMessage = 'Could not access your camera.';
+    let errorHelp = '';
+    
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      errorMessage = 'Camera access was denied.';
+      errorHelp = `
+        <div class="error-help">
+          <p>To fix this issue:</p>
+          <ol>
+            <li>Click on the camera icon in your browser's address bar</li>
+            <li>Select "Always allow" for this site</li>
+            <li>Refresh the page and try again</li>
+          </ol>
+          <div class="browser-specific">
+            <p><strong>Chrome/Edge users:</strong> Settings → Privacy and Security → Site Settings → Camera</p>
+            <p><strong>Firefox users:</strong> Settings → Privacy & Security → Permissions → Camera</p>
+            <p><strong>Safari users:</strong> Preferences → Websites → Camera</p>
+            <p><strong>Mobile users:</strong> Check your device permissions in Settings</p>
+          </div>
+        </div>
+      `;
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      errorMessage = 'No camera device was found.';
+      errorHelp = 'Please connect a camera to your device and try again.';
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      errorMessage = 'Your camera is already in use by another application.';
+      errorHelp = 'Please close other applications that might be using your camera.';
+    } else if (err.name === 'OverconstrainedError') {
+      errorMessage = 'The requested camera configuration is not supported.';
+      errorHelp = 'Your device may not support the selected camera mode.';
+      
+      // Try without specific deviceId
+      try {
+        console.log('Trying to open camera without specific constraints');
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: false 
+        });
+        
+        if (video.value) {
+          video.value.srcObject = stream;
+          return; // If successful, return early
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback camera access also failed:', fallbackErr);
+      }
+    }
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Camera Error',
+      html: `<p>${errorMessage}</p>${errorHelp}`,
+      confirmButtonText: 'Got It',
+      confirmButtonColor: '#4CAF50',
+      showCancelButton: false
+    });
+    
+    // Show fallback option
+    setTimeout(() => {
+      Swal.fire({
+        title: 'Alternative Option',
+        text: 'If you continue having camera issues, you can upload a photo instead.',
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Upload Photo Instead',
+        cancelButtonText: 'Try Camera Again',
+        confirmButtonColor: '#2196F3',
+        cancelButtonColor: '#4CAF50'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Trigger file input click
+          document.getElementById('profile-picture-upload').click();
+        } else {
+          // Try camera again
+          toggleCamera();
+        }
+      });
+    }, 5000); // Show after 5 seconds
+    
+    showCamera.value = false;
+  }
+};
+
+const closeCamera = () => {
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+  showCamera.value = false;
+  imageCaptured.value = false;
+};
+
+const captureImage = () => {
+  if (!video.value || !canvas.value) return;
+  
+  const context = canvas.value.getContext('2d');
+  // Draw the video frame to the canvas
+  context.drawImage(video.value, 0, 0, canvas.value.width, canvas.value.height);
+  
+  // Convert to data URL
+  const dataUrl = canvas.value.toDataURL('image/jpeg');
+  
+  // Pause the video to show the captured frame
+  video.value.pause();
+  
+  // Set the captured image as the preview
+  imagePreview.value = dataUrl;
+  imageCaptured.value = true;
+};
+
+const retryCapture = () => {
+  if (video.value) {
+    // Resume the video
+    video.value.play();
+  }
+  imageCaptured.value = false;
+};
+
+const useCapture = async () => {
+  if (!imagePreview.value) return;
+  
+  // Convert base64 to blob for upload
+  const response = await fetch(imagePreview.value);
+  const blob = await response.blob();
+  
+  // Create a File object from the blob
+  const file = new File([blob], "webcam-profile.jpg", { type: "image/jpeg" });
+  
+  // Set the file to be uploaded
+  imageFile.value = file;
+  
+  // Close the camera interface
+  closeCamera();
+};
+
+// Function to change camera
+const changeCamera = async (cameraId) => {
+  try {
+    console.log('Changing to camera with ID:', cameraId);
+    
+    // Update the selected camera
+    selectedCameraId.value = cameraId;
+    
+    // If already captured, reset
+    if (imageCaptured.value) {
+      retryCapture();
+    }
+    
+    // Stop current stream first
+    if (stream) {
+      console.log('Stopping current camera stream...');
+      stream.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      stream = null;
+    }
+    
+    // Add a small delay before reopening camera
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Use the specific camera ID
+    const constraints = {
+      video: {
+        deviceId: { exact: cameraId },
+        width: { ideal: 400 },
+        height: { ideal: 300 }
+      },
+      audio: false
+    };
+    
+    console.log('Requesting camera with constraints:', JSON.stringify(constraints));
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    
+    console.log('New stream acquired:', stream.id);
+    console.log('Video tracks:', stream.getVideoTracks().map(t => t.label));
+    
+    if (video.value) {
+      video.value.srcObject = stream;
+      console.log('Video element updated with new stream');
+    }
+    
+    // Show a toast notification
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 2000,
+      timerProgressBar: true
+    });
+    
+    const selectedCamera = availableCameras.value.find(camera => camera.id === cameraId);
+    
+    Toast.fire({
+      icon: 'success',
+      title: `Switched to ${selectedCamera ? selectedCamera.label : 'new camera'}`
+    });
+    
+  } catch (err) {
+    console.error('Error switching camera:', err);
+    
+    // Try fallback if device ID constraint fails
+    if (err.name === 'OverconstrainedError') {
+      console.log('Exact device ID constraint failed, trying default camera...');
+      
+      try {
+        // Fall back to default camera
+        const fallbackConstraints = { video: true, audio: false };
+        
+        console.log('Trying fallback constraints:', JSON.stringify(fallbackConstraints));
+        stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
+        
+        if (video.value) {
+          video.value.srcObject = stream;
+          console.log('Fallback stream applied successfully');
+        }
+        
+        return; // If we succeed with fallback, return early
+      } catch (fallbackErr) {
+        console.error('Fallback camera acquisition also failed:', fallbackErr);
+      }
+    }
+    
+    // If we got here, both attempts failed
+    Swal.fire({
+      icon: 'error',
+      title: 'Camera Switch Failed',
+      text: 'Unable to switch to the selected camera. It may no longer be available.',
+      confirmButtonColor: '#4CAF50'
+    });
+  }
+};
+
+// Clean up camera on component unmount
+onUnmounted(() => {
+  closeCamera();
+});
 </script>
 
 <style scoped>
@@ -637,6 +1071,26 @@ const togglePasswordVisibility = (field) => {
 }
 
 .upload-btn:hover {
+  background: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.camera-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #159750;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.camera-btn:hover {
   background: #107040;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -904,6 +1358,204 @@ const togglePasswordVisibility = (field) => {
   
   .picture-actions {
     width: 100%;
+  }
+}
+
+/* Webcam Styles */
+.webcam-container {
+  margin-top: 20px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.webcam-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.webcam-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.close-webcam {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.webcam-view {
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: #000;
+}
+
+.webcam-view video {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.webcam-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 15px;
+  gap: 10px;
+}
+
+.capture-btn, .retry-btn, .use-photo-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.capture-btn {
+  background-color: #159750;
+  color: white;
+}
+
+.retry-btn {
+  background-color: #FF9800;
+  color: white;
+}
+
+.use-photo-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.capture-btn:hover, .retry-btn:hover, .use-photo-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.permission-guide {
+  text-align: left;
+  margin: 0 auto;
+}
+
+.permission-steps {
+  margin-top: 15px;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+
+.step .material-icons-round {
+  color: #159750;
+}
+
+.error-help {
+  text-align: left;
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.error-help ol {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.browser-specific {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.browser-specific p {
+  margin: 5px 0;
+}
+
+.camera-select-container {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  color: white;
+  padding: 5px 30px 5px 15px;
+  display: flex;
+  align-items: center;
+  min-width: 120px;
+  max-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.camera-select-container:hover {
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.camera-select {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 4px 0;
+  cursor: pointer;
+  width: 100%;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.camera-select:focus {
+  outline: none;
+}
+
+.camera-select option {
+  background-color: #333;
+  color: white;
+  padding: 8px;
+}
+
+.camera-select-container .material-icons-round {
+  position: absolute;
+  right: 8px;
+  font-size: 18px;
+  color: white;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .webcam-container {
+    padding: 10px;
+  }
+  
+  .webcam-view {
+    max-width: 100%;
+  }
+  
+  .webcam-actions {
+    flex-wrap: wrap;
+  }
+  
+  .capture-btn, .retry-btn, .use-photo-btn, .camera-btn {
+    flex: 1;
+    min-width: 100px;
   }
 }
 </style> 
