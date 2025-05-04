@@ -1094,6 +1094,9 @@ export default {
 }
 
 @media (min-width: 768px) {
+.exam-session {
+    padding: 0rem;
+  }
   .score-display {
     flex-direction: row;
     align-items: center;
@@ -1111,6 +1114,9 @@ export default {
 }
 
 @media (max-width: 600px) {
+  .exam-session {
+    padding: 0rem;
+  } 
   .question-card {
     padding: 16px;
   }

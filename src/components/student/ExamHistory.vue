@@ -12,28 +12,30 @@
     </div>
 
     <div class="controls-section">
-      <div class="view-toggle">
-        <button 
-          @click="currentView = 'grid'" 
-          class="toggle-btn" 
-          :class="{ active: currentView === 'grid' }"
-        >
-          <span class="material-icons-round">grid_view</span>
-          Grid
-        </button>
-        <button 
-          @click="currentView = 'table'" 
-          class="toggle-btn" 
-          :class="{ active: currentView === 'table' }"
-        >
-          <span class="material-icons-round">table_rows</span>
-          Table
-        </button>
+      <div class="controls-group">
+        <div class="view-toggle">
+          <button 
+            @click="currentView = 'grid'" 
+            class="toggle-btn" 
+            :class="{ active: currentView === 'grid' }"
+          >
+            <span class="material-icons-round">grid_view</span>
+            Grid
+          </button>
+          <button 
+            @click="currentView = 'table'" 
+            class="toggle-btn" 
+            :class="{ active: currentView === 'table' }"
+          >
+            <span class="material-icons-round">table_rows</span>
+            Table
+          </button>
+          <button @click="refreshHistory" class="toggle-btn refresh-btn">
+            <span class="material-icons-round">refresh</span>
+            Refresh
+          </button>
+        </div>
       </div>
-      <button @click="refreshHistory" class="refresh-btn">
-        <span class="material-icons-round">refresh</span>
-        Refresh
-      </button>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -355,6 +357,12 @@ export default {
   margin-bottom: 20px;
 }
 
+.controls-group {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
 .view-toggle {
   display: flex;
   border-radius: 8px;
@@ -373,6 +381,11 @@ export default {
   cursor: pointer;
   transition: all 0.2s;
   font-weight: 500;
+  border-right: 1px solid #e0e0e0;
+}
+
+.toggle-btn:last-child {
+  border-right: none;
 }
 
 .toggle-btn.active {
@@ -380,22 +393,14 @@ export default {
   color: white;
 }
 
+/* Update the refresh button styles */
 .refresh-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background-color: #f5f5f5;
-  border: none;
-  border-radius: 8px;
+  background-color: white;
   color: #333;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
 }
 
 .refresh-btn:hover {
-  background-color: #e0e0e0;
+  background-color: #f5f5f5;
   transform: translateY(-2px);
 }
 
@@ -771,7 +776,7 @@ export default {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .exam-history-container {
-    padding: 10px;
+    padding: 0rem;
   }
   
   .header-content h1 {
@@ -781,21 +786,36 @@ export default {
   .header-content h1 .material-icons {
     font-size: 2rem;
   }
-  
   .header-background {
-    font-size: 4rem;
-    top: 30%;
-    right: 0.3rem;
-  }
+  position: absolute;
+  top: 30%;
+  right: 0.3rem;
+
+  font-size: 4rem;
+  font-weight: 900;
+
+}
   
   .divider {
     margin: 0.5rem 0;
   }
   
   .controls-section {
-    flex-direction: column;
-    gap: 10px;
-    align-items: stretch;
+    padding: 0.5rem;
+  }
+  
+  .controls-group {
+    width: 100%;
+  }
+
+  .view-toggle {
+    width: 100%;
+  }
+
+  .toggle-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.9rem;
   }
   
   .exams-grid {
@@ -818,4 +838,4 @@ export default {
     display: none;
   }
 }
-</style> 
+</style>

@@ -35,6 +35,7 @@ import GameCanvas from '@/components/game/GameCanvas.vue';
 import StudentTasks from '@/components/student/StudentTasks.vue';
 import TaskDetails from '@/components/student/TaskDetails.vue';
 import QuestionBank from '@/components/teacher/QuestionBank.vue';
+import AdminComponentController from "@/components/admin/AdminComponentController.vue";
 const routes = [
   { 
     path: "/", 
@@ -263,7 +264,13 @@ const routes = [
     name: 'QuestionBank',
     component: QuestionBank,
     meta: { requiresAuth: true, roles: ['teacher'] }
-  }
+  },
+  {path: '/admin-component-controller',
+    name: 'AdminComponentController',
+    component: AdminComponentController,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  
 ];
 
 

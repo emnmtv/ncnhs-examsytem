@@ -96,7 +96,7 @@ const togglePassword = () => {
           <h1 class="school-name">New Cabalan National High School</h1>
           
           <div class="logo-container">
-            <img src="@/assets/DepED-Logo.png" alt="DepEd Logo" class="deped-logo" />
+            <!-- <img src="@/assets/DepED-Logo.png" alt="DepEd Logo" class="deped-logo" /> -->
             <img src="@/assets/ncnhs-icon.png" alt="NCNHS Logo" class="ncnhs-logo" />
           </div>
           

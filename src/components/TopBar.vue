@@ -108,6 +108,9 @@ onBeforeUnmount(() => {
     padding: 0 12px 0 56px; /* Add space for mobile menu button */
   }
   
+  .top-bar  {
+    height: 50px;
+  }
   .datetime {
     font-size: 12px;
   }

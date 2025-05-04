@@ -893,11 +893,11 @@ export default {
     flex-direction: column;
   }
   .take-exam-container {
-  padding: 5px; 
+  padding: 0rem; 
 }
   .header-background {
   position: absolute;
-  top: 27%;
+  top: 17%;
   right: 0.3rem;
 
   font-size: 4rem;

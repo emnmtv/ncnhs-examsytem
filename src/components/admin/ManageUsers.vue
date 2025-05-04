@@ -240,11 +240,11 @@
       </div>
     </div>
 
-    <!-- Loading State -->
+    <!-- 
     <div v-else class="loading-state">
       <div class="spinner"></div>
       <p>Loading users...</p>
-    </div>
+    </div> -->
 
     <!-- Registration Modal -->
     <div v-if="showModal" class="modal-overlay" @click="showModal = false">
@@ -363,42 +363,66 @@
 
     <!-- Grade Section Modal -->
     <div v-if="showGradeSectionModal" class="modal-overlay" @click="showGradeSectionModal = false">
-      <div class="modal-content" @click.stop>
+      <div class="modal-content grade-section-modal" @click.stop>
         <div class="modal-header">
-          <h2>{{ currentGradeSection.id ? 'Edit' : 'Add' }} Grade Section</h2>
+          <div class="modal-title">
+            <span class="material-icons" style="color: #4CAF50">class</span>
+            <h2>{{ currentGradeSection.id ? 'Edit' : 'Add' }} Grade Section</h2>
+          </div>
           <button class="close-btn" @click="showGradeSectionModal = false">
             <span class="material-icons">close</span>
           </button>
         </div>
 
-        <form @submit.prevent="saveGradeSection">
-          <div class="form-group">
-            <label>Grade</label>
-            <select 
-              v-model.number="currentGradeSection.grade" 
-              required
-              class="uppercase-input"
-            >
-              <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
-                Grade {{ grade }}
-              </option>
-            </select>
+        <form @submit.prevent="saveGradeSection" class="grade-section-form">
+          <div class="form-row">
+            <div class="form-group grade-select">
+              <label>
+                <span class="material-icons" style="color: #4CAF50">school</span>
+                Grade Level
+              </label>
+              <select 
+                v-model.number="currentGradeSection.grade" 
+                required
+                class="uppercase-input"
+              >
+                <option value="" disabled>Select Grade Level</option>
+                <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
+                  Grade {{ grade }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group section-input">
+              <label>
+                <span class="material-icons" style="color: #4CAF50">groups</span>
+                Section Name
+              </label>
+              <input 
+                v-model="currentGradeSection.section" 
+                type="text" 
+                required
+                class="uppercase-input"
+                placeholder="Enter section name"
+              />
+            </div>
           </div>
-          <div class="form-group">
-            <label>Section</label>
-            <input 
-              v-model="currentGradeSection.section" 
-              type="text" 
-              required
-              class="uppercase-input"
-            />
+
+          <div class="form-info">
+            <div class="info-icon">
+              <span class="material-icons" style="color: #4CAF50">info</span>
+            </div>
+            <p style="color: #2E7D32">This section will be available for student registration once created.</p>
           </div>
+
           <div class="form-actions">
             <button type="button" @click="showGradeSectionModal = false" class="cancel-btn">
+              <span class="material-icons">close</span>
               Cancel
             </button>
-            <button type="submit" class="save-btn">
-              {{ currentGradeSection.id ? 'Update' : 'Save' }}
+            <button type="submit" class="save-btn" style="background: #4CAF50">
+              <span class="material-icons">{{ currentGradeSection.id ? 'update' : 'save' }}</span>
+              {{ currentGradeSection.id ? 'Update' : 'Save' }} Section
             </button>
           </div>
         </form>
@@ -1764,12 +1788,206 @@ const handleImageError = (event, user) => {
 
 /* Responsive table */
 @media (max-width: 768px) {
-  .users-table {
-    display: block;
+  .manage-users {
+    padding: 0rem;
   }
   
-  .users-table table {
-    min-width: 600px;
+  /* Header section fixes */
+  .page-header {
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+
+  /* Action buttons fixes */
+  .header-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .add-btn {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    min-width: auto;
+    width: 100%;
+    height: 40px;
+  }
+
+  .add-btn .material-icons {
+    font-size: 14px;
+  }
+
+  /* Filter section fixes */
+  .filters-section {
+    padding: 0.75rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .search-box {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .search-box input {
+    padding: 0.5rem 0.75rem 0.5rem 2rem;
+    font-size: 0.9rem;
+  }
+
+  /* Tabs fixes */
+  .tabs {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .tab-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* Filter group fixes */
+  .filter-group {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .filter-group select {
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Users grid fixes */
+  .users-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .user-card {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .user-info h3 {
+    font-size: 0.9rem;
+  }
+
+  .email {
+    font-size: 0.8rem;
+  }
+
+  .details {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .detail-item {
+    font-size: 0.75rem;
+  }
+
+  /* Action buttons in cards */
+  .user-actions {
+    gap: 0.25rem;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .action-btn .material-icons {
+    font-size: 16px;
+  }
+
+  /* Table view fixes */
+  .users-table {
+    margin-top: 0.5rem;
+  }
+
+  .users-table td, 
+  .users-table th {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  /* View controls fixes */
+  .view-controls {
+    margin: 0.5rem 0;
+  }
+
+  .view-toggle-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  /* Modal fixes */
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+    max-height: 85vh;
+  }
+
+  .modal-header {
+    padding: 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .registration-form {
+    padding: 1rem;
+  }
+
+  /* Form fixes */
+  .form-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .form-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  /* Fix overlapping issues */
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-actions {
+    padding-top: 1rem;
+    margin-top: 1rem;
+    gap: 0.5rem;
+  }
+
+  /* Avatar fixes */
+  .user-avatar-container,
+  .user-avatar {
+    width: 35px;
+    height: 35px;
+  }
+
+  .table-avatar-container,
+  .table-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
   }
 }
 
@@ -1823,4 +2041,127 @@ const handleImageError = (event, user) => {
     height: 30px;
   }
 }
-</style> 
+
+/* Grade Section Modal Specific Styles */
+.grade-section-modal {
+  max-width: 500px;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-title .material-icons {
+  font-size: 24px;
+  color: #2196F3;
+}
+
+.grade-section-form {
+  padding: 1.5rem;
+}
+
+.grade-section-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.grade-section-form .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  color: #424242;
+}
+
+.grade-section-form .form-group label .material-icons {
+  font-size: 18px;
+  color: #4CAF50;
+}
+
+.form-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: #E8F5E9;
+  border: 1px solid #A5D6A7;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.info-icon {
+  color: #4CAF50;
+}
+
+.form-info p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #2E7D32;
+}
+
+.grade-section-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E0E0E0;
+}
+
+.grade-section-form .save-btn,
+.grade-section-form .cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.grade-section-form .save-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.grade-section-form .save-btn:hover {
+  background: #43A047 !important;
+}
+
+.grade-section-form .cancel-btn {
+  background: #F5F5F5;
+  color: #616161;
+  border: 1px solid #E0E0E0;
+}
+
+.grade-section-form .cancel-btn:hover {
+  background: #EEEEEE;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .grade-section-form .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .grade-section-modal {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .grade-section-form .form-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .grade-section-form .save-btn,
+  .grade-section-form .cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+</style>

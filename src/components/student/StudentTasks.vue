@@ -468,6 +468,16 @@ const getTimeStatusText = (task) => {
     font-size: 0.9rem;
     padding: 6px 16px;
   }
+
+  .header-background {
+  position: absolute;
+  top: 30%;
+  right: 0.3rem;
+
+  font-size: 4rem;
+  font-weight: 900;
+
+}
 }
 
 /* Add these new styles */

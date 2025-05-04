@@ -44,6 +44,20 @@ export const loginUser = async (email, lrn, password) => {
     if (payload) {
       localStorage.setItem("userId", payload.userId.toString());
       localStorage.setItem("userRole", payload.role);
+
+      // Immediately fetch and store component settings after successful login
+      try {
+        const settings = await getComponentSettings(payload.role);
+        const storedSettings = {
+          [payload.role]: settings.map(s => ({
+            path: s.componentPath,
+            enabled: s.isEnabled
+          }))
+        };
+        localStorage.setItem('componentSettings', JSON.stringify(storedSettings));
+      } catch (error) {
+        console.error('Failed to fetch initial component settings:', error);
+      }
       
       // Use synchronous require to avoid issues
       const socketManager = require('@/utils/socketManager').default;
@@ -2432,6 +2446,80 @@ export const deleteQuestionBankFolder = async (folderId) => {
     return await response.json();
   } catch (error) {
     console.error('Error deleting folder:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get component settings for a role
+ */
+export const getComponentSettings = async (role) => {
+  try {
+    const response = await fetch(`${BASE_URL}/component-settings/${role}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch component settings');
+    }
+
+    const { settings } = await response.json();
+    return settings;
+  } catch (error) {
+    console.error('Error fetching component settings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update component settings
+ */
+export const updateComponentSetting = async (role, componentPath, isEnabled) => {
+  try {
+    const response = await fetch(`${BASE_URL}/component-settings/${role}/${encodeURIComponent(componentPath)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ isEnabled })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to update component setting');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating component setting:', error);
+    throw error;
+  }
+};
+
+/**
+ * Initialize default component settings
+ */
+export const initializeComponentSettings = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/component-settings/initialize`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to initialize component settings');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error initializing component settings:', error);
     throw error;
   }
 };

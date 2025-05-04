@@ -652,7 +652,7 @@ export default {
 
 @media (max-width: 768px) {
   .student-exams-container {
-    padding: 10px;
+    padding: 0rem;
   }
   
   .header-content h1 {

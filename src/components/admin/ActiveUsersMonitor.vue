@@ -74,7 +74,15 @@
       <!-- Grid View -->
       <div v-else-if="viewMode === 'grid'" class="users-grid">
         <div v-for="user in filteredUsers" :key="user.id" class="user-card">
-          <div class="user-avatar" :class="user.role">
+          <div v-if="user.profilePicture" class="user-avatar-container">
+            <img 
+              :src="getFullImageUrl(user.profilePicture)" 
+              alt="Profile" 
+              class="user-avatar-img"
+              @error="handleImageError($event, user)" 
+            />
+          </div>
+          <div v-else class="user-avatar" :class="user.role">
             {{ user.firstName[0] }}{{ user.lastName[0] }}
           </div>
           <div class="user-info">
@@ -177,6 +185,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import socketManager from '@/utils/socketManager';
+import { getFullImageUrl } from '@/services/authService';
 
 // State
 const activeUsers = ref([]);
@@ -442,6 +451,18 @@ const formatLastActive = (timestamp) => {
     return 'unknown';
   }
 };
+
+// Add handler for image loading errors
+const handleImageError = (event, user) => {
+  event.target.style.display = 'none';
+  const container = event.target.parentElement;
+  container.classList.add('user-avatar');
+  container.classList.add(user.role);
+  container.textContent = `${user.firstName[0]}${user.lastName[0]}`;
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'center';
+};
 </script>
 
 <style scoped>
@@ -583,6 +604,19 @@ const formatLastActive = (timestamp) => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.user-avatar-container {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .user-avatar {
@@ -859,4 +893,4 @@ const formatLastActive = (timestamp) => {
 .exam-badge .material-icons {
   font-size: 1rem;
 }
-</style> 
+</style>

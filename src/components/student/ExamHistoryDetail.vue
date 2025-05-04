@@ -946,7 +946,7 @@ export default {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .exam-detail-container {
-    padding: 16px;
+    padding: 0rem;
   }
   
   .content-header {

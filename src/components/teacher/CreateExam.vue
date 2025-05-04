@@ -1679,6 +1679,9 @@ small {
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+ .create-exam-container {
+    padding: 0rem;
+  }
   .form-row {
     flex-direction: column;
     gap: 15px;
@@ -1742,6 +1745,206 @@ small {
   
   .divider {
     margin: 0.5rem 0;
+  }
+
+  /* Question form adjustments */
+  .question-item {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .question-content {
+    padding: 15px;
+  }
+
+  /* Make textarea bigger on mobile */
+  .question-content textarea {
+    min-height: 120px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+  }
+
+  /* Adjust question type buttons */
+  .type-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .type-button {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  /* Options adjustments */
+  .options-section {
+    margin-top: 15px;
+    padding-top: 15px;
+  }
+
+  .option-item {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .option-item input[type="text"] {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Image upload section */
+  .image-upload-container {
+    min-height: 120px;
+  }
+
+  .upload-label .material-icons-round {
+    font-size: 2rem;
+  }
+
+  /* True/False section */
+  .true-false-options {
+    flex-direction: row;
+    gap: 20px;
+    justify-content: center;
+  }
+
+  .true-false-option {
+    flex: 1;
+    max-width: 150px;
+  }
+
+  /* Enumeration section */
+  .short-answer-section input {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Question actions */
+  .question-header {
+    padding: 12px;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .question-actions {
+    gap: 6px;
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Card body spacing */
+  .card-body {
+    padding: 10px;
+  }
+
+  /* Questions list spacing */
+  .questions-list {
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Form elements size adjustments */
+  input[type="text"],
+  textarea,
+  select {
+    padding: 8px;
+    font-size: 14px;
+    height: 38px;
+  }
+
+  textarea {
+    min-height: 80px;
+    height: auto;
+  }
+
+  .form-group {
+    margin-bottom: 8px;
+  }
+
+  label {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+  /* Button adjustments */
+  button {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 12px;
+  }
+
+  .add-question-button,
+  .import-question-button {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+
+  .generate-button {
+    height: 38px;
+    width: 38px;
+    padding: 0;
+  }
+
+  /* Options adjustments */
+  .option-item {
+    min-height: 38px;
+  }
+
+  .option-item input[type="radio"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .remove-option-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  /* Action buttons */
+  .action-buttons button {
+    height: 42px;
+    padding: 0 16px;
+  }
+
+  /* Card adjustments */
+  .card-body {
+    padding: 8px;
+  }
+
+  .form-row {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  /* Question type buttons */
+  .type-button {
+    height: 38px;
+    padding: 0 10px;
+    font-size: 0.85rem;
+  }
+
+  .type-button .material-icons-round {
+    font-size: 18px;
+  }
+
+  /* Icons size */
+  .material-icons,
+  .material-icons-round {
+    font-size: 20px;
+  }
+}
+
+/* Add iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input, 
+  textarea, 
+  select {
+    font-size: 16px !important;
   }
 }
 
@@ -2417,5 +2620,65 @@ small {
 
 .generate-button .material-icons {
   font-size: 20px;
+}
+
+/* Update Side Panel Styles */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: -100%;
+  width: 500px;
+  height: 100vh;
+  background: white;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+  z-index: 1000;
+}
+
+/* Add responsive adjustments */
+@media (max-width: 768px) {
+  .side-panel {
+    width: 100%;
+    right: -100%;
+  }
+
+  .side-panel-content {
+    padding: 10px;
+  }
+
+  .bank-question-card {
+    padding: 10px;
+  }
+
+  .bank-question-card:hover {
+    transform: none;
+  }
+
+  .filters-section {
+    padding: 10px;
+  }
+
+  .filter-group {
+    flex-direction: column;
+  }
+
+  .filter-group select {
+    width: 100%;
+  }
+
+  .side-panel-footer {
+    padding: 10px;
+  }
+
+  .import-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+
+  .selection-info {
+    font-size: 0.8rem;
+  }
 }
 </style>

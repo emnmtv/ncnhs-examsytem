@@ -8,8 +8,18 @@
     
     <!-- User Profile Section -->
     <div class="user-profile" v-if="userProfile">
-      <div class="avatar" v-if="!isCollapsed">
-        <span class="material-icons">account_circle</span>
+      <div v-if="!isCollapsed">
+        <div v-if="userProfile.profilePicture" class="avatar">
+          <img 
+            :src="getFullImageUrl(userProfile.profilePicture)" 
+            alt="Profile" 
+            class="profile-img"
+            @error="handleImageError" 
+          />
+        </div>
+        <div v-else class="avatar">
+          <span class="material-icons">account_circle</span>
+        </div>
       </div>
       <div class="logo-avatar" v-else>
         <img src="../assets/logo.png" alt="Logo" class="logo" />
@@ -23,7 +33,7 @@
     <div class="nav-links">
       <template v-if="userRole && navigationItems[userRole]">
         <router-link 
-          v-for="item in navigationItems[userRole]" 
+          v-for="item in filteredNavigationItems" 
           :key="item.path"
           :to="item.path"
           class="nav-link"
@@ -47,9 +57,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, defineEmits } from 'vue';
+import { ref, onMounted, defineEmits, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { getUserRole, logout, fetchUserProfile } from '../services/authService';
+import { getUserRole, logout, fetchUserProfile, getFullImageUrl, getComponentSettings } from '../services/authService';
 import Swal from 'sweetalert2';
 
 const router = useRouter();
@@ -62,7 +72,10 @@ const emit = defineEmits(['nav-toggle']);
 onMounted(async () => {
   userRole.value = getUserRole();
   
-  // Fetch user profile
+  // Load component settings first
+  await loadComponentSettings();
+  
+  // Then fetch user profile
   try {
     const profileData = await fetchUserProfile();
     userProfile.value = profileData;
@@ -74,6 +87,13 @@ onMounted(async () => {
   window.addEventListener('resize', () => {
     if (window.innerWidth <= 768) {
       isCollapsed.value = true;
+    }
+  });
+
+  // Add listener for localStorage changes
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'componentSettings') {
+      checkComponentSettings();
     }
   });
 });
@@ -98,7 +118,7 @@ const navigationItems = {
     // {name:'Game', path:'/game', icon:'controller'},
     { name: 'Profile', path: '/admin-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
-    
+    {name:'Controller', path:'/admin-component-controller', icon:'pan_tool'},
   
   ],
   teacher: [
@@ -177,6 +197,66 @@ const handleLogout = async () => {
     });
   }
 };
+
+// Add this function to handle image loading errors
+const handleImageError = (event) => {
+  event.target.style.display = 'none';
+  const container = event.target.parentElement;
+  const icon = document.createElement('span');
+  icon.className = 'material-icons';
+  icon.textContent = 'account_circle';
+  container.appendChild(icon);
+};
+
+// Add new function to load component settings
+const loadComponentSettings = async () => {
+  try {
+    if (!userRole.value) return;
+    
+    // Fetch settings from API
+    const settings = await getComponentSettings(userRole.value);
+    
+    // Store in localStorage for immediate use
+    const storedSettings = JSON.parse(localStorage.getItem('componentSettings') || '{}');
+    storedSettings[userRole.value] = settings.map(s => ({
+      path: s.componentPath,
+      enabled: s.isEnabled
+    }));
+    localStorage.setItem('componentSettings', JSON.stringify(storedSettings));
+  } catch (error) {
+    console.error('Failed to load component settings:', error);
+  }
+};
+
+// Add this lifecycle hook to watch for component settings changes
+const checkComponentSettings = () => {
+  // Force recompute of filteredNavigationItems
+  const items = navigationItems[userRole.value] || [];
+  const componentSettings = JSON.parse(localStorage.getItem('componentSettings') || '{}');
+  const roleSettings = componentSettings[userRole.value] || [];
+  
+  return items.filter(item => {
+    const component = roleSettings.find(s => s.path === item.path);
+    return !component || component.enabled;
+  });
+};
+
+// Update the filteredNavigationItems computed property
+const filteredNavigationItems = computed(() => {
+  return checkComponentSettings();
+});
+
+// Add watcher to reload settings when userRole changes
+watch(userRole, async () => {
+  await loadComponentSettings();
+});
+
+// Watch userRole changes
+watch([userRole], async () => {
+  if (userRole.value) {
+    await loadComponentSettings();
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -585,6 +665,7 @@ const handleLogout = async () => {
   margin-bottom: 12px;
   flex-shrink: 0;
   border: 3px solid rgba(255, 255, 255, 0.4);
+  overflow: hidden; /* Add this to contain the image */
 }
 
 .avatar .material-icons {
@@ -638,5 +719,12 @@ const handleLogout = async () => {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 </style>

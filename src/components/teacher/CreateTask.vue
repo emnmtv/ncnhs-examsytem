@@ -499,6 +499,10 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
+  .header-container {
+    padding: 0rem;
+  
+  }
   .header-content h1 {
     font-size: 2rem;
   }

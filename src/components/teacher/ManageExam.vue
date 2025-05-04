@@ -802,7 +802,7 @@
   
   @media (max-width: 768px) {
     .manage-exam-container {
-      padding: 1rem;
+      padding: 0rem;
     }
   
     

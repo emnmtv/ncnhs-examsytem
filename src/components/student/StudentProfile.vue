@@ -1360,7 +1360,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .profile-page {
-    padding: 10px;
+    padding: 0rem;
   }
   
   .header-content h1 {

@@ -522,12 +522,12 @@ onMounted(() => {
 /* Responsive design */
 @media (max-width: 768px) {
   .manage-subjects {
-    padding: 10px 5px;
+    padding: 0rem ;
   }
 
   .header-background {
     font-size: 3rem;
-    top: 60%;
+    top: 30%;
     right: 1rem;
   }
 

@@ -219,7 +219,7 @@ body {
 /* For mobile screens */
 @media (max-width: 768px) {
   .content.with-topbar {
-  margin-top: 90px; /* Update to match the 100px height of the top bar */
+  margin-top: 50px; /* Update to match the 100px height of the top bar */
   padding-top: 20px; /* Slightly increased padding for better spacing */
   
 }
