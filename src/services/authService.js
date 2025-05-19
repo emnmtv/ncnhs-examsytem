@@ -1,7 +1,6 @@
-// Export the BASE_URL at the top of the file
-export const BASE_URL = 'http://192.168.0.100:3300/auth';
-// export const BASE_URL = 'https://ncnhs.loophole.site/auth';
-// Helper function to decode JWT token
+
+export const BASE_URL = 'http://192.168.0.101:3300/auth';
+export const SOCKET_URL = 'http://192.168.0.101:3300';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));

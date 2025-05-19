@@ -41,17 +41,18 @@
             <div class="task-content">
               <div class="task-title">{{ task.title }}</div>
               <div class="task-meta">
-                <span class="due-date">
+                <div class="meta-item">
                   Due: {{ formatDate(task.dueDate) }}
                   <span class="exact-date">({{ formatExactDate(task.dueDate) }})</span>
-                </span>
-                <span class="date-submitted" v-if="task.submission">
+                </div>
+                <div class="meta-item" v-if="task.submission">
                   Submitted: {{ formatDate(task.submission.submittedAt) }}
                   <span class="exact-date">({{ formatExactDate(task.submission.submittedAt) }})</span>
-                </span>
-                <span class="on-time" :class="getTimeStatus(task)">
+                </div>
+                <!-- Only show on-time status if there's a submission -->
+                <div v-if="task.submission" class="status-badge" :class="getTimeStatus(task)">
                   {{ getTimeStatusText(task) }}
-                </span>
+                </div>
               </div>
             </div>
 
@@ -224,7 +225,7 @@ const getTimeStatusText = (task) => {
 }
 
 .tasks-list {
-  padding: 20px;
+  padding: 10px;  /* Reduced from 20px */
 }
 
 .subject-section {
@@ -294,9 +295,10 @@ const getTimeStatusText = (task) => {
 .task-item {
   display: flex;
   align-items: center;
-  padding: 20px;
+  padding: 15px;  /* Reduced from 20px */
   border-bottom: 1px solid #eee;
   transition: all 0.3s;
+  gap: 12px;  /* Added consistent gap */
 }
 
 .task-item:hover {
@@ -308,7 +310,7 @@ const getTimeStatusText = (task) => {
 }
 
 .task-status {
-  margin-right: 20px;
+  margin-right: 12px;  /* Reduced from 20px */
 }
 
 .task-status .material-icons-round {
@@ -350,39 +352,44 @@ const getTimeStatusText = (task) => {
   gap: 15px;
   font-size: 0.9rem;
   color: #5f6368;
+  margin-top: 4px;
 }
 
-.due-date, .date-submitted {
+.meta-item {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 4px 12px;
-  background: #f1f3f4;
-  border-radius: 20px;
+  gap: 4px;
+  color: #666;
 }
 
-.on-time {
+.status-badge {
   font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 20px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
 
-.on-time.on-time {
+.status-badge.on-time {
   background: #e8f5e9;
   color: #2e7d32;
 }
 
-.on-time.late {
+.status-badge.late {
   background: #ffebee;
   color: #d32f2f;
 }
 
+.due-date, .date-submitted {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+}
+
 .task-score {
-  margin: 0 20px;
+  margin: 0 12px;  /* Reduced from 20px */
+  padding: 6px 12px;  /* Reduced from 8px 16px */
   font-weight: 500;
   color: #202124;
-  padding: 8px 16px;
   background: #e3f2fd;
   border-radius: 20px;
   min-width: 80px;
@@ -435,38 +442,68 @@ const getTimeStatusText = (task) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .student-tasks {
-    padding: 10px;
+    padding: 0rem;
+  }
+
+  .tasks-list {
+    padding: 5px;  /* Further reduced padding */
   }
 
   .task-item {
+    display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 15px;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 10px;  /* Reduced padding */
+    gap: 8px;
+  }
+  
+  .task-status {
+    margin-right: 6px;
+  }
+
+  .task-content {
+    flex: 1;
+    min-width: 0; 
   }
   
   .task-meta {
-    flex-direction: column;
-    gap: 10px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
     font-size: 0.8rem;
     
   }
   
-  .task-title {
-    font-size: 1rem;
+  .meta-item {
+    font-size: 0.8rem;
+  }
+  
+  .status-badge {
+    font-size: 0.8rem;
+    padding: 1px 6px;
+  }
+  
+  .due-date, .date-submitted {
+    font-size: 0.8rem;
+    padding: 2px 6px;  /* Reduced padding */
   }
   
   .task-score {
-    margin: 8px 0;
+    white-space: nowrap;
+    margin: 0 6px;
+    padding: 2px 8px;
     font-size: 0.9rem;
-    padding: 6px 12px;
   }
   
   .activity-btn {
-    width: 100%;
+    white-space: nowrap;
+    padding: 4px 10px;
+    min-width: 80px;  /* Added minimum width */
     justify-content: center;
     font-size: 0.9rem;
-    padding: 6px 16px;
   }
 
   .header-background {
@@ -477,7 +514,40 @@ const getTimeStatusText = (task) => {
   font-size: 4rem;
   font-weight: 900;
 
+  }
+
+  .exact-date {
+    display: none; /* Hide exact dates on mobile */
+  }
+
+  /* Adjust subject header padding */
+  .subject-header {
+    padding: 12px 15px;  /* Reduced from 20px */
+  }
+
+  /* Adjust subject section margin */
+  .subject-section {
+    margin-bottom: 15px;  /* Reduced from 30px */
+  }
 }
+
+@media (max-width: 480px) {
+  .task-meta {
+    font-size: 0.75rem;
+  }
+
+  .task-score {
+    font-size: 0.8rem;
+  }
+
+  .task-item {
+    padding: 8px;  /* Even smaller padding for very small screens */
+  }
+  
+  .task-status .material-icons-round {
+    font-size: 24px;  /* Slightly smaller icons */
+    padding: 6px;
+  }
 }
 
 /* Add these new styles */

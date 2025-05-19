@@ -79,8 +79,8 @@
                 </button>
               </div>
               <div class="webcam-view">
-                <video ref="video" width="400" height="300" autoplay></video>
-                <canvas ref="canvas" width="400" height="300" style="display: none;"></canvas>
+                <video ref="video" width="400" height="400" autoplay></video>
+                <canvas ref="canvas" width="400" height="400" style="display: none;"></canvas>
                 <div v-if="hasMultipleCameras" class="camera-select-container">
                   <select 
                     class="camera-select" 
@@ -607,7 +607,8 @@ const openCamera = async () => {
         video: {
           deviceId: { exact: selectedCameraId.value },
           width: { ideal: 400 },
-          height: { ideal: 300 }
+          height: { ideal: 400 },
+          aspectRatio: { ideal: 1 }
         },
         audio: false
       };
@@ -616,7 +617,8 @@ const openCamera = async () => {
       constraints = {
         video: {
           width: { ideal: 400 },
-          height: { ideal: 300 }
+          height: { ideal: 400 },
+          aspectRatio: { ideal: 1 }
         },
         audio: false
       };
@@ -808,7 +810,8 @@ const changeCamera = async (cameraId) => {
       video: {
         deviceId: { exact: cameraId },
         width: { ideal: 400 },
-        height: { ideal: 300 }
+        height: { ideal: 400 },
+        aspectRatio: { ideal: 1 }
       },
       audio: false
     };
@@ -1338,6 +1341,7 @@ onUnmounted(() => {
   
   .form-grid, .password-fields {
     grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
   
   .save-btn {
@@ -1358,6 +1362,85 @@ onUnmounted(() => {
   
   .picture-actions {
     width: 100%;
+  }
+
+  /* Improved form fields for mobile */
+  .form-group {
+    margin-bottom: 1.25rem;
+  }
+
+  .input-wrapper {
+    padding: 0 1rem;
+    height: 56px;
+  }
+
+  .input-wrapper input {
+    padding: 1rem 0;
+    font-size: 1rem;
+    width: 100%;
+  }
+
+  .input-wrapper .material-icons-round {
+    font-size: 1.25rem;
+    min-width: 24px;
+  }
+
+  .edit-section {
+    padding: 1.5rem;
+    margin: 0.5rem 0;
+    border-radius: 12px;
+  }
+
+  .profile-form {
+    gap: 1.5rem;
+  }
+
+  .password-section {
+    padding-top: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .password-fields {
+    margin-top: 1.25rem;
+  }
+  
+  /* Fix for form labels on mobile */
+  .form-group label {
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+    color: #444;
+  }
+
+  .form-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .form-group {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .form-group.full-width {
+    width: 100%;
+    grid-column: unset;
+  }
+
+  .input-wrapper {
+    padding: 0 1rem;
+    height: 3.5rem;
+  }
+
+  .input-wrapper input {
+    padding: 1rem 0;
+    font-size: 1rem;
+  }
+
+  .password-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
 }
 
@@ -1399,12 +1482,14 @@ onUnmounted(() => {
   border-radius: 8px;
   overflow: hidden;
   background-color: #000;
+  aspect-ratio: 1/1;
 }
 
 .webcam-view video {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
+  object-fit: cover;
 }
 
 .webcam-actions {
@@ -1558,4 +1643,4 @@ onUnmounted(() => {
     min-width: 100px;
   }
 }
-</style> 
+</style>

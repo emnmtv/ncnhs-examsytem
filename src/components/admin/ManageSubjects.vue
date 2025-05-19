@@ -523,6 +523,10 @@ const openSubjectModal = (subject = null) => {
   showSubjectModal.value = true;
 };
 
+const openEditModal = (subject) => {
+  openSubjectModal(subject);
+};
+
 const openAssignTeacherModal = (subject) => {
   selectedSubject.value = subject;
   selectedTeacherId.value = '';
@@ -899,7 +903,7 @@ onMounted(async () => {
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #4CAF50;
+  background: #159750;
   color: white;
   border: none;
   border-radius: 8px;
@@ -908,7 +912,7 @@ onMounted(async () => {
 }
 
 .add-btn:hover {
-  background: #43A047;
+  background: #107040;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -1015,8 +1019,7 @@ onMounted(async () => {
   background: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
@@ -1024,11 +1027,11 @@ onMounted(async () => {
 
 .subject-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .subject-header {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
   padding: 20px;
   position: relative;
   overflow: hidden;
@@ -1191,21 +1194,22 @@ onMounted(async () => {
   padding: 4px 12px;
   border-radius: 20px;
   border: none;
-  background: #e3f2fd;
-  color: #1565c0;
+  background: #e8f5e9;
+  color: #159750;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .assign-btn:hover,
 .schedule-btn:hover {
-  background: #bbdefb;
+  background: #c8e6c9;
   transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .subject-actions {
   padding: 15px;
-  background: #f5f5f5;
+  background: #f9f9f9;
   border-top: 1px solid #eee;
   display: flex;
   gap: 8px;
@@ -1213,25 +1217,27 @@ onMounted(async () => {
 
 .action-btn {
   flex: 1;
-  padding: 8px;
+  padding: 10px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.9rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.2s;
+  transition: all 0.3s;
   color: white;
 }
 
 .edit-btn {
-  background-color: #2196F3;
+  background-color: #159750;
 }
 
 .edit-btn:hover {
-  background-color: #1976D2;
+  background-color: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .delete-btn {
@@ -1240,6 +1246,8 @@ onMounted(async () => {
 
 .delete-btn:hover {
   background-color: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Modal Styles */
@@ -1327,6 +1335,7 @@ onMounted(async () => {
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .cancel-btn {
@@ -1334,13 +1343,20 @@ onMounted(async () => {
   color: #666;
 }
 
+.cancel-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+}
+
 .save-btn {
-  background: #4CAF50;
+  background: #159750;
   color: white;
 }
 
 .save-btn:hover {
-  background: #43A047;
+  background: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Loading State */
@@ -1457,8 +1473,8 @@ onMounted(async () => {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.5rem;
-  background: #e3f2fd;
-  color: #2196F3;
+  background: #e8f5e9;
+  color: #159750;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -1466,14 +1482,16 @@ onMounted(async () => {
 }
 
 .schedule-btn:hover {
-  background: #bbdefb;
+  background: #c8e6c9;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .schedule-type-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 4px;
-  background: #e3f2fd;
-  color: #2196F3;
+  background: #e8f5e9;
+  color: #159750;
   font-size: 0.9rem;
 }
 
@@ -1494,16 +1512,37 @@ onMounted(async () => {
 /* Enhance schedule type badges with different colors */
 .schedule-type-badge.single {
   background-color: #e8f5e9;
-  color: #2e7d32;
+  color: #159750;
 }
 
 .schedule-type-badge.range {
   background-color: #e3f2fd;
-  color: #1565c0;
+  color: #1976d2;
 }
 
 .schedule-type-badge.multiple {
   background-color: #f3e5f5;
   color: #7b1fa2;
+}
+
+/* Add styles for the remove buttons */
+.remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.05);
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 0.8rem;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-btn:hover {
+  background: #ffebee;
+  color: #f44336;
 }
 </style>

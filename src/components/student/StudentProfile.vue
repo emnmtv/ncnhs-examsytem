@@ -391,7 +391,8 @@ const openCamera = async () => {
         video: {
           deviceId: { exact: selectedCameraId.value },
           width: { ideal: 400 },
-          height: { ideal: 300 }
+          height: { ideal: 400 },
+          aspectRatio: { ideal: 1 }
         },
         audio: false
       };
@@ -400,7 +401,8 @@ const openCamera = async () => {
       constraints = {
         video: {
           width: { ideal: 400 },
-          height: { ideal: 300 }
+          height: { ideal: 400 },
+          aspectRatio: { ideal: 1 }
         },
         audio: false
       };
@@ -592,7 +594,8 @@ const changeCamera = async (cameraId) => {
       video: {
         deviceId: { exact: cameraId },
         width: { ideal: 400 },
-        height: { ideal: 300 }
+        height: { ideal: 400 },
+        aspectRatio: { ideal: 1 }
       },
       audio: false
     };
@@ -746,8 +749,8 @@ onUnmounted(() => {
                 </button>
               </div>
               <div class="webcam-view">
-                <video ref="video" width="400" height="300" autoplay></video>
-                <canvas ref="canvas" width="400" height="300" style="display: none;"></canvas>
+                <video ref="video" width="400" height="400" autoplay></video>
+                <canvas ref="canvas" width="400" height="400" style="display: none;"></canvas>
                 <div v-if="hasMultipleCameras" class="camera-select-container">
                   <select 
                     class="camera-select" 
@@ -1464,12 +1467,14 @@ onUnmounted(() => {
   border-radius: 8px;
   overflow: hidden;
   background-color: #000;
+  aspect-ratio: 1/1;
 }
 
 .webcam-view video {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
+  object-fit: cover;
 }
 
 .webcam-actions {

@@ -80,10 +80,6 @@
             @click="openFullscreenImage(currentQuestion.imageUrl)"
             class="clickable-image"
           />
-          <div class="image-zoom-hint">
-            <span class="material-icons">zoom_in</span>
-            <span>Click to enlarge</span>
-          </div>
         </div>
         
         <div class="answer-container">
@@ -163,9 +159,9 @@
 
     <!-- Add this fullscreen image modal at the end of the template, before the closing div -->
     <div v-if="fullscreenImage" class="fullscreen-image-modal" @click="closeFullscreenImage">
-      <div class="fullscreen-image-container">
+      <div class="fullscreen-image-container" @click.stop>
         <img :src="getImageUrl(fullscreenImage)" alt="Fullscreen image" />
-        <button class="close-fullscreen-btn" @click.stop="closeFullscreenImage">
+        <button class="close-fullscreen-btn" @click="closeFullscreenImage">
           <span class="material-icons">close</span>
         </button>
       </div>
@@ -1160,79 +1156,6 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.fullscreen-image-container {
-  position: relative;
-  max-width: 80%;
-  max-height: 80%;
-  overflow: hidden;
-  border-radius: 8px;
-}
-
-.fullscreen-image-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.close-fullscreen-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  color: white;
-  cursor: pointer;
-}
-
-.image-zoom-hint {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 0 0 8px 8px;
-  padding: 5px 10px;
-  text-align: center;
-}
-
-.image-zoom-hint span {
-  color: white;
-  font-size: 0.9rem;
-}
-
-.clickable-image {
-  cursor: zoom-in;
-  transition: transform 0.2s;
-}
-
-.clickable-image:hover {
-  transform: scale(1.02);
-}
-
-.image-zoom-hint {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin-top: 5px;
-  color: #757575;
-  font-size: 0.8rem;
-}
-
-.fullscreen-image-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.9);
@@ -1278,5 +1201,14 @@ export default {
 .close-fullscreen-btn:hover {
   background-color: #f44336;
   color: white;
+}
+
+.clickable-image {
+  cursor: zoom-in;
+  transition: transform 0.2s;
+}
+
+.clickable-image:hover {
+  transform: scale(1.02);
 }
 </style> 

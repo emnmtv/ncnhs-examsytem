@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-
+import { SOCKET_URL } from '@/services/authService';
 class SocketManager {
   constructor() {
     this.socket = null;
@@ -39,7 +39,7 @@ class SocketManager {
 
     console.log('Initializing new socket connection...');
     // https://ncnhs.loophole.site
-    this.socket = io('http://192.168.0.100:3300', {
+    this.socket = io(SOCKET_URL, {
       path: '/socket.io',
       transports: ['websocket', 'polling'],
       reconnection: true,

@@ -58,11 +58,11 @@
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
               <span class="file-name">{{ file.fileName }}</span>
               <div class="button-actions">
-                <a :href="getFullFileUrl(file.fileUrl)" 
-                   target="_blank" 
+                <span 
+                  @click="openFilePreview(file)"
                    class="action-link view">
                   <span class="material-icons">visibility</span>
-                </a>
+                </span>
                 <a :href="getFullFileUrl(file.fileUrl)" 
                    download
                    class="action-link download">
@@ -190,12 +190,12 @@
                              class="file-icon">
                         <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                         <div class="file-actions">
-                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
-                             target="_blank" 
+                          <span 
+                            @click="openFilePreview(student.submission.files[0])"
                              class="action-link view">
                             <span class="material-icons">visibility</span>
                             View
-                          </a>
+                          </span>
                           <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                              download
                              class="action-link download">
@@ -295,12 +295,12 @@
                                  class="file-icon">
                             <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                             <div class="file-actions">
-                              <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
-                                 target="_blank" 
+                              <span 
+                                @click="openFilePreview(student.submission.files[0])"
                                  class="action-link view">
                                 <span class="material-icons">visibility</span>
                                 View
-                              </a>
+                              </span>
                               <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                                  download
                                  class="action-link download">
@@ -403,12 +403,12 @@
                              class="file-icon">
                         <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                         <div class="file-actions">
-                          <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
-                             target="_blank" 
+                          <span 
+                            @click="openFilePreview(student.submission.files[0])"
                              class="action-link view">
                             <span class="material-icons">visibility</span>
                             View
-                          </a>
+                          </span>
                           <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                              download
                              class="action-link download">
@@ -583,12 +583,12 @@
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
               <span class="file-name">{{ file.fileName }}</span>
               <div class="file-actions">
-                <a :href="getFullFileUrl(file.fileUrl)" 
-                   target="_blank" 
+                <span 
+                  @click="openFilePreview(file)"
                    class="action-link view">
                   <span class="material-icons">visibility</span>
                   View
-                </a>
+                </span>
                 <a :href="getFullFileUrl(file.fileUrl)" 
                    download
                    class="action-link download">
@@ -634,6 +634,53 @@
                 Save Score
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add this new file preview modal -->
+    <div v-if="showFilePreview" class="file-preview-modal" @click="closeFilePreview">
+      <div class="preview-content" @click.stop>
+        <div class="preview-header">
+          <h3>{{ previewFile.fileName }}</h3>
+          <button class="close-btn" @click="closeFilePreview">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="preview-body">
+          <!-- Image preview -->
+          <img v-if="isImage(previewFile.fileName)" 
+               :src="getFullFileUrl(previewFile.fileUrl)" 
+               alt="File preview"
+               class="preview-image">
+          
+          <!-- Video preview -->
+          <video v-else-if="isVideo(previewFile.fileName)" 
+                 controls
+                 class="preview-video">
+            <source :src="getFullFileUrl(previewFile.fileUrl)" :type="getVideoType(previewFile.fileName)">
+            Your browser does not support video playback.
+          </video>
+          
+          <!-- PDF preview -->
+          <iframe v-else-if="isPdf(previewFile.fileName)"
+                  :src="getFullFileUrl(previewFile.fileUrl)"
+                  class="preview-pdf"
+                  frameborder="0"></iframe>
+          
+          <!-- Other file types - show download prompt -->
+          <div v-else class="preview-fallback">
+            <div class="fallback-icon">
+              <img :src="getFileIcon(previewFile.fileName)" alt="File icon" class="large-file-icon">
+            </div>
+            <p>This file type cannot be previewed directly.</p>
+            <a :href="getFullFileUrl(previewFile.fileUrl)" 
+               download
+               class="download-file-btn">
+              <span class="material-icons">download</span>
+              Download File
+            </a>
           </div>
         </div>
       </div>
@@ -698,6 +745,10 @@ const submissionComments = ref({});
 // Add these new refs for the modal
 const showFilesModal = ref(false);
 const selectedSubmission = ref(null);
+
+// Add these new refs for file preview
+const showFilePreview = ref(false);
+const previewFile = ref({});
 
 // Filter visible students based on search
 const filteredStudents = computed(() => {
@@ -1146,6 +1197,42 @@ const submitScoreFromModal = () => {
   // Don't close the modal to allow for multiple score updates
 };
 
+// Add these new methods for file preview
+const openFilePreview = (file) => {
+  previewFile.value = file;
+  showFilePreview.value = true;
+};
+
+const closeFilePreview = () => {
+  showFilePreview.value = false;
+};
+
+// Add file type detection helpers
+const isImage = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+};
+
+const isVideo = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext);
+};
+
+const isPdf = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ext === 'pdf';
+};
+
+const getVideoType = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'mp4': return 'video/mp4';
+    case 'webm': return 'video/webm';
+    case 'ogg': return 'video/ogg';
+    default: return 'video/mp4';
+  }
+};
+
 onMounted(() => {
   loadTaskData();
 });
@@ -1207,22 +1294,20 @@ onMounted(() => {
   background: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
   transition: all 0.3s;
+  margin-bottom: 2rem;
 }
 
-.task-info-card h2 {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
-  color: white;
-  padding: 20px;
-  margin: 0;
+.task-header {
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  padding: 25px;
   position: relative;
   overflow: hidden;
 }
 
-/* Add texture layers */
-.task-info-card h2::after {
+/* Main paint swipe */
+.task-header::after {
   content: '';
   position: absolute;
   top: 0;
@@ -1240,7 +1325,8 @@ onMounted(() => {
   pointer-events: none;
 }
 
-.task-info-card h2::before {
+/* Secondary paint swipe */
+.task-header::before {
   content: '';
   position: absolute;
   top: -20%;
@@ -1258,107 +1344,425 @@ onMounted(() => {
   pointer-events: none;
 }
 
-/* Updated task meta */
-.task-meta {
-  padding: 20px;
+.task-title-section {
+  position: relative;
+  z-index: 1;
+}
+
+.task-title-section h2 {
+  color: white;
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+}
+
+.task-meta-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 1rem;
 }
 
-.meta-item {
+.meta-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #666;
-  background: rgba(0, 0, 0, 0.03);
-  padding: 8px 16px;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   border-radius: 20px;
-  transition: all 0.3s;
-}
-
-.meta-item:hover {
-  background: rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
+  font-size: 0.875rem;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
 }
 
 .task-description {
-  padding: 0 20px 20px;
-  color: #666;
+  padding: 25px;
+  color: #555;
   line-height: 1.6;
+  border-bottom: 1px solid #eee;
+  margin: 0;
 }
 
-/* Updated status badges */
+/* Updated card styles */
+.card-header {
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  padding: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #159750;
+  color: white;
+}
+
+/* File buttons and actions */
+.task-files-list {
+  padding: 0 25px 25px 25px;
+}
+
+.files-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.file-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 12px 15px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s;
+  max-width: 300px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.file-button:hover {
+  background: #f1f3f4;
+  border-color: #dadce0;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+}
+
+/* Actions buttons with consistent colors */
+.visibility-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+}
+
+.add-btn {
+  background: #159750;
+  color: white;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.2);
+}
+
+.add-btn:hover {
+  background: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(21, 151, 80, 0.3);
+}
+
+.remove-btn {
+  background: #f44336;
+  color: white;
+  box-shadow: 0 2px 5px rgba(244, 67, 54, 0.2);
+}
+
+.remove-btn:hover {
+  background: #d32f2f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Updated search and filter styles */
+.search-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1.5rem 0;
+  gap: 1rem;
+}
+
+.search-box {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.filter-options {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status-filter {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Updated students table */
+.students-table {
+  margin-top: 1.5rem;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: white;
+}
+
+thead {
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+thead::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+th {
+  color: white;
+  font-weight: 500;
+  text-align: left;
+  padding: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+td {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr {
+  transition: all 0.3s;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Style the table checkboxes */
+th input[type="checkbox"],
+td input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s;
+}
+
+td input[type="checkbox"] {
+  border-color: #ddd;
+}
+
+/* Table score input styles */
+.table-score-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-input-field {
+  width: 60px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.comment-input-field {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  width: 150px;
+  resize: vertical;
+  min-height: 32px;
+}
+
+.table-score-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.875rem;
+}
+
+.table-score-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Card header styles */
+.card-header {
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Main paint swipe */
+.card-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+/* Secondary paint swipe */
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: -20%;
+  right: 20%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(45deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.02) 30%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.02) 70%,
+    transparent 100%
+  );
+  transform: skewX(-35deg);
+  pointer-events: none;
+}
+
+.checkbox-label {
+  position: relative;
+  z-index: 1;
+  color: white;
+}
+
+.student-name {
+  font-weight: 500;
+  margin-left: 8px;
+}
+
 .status-badge {
-  padding: 4px 12px;
+  position: relative;
+  z-index: 1;
+  padding: 6px 12px;
   border-radius: 20px;
   font-size: 0.875rem;
   font-weight: 500;
   display: flex;
   align-items: center;
   gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.status-badge.submitted {
-  background: #e8f5e9;
-  color: #2e7d32;
+/* Add back grid layout */
+.students-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
 }
 
-.status-badge.late {
-  background: #fff3e0;
-  color: #ef6c00;
-}
-
-.status-badge.no-submission {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.status-badge.scored {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-/* Student card hover effects */
 .student-card {
   background: white;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
   transition: all 0.3s;
 }
 
 .student-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-/* Rest of the existing styles remain unchanged */
-.content-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-.task-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin: 1rem 0;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.875rem;
-  color: #666;
-}
-
-.task-description {
-  color: #666;
-  line-height: 1.5;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
 }
 
 .visibility-header {
@@ -1422,6 +1826,11 @@ onMounted(() => {
 .status-badge.no-submission {
   background: #ffebee;
   color: #c62828;
+}
+
+.status-badge.scored {
+  background: #e3f2fd;
+  color: #1565c0;
 }
 
 .visibility-actions {
@@ -1702,7 +2111,21 @@ onMounted(() => {
 
 @media (max-width: 768px) {
   .task-visibility {
-    padding: 1rem;
+    padding: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 3rem;
+    top: 60%;
+    right: 1rem;
   }
   
   .visibility-header {
@@ -1711,322 +2134,341 @@ onMounted(() => {
     gap: 1rem;
   }
   
+  .header-left {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
   .visibility-actions {
     width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
   }
   
   .action-btn {
-    flex: 1;
+    width: 100%;
+    justify-content: center;
   }
   
   .search-filter {
     flex-direction: column;
-    align-items: flex-start;
-    /* border: 1px solid #000000; */
+    gap: 1rem;
   }
   
-  .search-box {
+  .filter-options {
     width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .status-filter {
+    width: 100%;
+  }
+  
+  .students-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Improve card internal responsiveness */
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 15px;
+  }
+  
+  .card-header .checkbox-label {
+  width: 100%;
+  }
+  
+  .card-header .status-badge {
+    align-self: flex-start;
+  }
+  
+  .card-body {
+    padding: 15px;
+  }
+  
+  .student-info p {
+    flex-wrap: wrap;
+  }
+  
+  .student-info p strong {
+    min-width: auto;
+    margin-right: 8px;
+  }
+  
+  .scoring-section {
+    padding: 15px;
+  }
+  
+  .score-input {
+    flex-wrap: wrap;
+  }
+  
+  .comment-input textarea {
+    min-height: 60px;
+  }
+  
+  .submission-files {
+    margin-top: 10px;
+  }
+  
+  .file-item {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  
+  .file-actions {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 5px;
+  }
+  
+  /* Table view responsiveness improvements */
+  .students-table {
+    overflow-x: auto;
+  }
+  
+  /* Section grouping responsiveness */
+  .section-group {
+    margin-bottom: 15px;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  gap: 8px;
+    padding: 12px;
+  }
+  
+  .student-count {
+    align-self: flex-start;
+  }
+  
+  .task-meta-badges {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .file-button {
+    max-width: none;
+    width: 100%;
+  }
+  
+  /* Modal adjustments for mobile */
+  .modal-container,
+  .preview-content {
+    width: 95%;
+    max-height: 80vh;
+  }
+  
+  .preview-body {
+    padding: 10px;
+  }
+  
+  .preview-image,
+  .preview-video {
+    max-height: 60vh;
+  }
+  
+  .student-info-panel {
+    flex-direction: column;
+  }
+  
+  .student-meta {
+    flex-direction: column;
+  gap: 8px;
+  }
+  
+  .files-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-/* Table Styles */
-.students-table {
-  margin-top: 1rem;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+/* Extra small devices */
+@media (max-width: 480px) {
+  .task-visibility {
+    padding: 5px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.5rem;
+  }
+  
+  .divider {
+    margin: 0.75rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .card-body {
+    padding: 10px;
+  }
+  
+  .student-info p {
+    font-size: 0.9rem;
+    margin: 5px 0;
+  }
+  
+  .action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .scoring-section {
+    padding: 10px;
+  }
+  
+  .score-input label,
+  .comment-input label {
+    font-size: 0.9rem;
+  }
+  
+  .score-input input {
+    width: 60px;
+    padding: 6px;
+  }
+  
+  .score-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .preview-content {
+    width: 98%;
+  }
+  
+  .preview-header {
+    padding: 12px 16px;
+  }
+  
+  .preview-header h3 {
+    font-size: 1rem;
+  }
+  
+  .close-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .large-file-icon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .download-file-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
 }
 
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: white;
-}
-
-thead {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-thead::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -10%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(45deg, 
-    transparent 0%,
-    rgba(255, 255, 255, 0.05) 30%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.05) 70%,
-    transparent 100%
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-}
-
-th {
-  color: white;
-  font-weight: 500;
-  text-align: left;
-  padding: 1rem;
-  position: relative;
-  z-index: 1;
-}
-
-td {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-tr:last-child td {
-  border-bottom: none;
-}
-
-tbody tr {
-  transition: all 0.3s;
-}
-
-tbody tr:hover {
-  background: #f8f9fa;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
-}
-
-/* Style the table checkboxes */
-th input[type="checkbox"],
-td input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 2px solid rgba(255, 255, 255, 0.7);
-  cursor: pointer;
-  position: relative;
-  transition: all 0.3s;
-}
-
-td input[type="checkbox"] {
-  border-color: #ddd;
-}
-
-/* Table score input styles */
-.table-score-input {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.score-input-field {
-  width: 60px;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-
-.table-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.comment-input-field {
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  width: 150px;
-  resize: vertical;
-  min-height: 32px;
-}
-
-.table-score-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 0.875rem;
-}
-
-.table-score-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* Card Styles */
-.students-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.student-card {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s;
-}
-
-.student-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.card-header {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+/* Improvements for student card layout */
+.card-body {
   padding: 20px;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-/* Main paint swipe */
-.card-header::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -10%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(45deg, 
-    transparent 0%,
-    rgba(255, 255, 255, 0.05) 30%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.05) 70%,
-    transparent 100%
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-}
-
-/* Secondary paint swipe */
-.card-header::before {
-  content: '';
-  position: absolute;
-  top: -20%;
-  right: 20%;
-  width: 30%;
-  height: 200%;
-  background: linear-gradient(45deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.02) 30%,
-    rgba(255, 255, 255, 0.05) 50%,
-    rgba(255, 255, 255, 0.02) 70%,
-    transparent 100%
-  );
-  transform: skewX(-35deg);
-  pointer-events: none;
-}
-
-.checkbox-label {
-  position: relative;
-  z-index: 1;
-  color: white;
-}
-
-.student-name {
-  font-weight: 500;
-  margin-left: 8px;
-}
-
-.status-badge {
-  position: relative;
-  z-index: 1;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.1);
 }
 
 .student-info {
-  padding: 20px;
+  margin-bottom: 15px;
 }
 
 .student-info p {
-  margin: 8px 0;
-  color: #666;
+  margin: 10px 0;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.student-info p strong {
-  color: #333;
-  min-width: 100px;
+.submission-files {
+  margin-top: 15px;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-top: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
 }
 
 .scoring-section {
-  background: #f8f9fa;
+  background: #f9f9f9;
   padding: 20px;
   border-radius: 12px;
   margin-top: 15px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05) inset;
 }
 
 .score-input {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 15px;
 }
 
 .score-input input {
   width: 80px;
-  padding: 8px;
+  padding: 10px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;
 }
 
 .comment-input textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid #ddd;
-  border-radius: 6px;
+  border-radius: 8px;
   resize: vertical;
   min-height: 80px;
   margin-bottom: 15px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05) inset;
 }
 
 .score-btn {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
   color: white;
-  padding: 10px 20px;
+  padding: 12px 20px;
   border: none;
   border-radius: 8px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
   transition: all 0.3s;
   font-weight: 500;
   width: 100%;
-  justify-content: center;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.2);
 }
 
 .score-btn:hover {
+  background: #107040;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 8px rgba(21, 151, 80, 0.3);
 }
 
 /* Add these styles */
@@ -2202,7 +2644,7 @@ td input[type="checkbox"] {
 }
 
 .action-link:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .action-link.view {
@@ -2210,7 +2652,7 @@ td input[type="checkbox"] {
 }
 
 .action-link.download {
-  color: #5f6368;
+  color: #1976D2;
 }
 
 .action-link .material-icons {
@@ -2420,5 +2862,276 @@ td input[type="checkbox"] {
 
 .save-score-btn:hover {
   background-color: #1765cc;
+}
+
+/* File Preview Modal */
+.file-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+/* Replace with updated modal style */
+.file-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+
+.preview-content {
+  background-color: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Replace with updated content style */
+.preview-content {
+  background-color: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+}
+
+/* Replace with updated header style */
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layers to header */
+.preview-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Update header text style */
+.preview-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: #f2f2f2;
+  min-height: 300px;
+}
+
+/* Update preview body style */
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  background: #f9f9f9;
+  min-height: 300px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #5f6368;
+}
+
+/* Update close button style */
+.close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  background: white;
+}
+
+/* Update image preview style */
+.preview-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #eee;
+}
+
+.preview-video {
+  width: 100%;
+  max-width: 800px;
+  max-height: 70vh;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: black;
+}
+
+/* Add back PDF preview style */
+.preview-pdf {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.preview-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: white;
+  padding: 50px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #eee;
+}
+
+/* Add back the large file icon style */
+.large-file-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 10px;
+}
+
+.download-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: #159750;
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+/* Update download button style */
+.download-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
+}
+
+.download-file-btn:hover {
+  background: #107040;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Update download button hover style */
+.download-file-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(21, 151, 80, 0.3);
 }
 </style>

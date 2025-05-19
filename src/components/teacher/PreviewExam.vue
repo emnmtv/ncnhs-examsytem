@@ -377,6 +377,57 @@ export default {
   background: #45a049;
 }
 
+/* Add responsive styles for mobile view */
+@media (max-width: 768px) {
+  .preview-exam {
+    padding: 0rem;
+  }
+  .preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 0.5rem;
+  }
+  
+  .header-content {
+    width: 100%;
+  }
+  
+  .header-content h1 {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+  }
+  
+  .exam-meta {
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .back-btn, .store-btn {
+    padding: 10px 15px;
+    min-height: 44px;
+    font-size: 0.9rem;
+    flex: 1;
+    justify-content: center;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .store-btn {
+    max-width: 65%;
+  }
+  
+  .back-btn {
+    max-width: 30%;
+  }
+}
+
 .question-card {
   background: white;
   border-radius: 10px;

@@ -119,7 +119,10 @@
               class="student-card"
               :class="{ 'teacher': student.role === 'teacher' }"
             >
-              <div class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
+              <div class="avatar" v-if="student.profilePicture" :class="{ 'has-image': student.profilePicture }">
+                <img :src="getFullImageUrl(student.profilePicture)" alt="Profile" @error="handleImageError($event, student)" />
+              </div>
+              <div v-else class="avatar" :style="{ backgroundColor: getAvatarColor(student.userName) }">
                 {{ getInitials(student.userName) }}
               </div>
               <div class="student-info">
@@ -137,7 +140,7 @@
   </template>
   
   <script>
-  import { startExam, stopExam, fetchExamQuestions } from '@/services/authService';
+  import { startExam, stopExam, fetchExamQuestions, getFullImageUrl } from '@/services/authService';
   import socketManager from '@/utils/socketManager';
   import Swal from 'sweetalert2';
   import ExamProgressModal from './ExamProgressModal.vue';
@@ -424,7 +427,15 @@
       handleWindowBlur() {
         // Optionally handle window blur
         console.log('Window blurred');
-      }
+      },
+      handleImageError(event, student) {
+        event.target.style.display = 'none';
+        
+        const container = event.target.parentElement;
+        container.textContent = this.getInitials(student.userName);
+        container.style.backgroundColor = this.getAvatarColor(student.userName);
+      },
+      getFullImageUrl
     },
     beforeUnmount() {
       if (this.socket) {
@@ -758,6 +769,20 @@
     color: white;
     font-weight: 600;
     font-size: 1rem;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .avatar.has-image {
+    padding: 0;
+    background-color: transparent;
+  }
+  
+  .avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
   }
   
   .student-info {

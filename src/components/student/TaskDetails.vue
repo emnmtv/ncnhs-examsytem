@@ -4,10 +4,12 @@
       <div class="header-content">
         <router-link to="/student/tasks" class="back-link">
           <span class="material-icons">arrow_back</span>
-          Back
+          Back to Tasks
         </router-link>
         <h1>{{ task?.title }}</h1>
+        <div class="divider"></div>
       </div>
+      <div class="header-background">DETAILS</div>
     </div>
 
     <!-- Loading State -->
@@ -562,18 +564,192 @@ const removeFile = async (fileId) => {
 
 <style scoped>
 .task-details {
-  padding: 20px;
-  max-width: 1200px;
+  max-width: auto;
   margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+
+.header-background {
+  position: absolute;
+  top: 30%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
 }
 
 .back-link {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: #1a73e8;
+  gap: 8px;
+  color: #159750;
   text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.back-link:hover {
+  transform: translateX(-5px);
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+
+/* Card Styles */
+.task-info, .task-section, .your-work {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
+              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s;
   margin-bottom: 20px;
+}
+
+.task-info:hover, .task-section:hover, .your-work:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Button Styles */
+.file-select-btn, .submit-btn, .resubmit-btn, .edit-btn {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+}
+
+.file-select-btn:hover, .submit-btn:hover, .resubmit-btn:hover, .edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* File Items */
+.file-item {
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s;
+  margin-bottom: 8px;
+}
+
+.file-item:hover {
+  background: #fff;
+  border-color: #159750;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .task-details {
+    padding: 10px;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .header-background {
+    font-size: 4rem;
+    right: 0.3rem;
+  }
+
+  .task-info, .task-section, .your-work {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .info-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .file-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .file-select-btn, .submit-btn, .resubmit-btn {
+    width: 100%;
+    padding: 8px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+
+  .file-item {
+    padding: 8px;
+  }
+
+  .file-name {
+    font-size: 0.9rem;
+  }
+
+  .view-btn, .download-btn {
+    padding: 4px;
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #5f6368;
+}
+
+.loading-state .rotating {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #d93025;
 }
 
 .task-info {
@@ -904,4 +1080,4 @@ const removeFile = async (fileId) => {
 .remove-file:hover {
   background: rgba(0, 0, 0, 0.05);
 }
-</style> 
+</style>

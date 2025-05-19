@@ -272,6 +272,7 @@ export default {
   padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  font-family: 'Inter', sans-serif;
 }
 
 .header {
@@ -279,6 +280,8 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .back-button {
@@ -286,14 +289,21 @@ export default {
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: #f5f5f5;
+  background: #e8f5e9;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  color: #159750;
+  font-weight: 600;
 }
 
 .back-button:hover {
-  background: #e0e0e0;
+  background: #c8e6c9;
+  transform: translateX(-5px);
+}
+
+.back-button .material-icons {
+  font-size: 20px;
 }
 
 .student-info {
@@ -302,7 +312,9 @@ export default {
 
 .student-info h2 {
   margin: 0;
-  color: #333;
+  color: #159750;
+  font-size: 1.8rem;
+  font-weight: 700;
 }
 
 .sub-info {
@@ -311,24 +323,32 @@ export default {
   display: flex;
   gap: 10px;
   align-items: center;
+  font-size: 0.9rem;
 }
 
 .exam-info {
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   margin-bottom: 20px;
+  border-left: 5px solid #159750;
 }
 
 .exam-info h3 {
   margin: 0;
-  color: #333;
+  color: #159750;
+  font-size: 1.5rem;
+  font-weight: 700;
 }
 
 .test-code {
   color: #666;
-  margin: 5px 0 0;
+  margin: 8px 0 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .score-section {
@@ -340,61 +360,89 @@ export default {
 
 .current-score, .manual-score {
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 25px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.current-score h4, .manual-score h4 {
+  color: #159750;
+  margin: 0 0 15px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .score-display {
   display: flex;
   align-items: baseline;
   gap: 5px;
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .score-value {
-  font-size: 2.5em;
-  font-weight: 600;
-  color: #2196f3;
+  font-size: 3em;
+  font-weight: 700;
+  color: #159750;
 }
 
 .score-total {
-  font-size: 1.5em;
+  font-size: 1.8em;
   color: #666;
 }
 
 .score-percentage {
-  color: #666;
+  color: #159750;
   margin-left: 10px;
+  font-weight: 600;
+  font-size: 1.2em;
 }
 
 .score-input {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 15px;
 }
 
 .score-input input {
-  width: 80px;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1em;
+  width: 100px;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 1.1em;
+  transition: all 0.3s ease;
+  text-align: center;
+  font-weight: 600;
+}
+
+.score-input input:focus {
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
+  outline: none;
 }
 
 .score-input button {
-  padding: 8px 16px;
-  background: #2196f3;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #159750 0%, #0d6b38 100%);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.score-input button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(21, 151, 80, 0.2);
 }
 
 .score-input button:disabled {
-  background: #ccc;
+  background: #e2e8f0;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .error-text {
@@ -411,59 +459,61 @@ export default {
 
 .answer-item {
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   overflow: hidden;
   border-left: 5px solid transparent;
+  transition: all 0.3s ease;
 }
 
 .answer-item[data-correct="true"] {
-  border-left-color: #4caf50;
-  background: linear-gradient(to right, rgba(76, 175, 80, 0.05), white);
+  border-left-color: #159750;
+  background: linear-gradient(to right, rgba(21, 151, 80, 0.05), white);
 }
 
 .answer-item[data-correct="false"] {
-  border-left-color: #f44336;
-  background: linear-gradient(to right, rgba(244, 67, 54, 0.05), white);
+  border-left-color: #dc2626;
+  background: linear-gradient(to right, rgba(220, 38, 38, 0.05), white);
 }
 
 .question-section {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+  padding: 25px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .question-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .question-number {
-  font-weight: 600;
-  color: #333;
+  font-weight: 700;
+  color: #159750;
+  font-size: 1.1rem;
 }
 
 .question-type {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-size: 0.9em;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .question-type.multiple-choice {
+  background: #e8f5e9;
+  color: #159750;
+}
+
+.question-type.true-false {
   background: #e3f2fd;
   color: #1976d2;
 }
 
-.question-type.true-false {
+.question-type.short-answer {
   background: #f3e5f5;
   color: #7b1fa2;
-}
-
-.question-type.short-answer {
-  background: #e8f5e9;
-  color: #2e7d32;
 }
 
 .question-text {
@@ -564,18 +614,19 @@ export default {
 .toggle-btn {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 8px 16px;
+  gap: 8px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
-  font-weight: 500;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .toggle-btn.correct {
   background: #e8f5e9;
-  color: #2e7d32;
+  color: #159750;
 }
 
 .toggle-btn.correct:hover {
@@ -583,13 +634,13 @@ export default {
 }
 
 .toggle-btn.correct.active {
-  background: #4caf50;
+  background: #159750;
   color: white;
 }
 
 .toggle-btn.incorrect {
   background: #ffebee;
-  color: #c62828;
+  color: #dc2626;
 }
 
 .toggle-btn.incorrect:hover {
@@ -597,7 +648,7 @@ export default {
 }
 
 .toggle-btn.incorrect.active {
-  background: #f44336;
+  background: #dc2626;
   color: white;
 }
 
@@ -610,22 +661,30 @@ export default {
   text-align: center;
   padding: 40px;
   color: #666;
+  font-size: 1.1rem;
 }
 
 .error {
   text-align: center;
   padding: 40px;
-  color: #f44336;
+  color: #dc2626;
 }
 
 .retry-btn {
-  margin-top: 10px;
-  padding: 8px 16px;
-  background: #f44336;
+  margin-top: 15px;
+  padding: 10px 24px;
+  background: #159750;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #0d6b38;
+  transform: translateY(-2px);
 }
 
 @media (max-width: 768px) {
@@ -660,4 +719,4 @@ export default {
     justify-content: center;
   }
 }
-</style> 
+</style>
