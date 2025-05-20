@@ -3,12 +3,28 @@ const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   transpileDependencies: true,
   
+  // Disable source maps in production
+  productionSourceMap: false,
+  
   // Set the title consistently for webpack
   chainWebpack: config => {
     config.plugin('html').tap(args => {
       args[0].title = "NCNHS Assessment Portal";
       return args;
     });
+    
+    // Add code obfuscation in production
+    if (process.env.NODE_ENV === 'production') {
+      const JavaScriptObfuscator = require('webpack-obfuscator');
+      config.plugin('obfuscator').use(JavaScriptObfuscator, [{
+        rotateStringArray: true,
+        stringArray: true,
+        stringArrayEncoding: ['base64'],
+        identifierNamesGenerator: 'hexadecimal',
+        renameGlobals: false,
+        selfDefending: true
+      }]);
+    }
   },
   
   devServer: {
