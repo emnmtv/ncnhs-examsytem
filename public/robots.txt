@@ -1,0 +1,9 @@
+# Allow all web crawlers to index the site
+User-agent: *
+Allow: /
+
+# Suggest a crawl-delay of 5 seconds between requests
+Crawl-delay: 5
+
+# New Cabalan National High School Assessment Portal sitemap
+Sitemap: https://ncnhs-portal.edu.ph/sitemap.xml 

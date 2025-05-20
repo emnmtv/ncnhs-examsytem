@@ -2,6 +2,15 @@ const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
+  
+  // Set the title consistently for webpack
+  chainWebpack: config => {
+    config.plugin('html').tap(args => {
+      args[0].title = "NCNHS Assessment Portal";
+      return args;
+    });
+  },
+  
   devServer: {
     port: 4201,
   },
@@ -53,13 +62,13 @@ module.exports = defineConfig({
           sizes: "1280x800",
           type: "image/png",
           form_factor: "wide",
-          label: "NCNHS Exam System Desktop View"
+          label: "NCNHS Assessment Portal Desktop View"
         },
         {
           src: "/img/screenshots/mobile.png",
           sizes: "390x844",
           type: "image/png",
-          label: "NCNHS Exam System Mobile View"
+          label: "NCNHS Assessment Portal Mobile View"
         }
       ]
     },

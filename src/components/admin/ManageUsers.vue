@@ -18,6 +18,26 @@
       </div>
     </div>
 
+    <!-- AI Batch Creation Dropdown -->
+    <div class="ai-batch-dropdown">
+      <button @click="toggleAIDropdown" class="ai-batch-main-btn" :class="{ 'active': showAIDropdown }">
+        <span class="material-icons">psychology</span> 
+        <span>AI Batch Creation</span>
+        <span class="material-icons dropdown-icon" :class="{ 'rotated': showAIDropdown }">expand_more</span>
+      </button>
+      <div class="ai-dropdown-content" v-if="showAIDropdown">
+        <button @click="openBatchModal('student')" class="ai-dropdown-item student">
+          <span class="material-icons">group_add</span> Batch Add Students
+        </button>
+        <button @click="openBatchModal('teacher')" class="ai-dropdown-item teacher">
+          <span class="material-icons">groups</span> Batch Add Teachers
+        </button>
+        <button @click="openBatchModal('section')" class="ai-dropdown-item section">
+          <span class="material-icons">dashboard_customize</span> Batch Add Sections
+        </button>
+      </div>
+    </div>
+
     <div class="filters-section">
       <div class="search-box">
         <span class="material-icons">search</span>
@@ -72,24 +92,116 @@
       </div>
     </div>
 
-    <!-- Add view toggle button -->
+    <!-- View toggle and export buttons -->
     <div class="view-controls">
-      <button 
-        class="view-toggle-btn" 
-        :class="{ active: viewMode === 'grid' }"
-        @click="viewMode = 'grid'"
-      >
-        <span class="material-icons">grid_view</span>
-        Grid View
-      </button>
-      <button 
-        class="view-toggle-btn" 
-        :class="{ active: viewMode === 'table' }"
-        @click="viewMode = 'table'"
-      >
-        <span class="material-icons">table_rows</span>
-        Table View
-      </button>
+      <div class="view-toggle-group">
+        <button 
+          class="view-toggle-btn" 
+          :class="{ active: viewMode === 'grid' }"
+          @click="viewMode = 'grid'"
+        >
+          <span class="material-icons">grid_view</span>
+          Grid View
+        </button>
+        <button 
+          class="view-toggle-btn" 
+          :class="{ active: viewMode === 'table' }"
+          @click="viewMode = 'table'"
+        >
+          <span class="material-icons">table_rows</span>
+          Table View
+        </button>
+      </div>
+      
+      <div class="export-controls">
+        <button @click="toggleExportOptions" class="export-main-btn">
+          <span class="material-icons">download</span>
+          Export
+          <span class="material-icons dropdown-icon" :class="{ 'rotated': showExportOptions }">expand_more</span>
+        </button>
+        
+        <div v-if="showExportOptions" class="export-dropdown">
+          <div class="export-options-header">
+            <h3>Export Options</h3>
+          </div>
+          
+          <div class="export-data-selection">
+            <h4>Select data to export:</h4>
+            <div class="export-checkboxes">
+              <label v-if="activeTab === 'students'">
+                <input type="checkbox" v-model="exportOptions.fields.name" checked>
+                Name
+              </label>
+              <label v-if="activeTab === 'students'">
+                <input type="checkbox" v-model="exportOptions.fields.email">
+                Email
+              </label>
+              <label v-if="activeTab === 'students'">
+                <input type="checkbox" v-model="exportOptions.fields.lrn">
+                LRN
+              </label>
+              <label v-if="activeTab === 'students'">
+                <input type="checkbox" v-model="exportOptions.fields.grade">
+                Grade
+              </label>
+              <label v-if="activeTab === 'students'">
+                <input type="checkbox" v-model="exportOptions.fields.section">
+                Section
+              </label>
+              
+              <label v-if="activeTab === 'teachers'">
+                <input type="checkbox" v-model="exportOptions.fields.name" checked>
+                Name
+              </label>
+              <label v-if="activeTab === 'teachers'">
+                <input type="checkbox" v-model="exportOptions.fields.email">
+                Email
+              </label>
+              <label v-if="activeTab === 'teachers'">
+                <input type="checkbox" v-model="exportOptions.fields.department">
+                Department
+              </label>
+              <label v-if="activeTab === 'teachers'">
+                <input type="checkbox" v-model="exportOptions.fields.domain">
+                Domain
+              </label>
+              
+              <label v-if="activeTab === 'admins'">
+                <input type="checkbox" v-model="exportOptions.fields.name" checked>
+                Name
+              </label>
+              <label v-if="activeTab === 'admins'">
+                <input type="checkbox" v-model="exportOptions.fields.email">
+                Email
+              </label>
+              
+              <label v-if="activeTab === 'sections'">
+                <input type="checkbox" v-model="exportOptions.fields.grade" checked>
+                Grade
+              </label>
+              <label v-if="activeTab === 'sections'">
+                <input type="checkbox" v-model="exportOptions.fields.section" checked>
+                Section
+              </label>
+            </div>
+          </div>
+          
+          <div class="export-actions">
+            <button @click="exportToExcel" class="export-btn excel">
+              <span class="material-icons">description</span>
+              Excel
+            </button>
+            <button @click="exportToPDF" class="export-btn pdf">
+              <span class="material-icons">picture_as_pdf</span>
+              PDF
+            </button>
+            <button @click="printData" class="export-btn print">
+              <span class="material-icons">print</span>
+              Print
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Grade Section List -->
@@ -304,8 +416,9 @@
           <template v-if="modalType === 'student'">
             <div class="form-row">
               <div class="form-group">
-                <label>LRN</label>
-                <input v-model.number="formData.lrn" type="number" class="uppercase-input" />
+                <label>LRN (12-digit)</label>
+                <input v-model="formData.lrn" type="text" maxlength="12" pattern="[0-9]*" class="uppercase-input" />
+                <small>The Learner Reference Number is a unique 12-digit identifier</small>
               </div>
               <div class="form-group">
                 <label>Grade</label>
@@ -483,8 +596,9 @@
           <!-- Student-specific fields -->
           <div v-if="editFormData.role === 'student'">
             <div class="form-group">
-              <label>LRN</label>
-              <input v-model.number="editFormData.lrn" type="number" required class="uppercase-input" />
+              <label>LRN (12-digit)</label>
+              <input v-model="editFormData.lrn" type="text" maxlength="12" pattern="[0-9]*" required class="uppercase-input" />
+              <small>The Learner Reference Number is a unique 12-digit identifier</small>
             </div>
 
             <div class="form-group">
@@ -541,11 +655,195 @@
         </form>
       </div>
     </div>
+
+    <!-- AI Batch User Creation Modal -->
+    <div v-if="showBatchModal" class="modal-overlay" @click="showBatchModal = false">
+      <div class="modal-content batch-modal" @click.stop>
+        <div class="modal-header">
+          <div class="modal-title">
+            <span class="material-icons" :style="{ color: batchModalType === 'student' ? '#4CAF50' : batchModalType === 'teacher' ? '#2196F3' : '#9C27B0' }">psychology</span>
+            <h2>AI Batch {{ batchModalType === 'section' ? 'Grade Section' : batchModalType.charAt(0).toUpperCase() + batchModalType.slice(1) }} Creation</h2>
+          </div>
+          <button class="close-btn" @click="showBatchModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="batch-modal-content">
+          <div class="batch-instructions">
+            <div class="instructions-icon">
+              <span class="material-icons">info</span>
+            </div>
+            <div class="instructions-text">
+              <p v-if="batchModalType === 'student'">
+                Paste a list of students with their details. Our AI will automatically extract names, grade levels, and sections.
+                <br><br>Examples:
+                <br>• Juan Dela Cruz, Grade 7, Section A
+                <br>• Maria Santos - 8th Grade (Einstein)
+                <br>• List with columns: Name | Grade | Section
+              </p>
+              <p v-else-if="batchModalType === 'teacher'">
+                Paste a list of teachers with their details. Our AI will automatically extract names, departments, and domains.
+                <br><br>Examples:
+                <br>• Juan Dela Cruz, Science Department, Physics
+                <br>• Maria Santos - Mathematics, Algebra
+                <br>• List with columns: Name | Department | Subject
+              </p>
+              <p v-else>
+                Paste a list of grade sections. Our AI will automatically extract grade levels and section names.
+                <br><br>Examples:
+                <br>• Grade 7 - Einstein
+                <br>• 8-Newton
+                <br>• Grade 9 (Curie)
+              </p>
+            </div>
+          </div>
+
+          <div class="batch-form">
+            <textarea 
+              v-model="batchInputText" 
+              placeholder="Paste your list here..."
+              rows="10"
+              class="batch-textarea"
+            ></textarea>
+
+            <div v-if="batchModalType !== 'section'" class="batch-defaults">
+              <h3>Default Values (Applied when information is missing)</h3>
+              <div class="defaults-form">
+                <div v-if="batchModalType === 'student'" class="defaults-row">
+                  <div class="defaults-group">
+                    <label>Default Grade Level</label>
+                    <select v-model.number="batchDefaults.gradeLevel">
+                      <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
+                        Grade {{ grade }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="defaults-group">
+                    <label>Default Section</label>
+                    <select v-model="batchDefaults.section">
+                      <option value="">Select Section</option>
+                      <option v-for="section in availableSections" :key="section" :value="section">
+                        {{ section }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div v-else-if="batchModalType === 'teacher'" class="defaults-row">
+                  <div class="defaults-group">
+                    <label>Default Department</label>
+                    <input 
+                      v-model="batchDefaults.department" 
+                      type="text" 
+                      placeholder="e.g., SCIENCE"
+                      class="uppercase-input"
+                    />
+                  </div>
+                  <div class="defaults-group">
+                    <label>Default Domain</label>
+                    <input 
+                      v-model="batchDefaults.domain" 
+                      type="text" 
+                      placeholder="e.g., PHYSICS"
+                      class="uppercase-input"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="batchProcessing" class="batch-processing">
+            <div class="spinner"></div>
+            <p>Processing your data with AI... Please wait.</p>
+          </div>
+
+          <div v-if="batchResults.length > 0" class="batch-results">
+            <h3>AI Processing Results ({{ batchResults.length }} {{ batchModalType === 'section' ? 'sections' : batchModalType + 's' }})</h3>
+            
+            <div class="batch-table-container">
+              <table class="batch-table">
+                <thead>
+                  <tr v-if="batchModalType === 'student'">
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Grade</th>
+                    <th>Section</th>
+                    <th>LRN</th>
+                  </tr>
+                  <tr v-else-if="batchModalType === 'teacher'">
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Department</th>
+                    <th>Domain</th>
+                  </tr>
+                  <tr v-else>
+                    <th>Grade</th>
+                    <th>Section</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(item, index) in batchResults" :key="index" 
+                      :class="{ 'has-error': item.hasError }">
+                    <template v-if="batchModalType === 'student'">
+                      <td>{{ item.firstName }}</td>
+                      <td>{{ item.lastName }}</td>
+                      <td>{{ item.gradeLevel }}</td>
+                      <td>{{ item.section }}</td>
+                      <td>{{ item.lrn || 'N/A' }}</td>
+                    </template>
+                    <template v-else-if="batchModalType === 'teacher'">
+                      <td>{{ item.firstName }}</td>
+                      <td>{{ item.lastName }}</td>
+                      <td>{{ item.department }}</td>
+                      <td>{{ item.domain }}</td>
+                    </template>
+                    <template v-else>
+                      <td>{{ item.grade }}</td>
+                      <td>{{ item.section }}</td>
+                    </template>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="batch-modal-footer">
+          <div class="batch-actions">
+            <button type="button" class="cancel-btn" @click="showBatchModal = false">
+              <span class="material-icons">close</span>
+              Cancel
+            </button>
+            <button 
+              v-if="!batchResults.length" 
+              type="button" 
+              class="analyze-btn" 
+              @click="processInputWithAI"
+              :disabled="!batchInputText.trim() || batchProcessing"
+            >
+              <span class="material-icons">psychology</span>
+              Analyze with AI
+            </button>
+            <button 
+              v-else
+              type="button" 
+              class="create-btn" 
+              @click="createBatchItems"
+              :disabled="batchProcessing || batchCreating"
+            >
+              <span class="material-icons">add_circle</span>
+              Create {{ batchResults.length }} {{ batchModalType === 'section' ? 'Sections' : batchModalType.charAt(0).toUpperCase() + batchModalType.slice(1) + 's' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue';
 import { 
   registerStudent, 
   registerTeacher, 
@@ -562,7 +860,12 @@ import {
   getUserDetails,
   getFullImageUrl
 } from '@/services/authService';
+import aiService from '@/services/aiService';
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
+// Import jsPDF and its autotable plugin properly
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Data for user lists
 const students = ref([]);
@@ -636,8 +939,58 @@ const availableSectionsForGrade = computed(() => {
     .map(gs => gs.section);
 });
 
+// Add Batch Creation state
+const showBatchModal = ref(false);
+const batchModalType = ref('');
+const batchInputText = ref('');
+const batchDefaults = ref({
+  gradeLevel: 7,
+  section: '',
+  department: 'GENERAL',
+  domain: 'GENERAL'
+});
+const batchProcessing = ref(false);
+const batchResults = ref([]);
+const batchCreating = ref(false);
+
+// Fix the onMounted handler to work with existing code
+// Update this function
+const closeAIDropdownOnClickOutside = (event) => {
+  if (showAIDropdown.value && !event.target.closest('.ai-batch-dropdown')) {
+    showAIDropdown.value = false;
+  }
+};
+
+// Make sure to close the dropdown when opening the batch modal
+const openBatchModal = (type) => {
+  batchModalType.value = type;
+  batchInputText.value = '';
+  batchResults.value = [];
+  batchProcessing.value = false;
+  showAIDropdown.value = false; // Close the dropdown
+  
+  if (type === 'student') {
+    batchDefaults.value = {
+      gradeLevel: 7,
+      section: availableSections.value[0] || ''
+    };
+  } else if (type === 'teacher') {
+    batchDefaults.value = {
+      department: 'GENERAL',
+      domain: 'GENERAL'
+    };
+  }
+  
+  showBatchModal.value = true;
+};
+
+// Replace the entire onMounted function
 // Initial data loading
 onMounted(async () => {
+  // Add the click event listener for the dropdown
+  document.addEventListener('click', closeAIDropdownOnClickOutside);
+  
+  // Original onMounted code
   await loadAllUsers();
   await loadGradeSections();
   await loadSections();
@@ -1153,6 +1506,695 @@ const handleImageError = (event, user) => {
   container.style.color = '#666';
   container.style.fontWeight = 'bold';
 };
+
+// Functions for Batch Creation
+const processInputWithAI = async () => {
+  if (!batchInputText.value.trim()) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'No Input',
+      text: 'Please enter some text to process.'
+    });
+    return;
+  }
+  
+  batchProcessing.value = true;
+  
+  try {
+    if (batchModalType.value === 'section') {
+      // Process grade sections
+      const sections = await aiService.parseAndGenerateGradeSections(batchInputText.value);
+      batchResults.value = sections;
+    } else {
+      // Process users (students or teachers)
+      const users = await aiService.parseAndGenerateUsers(
+        batchInputText.value, 
+        batchModalType.value, 
+        batchDefaults.value
+      );
+      
+      // Assign unique LRNs to students right after AI processing
+      if (batchModalType.value === 'student') {
+        usedLRNs.clear(); // Reset tracking
+        users.forEach(student => {
+          // If LRN is missing or null, generate a unique one immediately
+          if (!student.lrn) {
+            student.lrn = generateRandomLRN();
+          } else {
+            // Ensure LRN is always stored as a string
+            student.lrn = student.lrn.toString();
+          }
+        });
+      }
+      
+      batchResults.value = users;
+    }
+  } catch (error) {
+    console.error('Error processing with AI:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Processing Failed',
+      text: error.message || 'Failed to process input with AI'
+    });
+  } finally {
+    batchProcessing.value = false;
+  }
+};
+
+// Add a function to generate a random LRN number with used LRN tracking
+const usedLRNs = new Set(); // Track used LRNs to avoid duplicates
+
+const generateRandomLRN = (attempt = 0, gradeLevel = 10) => {
+  // Create a timestamp-based LRN with exactly 12 digits and additional randomness
+  // Format for uniqueness and 12-digit compliance
+  
+  // Map grade level to a single digit prefix
+  const gradePrefix = gradeLevel === 10 ? 0 : 
+                      gradeLevel === 11 ? 1 : 
+                      gradeLevel === 12 ? 2 : gradeLevel;
+  
+  // Get current date and time components
+  const now = new Date();
+  // Add delay based on attempt number to ensure time difference
+  now.setMilliseconds(now.getMilliseconds() + (attempt * 111));
+  
+  // Use timestamp components
+  const timestamp = now.getTime().toString();
+  
+  // Add randomness - create a 3-digit random number
+  const randomDigits = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+  
+  // Create a uniqueness string with:
+  // - Grade prefix (1 digit)
+  // - Last 7 digits of timestamp
+  // - 3 random digits
+  // - Attempt digit (0-9)
+  const timestampPart = timestamp.slice(-7);
+  const attemptDigit = (attempt % 10).toString();
+  
+  // Combine all components into a 12-digit string
+  let lrn = `${gradePrefix}${timestampPart}${randomDigits.substring(0, 3)}${attemptDigit}`;
+  
+  // Ensure it's exactly 12 digits
+  if (lrn.length > 12) {
+    lrn = lrn.substring(0, 12);
+  } else if (lrn.length < 12) {
+    // Pad with random digits if needed
+    while (lrn.length < 12) {
+      lrn += Math.floor(Math.random() * 10).toString();
+    }
+  }
+  
+  return lrn;
+};
+
+// Update the createBatchItems function to avoid regenerating LRNs
+const createBatchItems = async () => {
+  if (!batchResults.value.length) return;
+  
+  batchCreating.value = true;
+  
+  try {
+    // Start with confirmation
+    const result = await Swal.fire({
+      title: 'Confirm Batch Creation',
+      text: `Are you sure you want to create ${batchResults.value.length} ${batchModalType.value === 'section' ? 'grade sections' : batchModalType.value + 's'}?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, create them',
+      cancelButtonText: 'No, cancel'
+    });
+    
+    if (!result.isConfirmed) {
+      batchCreating.value = false;
+      return;
+    }
+    
+    // Show loading indicator
+    Swal.fire({
+      title: 'Creating...',
+      text: 'Please wait while we create the items',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    
+    let successCount = 0;
+    let errorCount = 0;
+    let failedItems = [];
+    
+    if (batchModalType.value === 'section') {
+      // Create grade sections
+      for (const section of batchResults.value) {
+        try {
+          await createGradeSection(section.grade, section.section);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating section:', error);
+          errorCount++;
+          failedItems.push(section);
+        }
+      }
+    } else if (batchModalType.value === 'student') {
+      // Create students - with enhanced retry mechanism and delays
+      for (const student of batchResults.value) {
+        let isCreated = false;
+        let attempts = 0;
+        const maxAttempts = 10; // Increased maximum attempts for unique LRN generation
+        
+        // Try multiple times with different LRNs if needed
+        while (!isCreated && attempts < maxAttempts) {
+          try {
+            // Generate email and password
+            const { email, password } = generateCredentials(student.firstName, student.lastName);
+            
+            // Generate unique LRN with additional randomness
+            const lrn = generateRandomLRN(attempts, student.gradeLevel);
+            
+            // Add a longer delay between retries with exponential backoff
+            if (attempts > 0) {
+              // Exponential backoff: 200ms, 400ms, 800ms, etc.
+              const delayTime = 200 * Math.pow(2, attempts - 1);
+              await new Promise(resolve => setTimeout(resolve, delayTime));
+            }
+            
+            const studentData = {
+              firstName: student.firstName,
+              lastName: student.lastName,
+              email: email,
+              password: password,
+              address: student.address || '',
+              role: 'student',
+              lrn: lrn,
+              gradeLevel: student.gradeLevel,
+              section: student.section
+            };
+            
+            await registerStudent(studentData);
+            isCreated = true;
+            student.lrn = lrn; // Update the LRN in the original data
+            successCount++;
+            
+            // Add a small delay after success to prevent timestamp collisions
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+          } catch (error) {
+            console.error(`Attempt ${attempts + 1} failed for ${student.firstName} ${student.lastName}:`, error);
+            
+            // Always increment attempts - any error qualifies for a retry with a new timestamp
+            attempts++;
+            console.log(`Retrying with a different LRN, attempt ${attempts}`);
+          }
+        }
+        
+        // If we've exhausted all attempts, count as an error
+        if (!isCreated && attempts >= maxAttempts) {
+          console.error(`Failed to create student after ${maxAttempts} attempts:`, student);
+          errorCount++;
+          failedItems.push({...student, error: `Failed after ${maxAttempts} attempts to generate a unique LRN`});
+        }
+      }
+    } else if (batchModalType.value === 'teacher') {
+      // Create teachers
+      for (const teacher of batchResults.value) {
+        try {
+          // Generate email and password
+          const { email, password } = generateCredentials(teacher.firstName, teacher.lastName);
+          
+          const teacherData = {
+            firstName: teacher.firstName,
+            lastName: teacher.lastName,
+            email: email,
+            password: password,
+            address: teacher.address || '',
+            role: 'teacher',
+            department: teacher.department,
+            domain: teacher.domain
+          };
+          
+          await registerTeacher(teacherData);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating teacher:', error);
+          errorCount++;
+          failedItems.push(teacher);
+        }
+      }
+    }
+    
+    // Close loading indicator
+    Swal.close();
+    
+    // Show simple completion message
+    Swal.fire({
+      icon: successCount > 0 ? 'success' : 'error',
+      title: 'Batch Creation Complete',
+      text: `Successfully created: ${successCount} ${errorCount > 0 ? `, Failed: ${errorCount}` : ''}`,
+      timer: errorCount > 0 ? undefined : 2000,
+      showConfirmButton: errorCount > 0
+    });
+    
+    // Refresh data
+    await loadAllUsers();
+    await loadGradeSections();
+    showBatchModal.value = false;
+    
+  } catch (error) {
+    console.error('Batch creation error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Batch Creation Failed',
+      text: error.message || 'An unexpected error occurred'
+    });
+  } finally {
+    batchCreating.value = false;
+  }
+};
+
+// Add dropdown state variable and toggle function
+const showAIDropdown = ref(false);
+
+// Function to toggle dropdown
+const toggleAIDropdown = () => {
+  showAIDropdown.value = !showAIDropdown.value;
+};
+
+// Export functionality
+const showExportOptions = ref(false);
+const exportOptions = ref({
+  fields: {
+    name: true,
+    email: false,
+    lrn: false,
+    grade: false,
+    section: false,
+    department: false,
+    domain: false
+  }
+});
+
+const toggleExportOptions = () => {
+  showExportOptions.value = !showExportOptions.value;
+  // Close AI dropdown if open
+  if (showAIDropdown.value) {
+    showAIDropdown.value = false;
+  }
+};
+
+const closeExportOptionsOnClickOutside = (event) => {
+  if (showExportOptions.value && !event.target.closest('.export-controls')) {
+    showExportOptions.value = false;
+  }
+};
+
+// Prepare data for export based on selected options
+const getExportData = () => {
+  let dataToExport = [];
+  let headers = [];
+  
+  // Determine which data to include based on active tab and selected fields
+  if (activeTab.value === 'students') {
+    const fields = exportOptions.value.fields;
+    
+    // Build headers array
+    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.email) headers.push('Email');
+    if (fields.lrn) headers.push('LRN');
+    if (fields.grade) headers.push('Grade Level');
+    if (fields.section) headers.push('Section');
+    
+    // Build rows
+    dataToExport = filteredUsers.value.map(student => {
+      const row = {};
+      if (fields.name) {
+        row['First Name'] = student.firstName;
+        row['Last Name'] = student.lastName;
+      }
+      if (fields.email) row['Email'] = student.email;
+      if (fields.lrn) row['LRN'] = student.lrn || 'N/A';
+      if (fields.grade) row['Grade Level'] = student.gradeLevel || 'N/A';
+      if (fields.section) row['Section'] = student.section || 'N/A';
+      return row;
+    });
+  } 
+  else if (activeTab.value === 'teachers') {
+    const fields = exportOptions.value.fields;
+    
+    // Build headers array
+    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.email) headers.push('Email');
+    if (fields.department) headers.push('Department');
+    if (fields.domain) headers.push('Domain');
+    
+    // Build rows
+    dataToExport = filteredUsers.value.map(teacher => {
+      const row = {};
+      if (fields.name) {
+        row['First Name'] = teacher.firstName;
+        row['Last Name'] = teacher.lastName;
+      }
+      if (fields.email) row['Email'] = teacher.email;
+      if (fields.department) row['Department'] = teacher.department || 'N/A';
+      if (fields.domain) row['Domain'] = teacher.domain || 'N/A';
+      return row;
+    });
+  } 
+  else if (activeTab.value === 'admins') {
+    const fields = exportOptions.value.fields;
+    
+    // Build headers array
+    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.email) headers.push('Email');
+    
+    // Build rows
+    dataToExport = filteredUsers.value.map(admin => {
+      const row = {};
+      if (fields.name) {
+        row['First Name'] = admin.firstName;
+        row['Last Name'] = admin.lastName;
+      }
+      if (fields.email) row['Email'] = admin.email;
+      return row;
+    });
+  } 
+  else if (activeTab.value === 'sections') {
+    const fields = exportOptions.value.fields;
+    
+    // Build headers array
+    if (fields.grade) headers.push('Grade');
+    if (fields.section) headers.push('Section');
+    
+    // Build rows
+    dataToExport = gradeSections.value.map(gs => {
+      const row = {};
+      if (fields.grade) row['Grade'] = gs.grade;
+      if (fields.section) row['Section'] = gs.section;
+      return row;
+    });
+  }
+  
+  return { headers, data: dataToExport };
+};
+
+// Export to Excel
+const exportToExcel = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Create worksheet with custom headers
+    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+    
+    // Create workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.value.toUpperCase());
+    
+    // Generate Excel file
+    const fileName = `NCNHS_${activeTab.value}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Data exported to Excel successfully as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to Excel error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to Excel. Please try again.'
+    });
+  }
+};
+
+// Export to PDF
+const exportToPDF = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Create PDF document
+    const doc = new jsPDF();
+    
+    // Add title
+    const title = `NCNHS ${activeTab.value.toUpperCase()} DATA`;
+    doc.setFontSize(16);
+    doc.text(title, 14, 15);
+    
+    // Add date
+    const currentDate = new Date().toLocaleDateString();
+    doc.setFontSize(10);
+    doc.text(`Generated: ${currentDate}`, 14, 22);
+    
+    // Extract values for autoTable
+    const tableData = data.map(item => Object.values(item));
+    
+    // Create table with autoTable
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 30,
+      theme: 'grid',
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        lineColor: [200, 200, 200]
+      },
+      headStyles: {
+        fillColor: [41, 128, 185],
+        textColor: 255,
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240]
+      }
+    });
+    
+    // Generate PDF filename
+    const fileName = `NCNHS_${activeTab.value}_${new Date().toISOString().slice(0, 10)}.pdf`;
+    
+    // Save PDF
+    doc.save(fileName);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Data exported to PDF successfully as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to PDF error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to PDF. Please try again.'
+    });
+  }
+};
+
+// Print data
+const printData = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to print.'
+      });
+      return;
+    }
+    
+    // Create a print-friendly display using SweetAlert
+    Swal.fire({
+      title: `NCNHS ${activeTab.value.toUpperCase()} DATA`,
+      html: `
+        <div class="print-preview">
+          <div class="print-date">Generated: ${new Date().toLocaleDateString()}</div>
+          <div class="table-container">
+            <table class="print-table">
+              <thead>
+                <tr>
+                  ${headers.map(header => `<th>${header}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${data.map(row => `
+                  <tr>
+                    ${Object.values(row).map(cell => `<td>${cell}</td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `,
+      width: '80%',
+      showCloseButton: true,
+      showConfirmButton: true,
+      confirmButtonText: 'Print',
+      customClass: {
+        popup: 'print-popup',
+        content: 'print-content'
+      },
+      didOpen: () => {
+        // Add print-specific styles
+        const style = document.createElement('style');
+        style.textContent = `
+          .print-preview {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+          }
+          .print-date {
+            color: #555;
+            font-size: 12px;
+            margin-bottom: 20px;
+          }
+          .table-container {
+            max-height: 60vh;
+            overflow-y: auto;
+          }
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          .print-table th {
+            background-color: #2980b9;
+            color: white;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+          }
+          .print-table th, .print-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+          }
+          .print-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+          }
+          .print-popup {
+            max-width: 1000px !important;
+          }
+          .print-content {
+            padding: 0;
+          }
+                     /* Remove problematic print styles */
+        `;
+        document.head.appendChild(style);
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Create a separate print-only div outside of SweetAlert
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        
+        document.body.appendChild(printFrame);
+        
+        printFrame.contentDocument.write(`
+          <html>
+            <head>
+              <title>NCNHS ${activeTab.value.toUpperCase()} DATA</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #2980b9; font-size: 20px; }
+                .print-date { color: #555; font-size: 12px; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th { background-color: #2980b9; color: white; font-weight: bold; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                tr:nth-child(even) { background-color: #f2f2f2; }
+              </style>
+            </head>
+            <body>
+              <h1>NCNHS ${activeTab.value.toUpperCase()} DATA</h1>
+              <div class="print-date">Generated: ${new Date().toLocaleDateString()}</div>
+              <table>
+                <thead>
+                  <tr>
+                    ${headers.map(header => `<th>${header}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.map(row => `
+                    <tr>
+                      ${Object.values(row).map(cell => `<td>${cell}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `);
+        
+        printFrame.contentDocument.close();
+        
+        // Wait for content to load
+        setTimeout(() => {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+          // Remove the frame after printing
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 500);
+        }, 300);
+      }
+    });
+    
+    // Hide export options after print dialog is shown
+    showExportOptions.value = false;
+  } catch (error) {
+    console.error('Print error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Print Failed',
+      text: 'Failed to prepare data for printing. Please try again.'
+    });
+  }
+};
+
+// Update event listeners for both dropdowns
+document.addEventListener('click', closeExportOptionsOnClickOutside);
+
+// Make sure to remove all event listeners when component is unmounted
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeAIDropdownOnClickOutside);
+  document.removeEventListener('click', closeExportOptionsOnClickOutside);
+});
 </script>
 
 <style scoped>
@@ -1732,8 +2774,14 @@ const handleImageError = (event, user) => {
 /* Add view controls styling */
 .view-controls {
   display: flex;
-  gap: 0.5rem;
+  justify-content: space-between;
+  align-items: center;
   margin: 1rem 0;
+}
+
+.view-toggle-group {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .view-toggle-btn {
@@ -1756,6 +2804,143 @@ const handleImageError = (event, user) => {
   background: #2196F3;
   color: white;
   border-color: #2196F3;
+}
+
+/* Export controls */
+.export-controls {
+  position: relative;
+}
+
+.export-main-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.export-main-btn:hover {
+  background: #43A047;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.export-options-header {
+  padding: 1rem;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.export-options-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.export-data-selection {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.export-data-selection h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.export-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.export-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #333;
+  cursor: pointer;
+}
+
+.export-checkboxes input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.export-actions {
+  display: flex;
+  padding: 1rem;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.export-btn {
+  flex: 1;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.export-btn .material-icons {
+  font-size: 18px;
+}
+
+.export-btn.excel {
+  background: #1D6F42;
+}
+
+.export-btn.excel:hover {
+  background: #0E5A2F;
+}
+
+.export-btn.pdf {
+  background: #E74C3C;
+}
+
+.export-btn.pdf:hover {
+  background: #C0392B;
+}
+
+.export-btn.print {
+  background: #7F8C8D;
+}
+
+.export-btn.print:hover {
+  background: #5a6a6b;
 }
 
 /* Add table styling */
@@ -1922,11 +3107,36 @@ const handleImageError = (event, user) => {
   /* View controls fixes */
   .view-controls {
     margin: 0.5rem 0;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .view-toggle-group {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
   }
 
   .view-toggle-btn {
     padding: 0.4rem 0.75rem;
     font-size: 0.8rem;
+    flex: 1;
+  }
+  
+  .export-main-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .export-dropdown {
+    width: 100%;
+    right: auto;
+    left: 0;
+  }
+  
+  .export-checkboxes {
+    grid-template-columns: 1fr;
   }
 
   /* Modal fixes */
@@ -2215,6 +3425,421 @@ const handleImageError = (event, user) => {
     width: 100%;
     padding: 0.75rem 1rem;
     font-size: 0.9rem;
+  }
+}
+
+/* AI Batch Creation Styles */
+.ai-batch-dropdown {
+  position: relative;
+  margin-bottom: 2rem;
+}
+
+.ai-batch-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  border: none;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+}
+
+.ai-batch-main-btn.active {
+  background: linear-gradient(135deg, #5E35B1 0%, #4527A0 100%);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.ai-batch-main-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-icon {
+  margin-left: auto;
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.ai-dropdown-content {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  overflow: hidden;
+  animation: fadeInDown 0.3s ease;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ai-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+}
+
+.ai-dropdown-item:hover {
+  background-color: #f5f5f5;
+}
+
+.ai-dropdown-item.student {
+  border-left-color: #4CAF50;
+}
+
+.ai-dropdown-item.teacher {
+  border-left-color: #2196F3;
+}
+
+.ai-dropdown-item.section {
+  border-left-color: #9C27B0;
+}
+
+.ai-dropdown-item .material-icons {
+  font-size: 1.25rem;
+}
+
+.ai-dropdown-item.student .material-icons {
+  color: #4CAF50;
+}
+
+.ai-dropdown-item.teacher .material-icons {
+  color: #2196F3;
+}
+
+.ai-dropdown-item.section .material-icons {
+  color: #9C27B0;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .ai-batch-main-btn {
+    padding: 0.75rem 1rem;
+  }
+  
+  .ai-dropdown-item {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Batch Modal Styles */
+.batch-modal {
+  max-width: 800px;
+  width: 90vw;
+  max-height: 85vh;
+}
+
+.batch-modal-content {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(85vh - 180px);
+}
+
+.batch-instructions {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem;
+  background-color: #e8f5e9;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #4CAF50;
+}
+
+.instructions-icon {
+  color: #4CAF50;
+  font-size: 1.5rem;
+}
+
+.instructions-text p {
+  margin: 0;
+  color: #2E7D32;
+  line-height: 1.5;
+}
+
+.batch-textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 150px;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.batch-textarea:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  outline: none;
+}
+
+.batch-defaults {
+  background-color: #f5f5f5;
+  padding: 1.25rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.batch-defaults h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: #424242;
+}
+
+.defaults-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.defaults-group {
+  flex: 1;
+  margin-bottom: 0.5rem;
+}
+
+.defaults-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  color: #616161;
+}
+
+.defaults-group input,
+.defaults-group select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.defaults-group input:focus,
+.defaults-group select:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+  outline: none;
+}
+
+.batch-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.batch-processing .spinner {
+  margin-bottom: 1rem;
+  width: 40px;
+  height: 40px;
+}
+
+.batch-results {
+  margin-top: 1.5rem;
+}
+
+.batch-results h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #424242;
+}
+
+.batch-table-container {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.batch-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.batch-table th,
+.batch-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.batch-table th {
+  background-color: #f5f5f5;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.batch-table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.batch-table tr.has-error {
+  background-color: #ffebee;
+}
+
+.batch-modal-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.analyze-btn,
+.create-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 6px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.analyze-btn {
+  background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%);
+  color: white;
+}
+
+.create-btn {
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+  color: white;
+}
+
+.analyze-btn:hover,
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.analyze-btn:disabled,
+.create-btn:disabled {
+  background: #bdbdbd;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Responsive design for batch creation */
+@media (max-width: 768px) {
+  .ai-batch-dropdown {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .ai-batch-main-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+  }
+  
+  .batch-modal {
+    width: 95vw;
+    margin: 0.5rem;
+  }
+  
+  .batch-modal-content {
+    padding: 1rem;
+  }
+  
+  .defaults-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .batch-instructions {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .batch-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .cancel-btn,
+  .analyze-btn,
+  .create-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .batch-table th,
+  .batch-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .batch-table-container {
+    max-height: 250px;
+  }
+}
+
+/* Responsive design for batch creation */
+@media (max-width: 768px) {
+  .ai-batch-dropdown {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  
+  .ai-batch-main-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .ai-dropdown-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .ai-dropdown-content {
+    width: 100%;
+    position: absolute;
+    z-index: 20;
   }
 }
 </style>

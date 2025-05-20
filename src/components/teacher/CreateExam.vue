@@ -107,6 +107,14 @@
                 <div class="question-actions">
                   <button 
                     type="button" 
+                    class="action-btn ai-improve-btn" 
+                    @click="improveQuestionWithAI(question, index)"
+                    title="Improve with AI"
+                  >
+                    <span class="material-icons-round">psychology</span>
+                  </button>
+                  <button 
+                    type="button" 
                     class="action-btn duplicate-btn" 
                     @click="duplicateQuestion(index)"
                     title="Duplicate question"
@@ -127,11 +135,25 @@
               <div class="question-content">
                 <div class="form-group">
                   <label>Question Text</label>
-                  <textarea 
-                    v-model="question.text" 
-                    required 
-                    placeholder="Enter your question here"
-                  ></textarea>
+                  <div class="question-input-wrapper">
+                    <textarea 
+                      v-model="question.text" 
+                      required 
+                      placeholder="Enter your question here"
+                    ></textarea>
+                    <button 
+                      type="button"
+                      v-if="question.text.trim().length > 10"
+                      class="detect-options-btn"
+                      @click="detectOptionsWithAI(question, index)"
+                      title="AI will analyze your question and suggest the most appropriate answer"
+                    >
+                      <span class="material-icons">auto_fix_high</span>
+                      {{ question.type === 'multipleChoice' ? 'AI: Detect Answer & Options' : 
+                         question.type === 'true_false' ? 'AI: Detect True/False' : 
+                         question.type === 'enumeration' ? 'AI: Detect Items' : 'AI: Analyze Question' }}
+                    </button>
+                  </div>
                 </div>
                 
                 <!-- Add image upload section -->
@@ -205,14 +227,25 @@
                 <div v-if="question.type === 'multipleChoice'" class="options-section">
                   <div class="options-header">
                     <h4>Answer Options</h4>
-                    <button 
-                      type="button" 
-                      class="add-option-btn"
-                      @click="addOption(question)"
-                    >
-                      <span class="material-icons-round">add</span>
-                      Add Option
-                    </button>
+                    <div class="option-header-buttons">
+                      <button 
+                        type="button" 
+                        class="ai-options-btn"
+                        @click="generateOptionsWithAI(question, index)"
+                        title="Add options based on your specified correct answer"
+                      >
+                        <span class="material-icons-round">psychology</span>
+                        Based on Answer
+                      </button>
+                      <button 
+                        type="button" 
+                        class="add-option-btn"
+                        @click="addOption(question)"
+                      >
+                        <span class="material-icons-round">add</span>
+                        Add Option
+                      </button>
+                    </div>
                   </div>
                   
                   <div class="options-list">
@@ -309,6 +342,24 @@
             >
               <span class="material-icons">library_books</span>
               Import from Bank
+            </button>
+            
+            <button 
+              type="button" 
+              class="ai-generate-button"
+              @click="generateAIQuestions"
+            >
+              <span class="material-icons">psychology</span>
+              Generate with AI
+            </button>
+            
+            <button 
+              type="button" 
+              class="document-upload-button"
+              @click="showDocumentUploadModal = true"
+            >
+              <span class="material-icons">upload_file</span>
+              Extract from Document
             </button>
           </div>
         </div>
@@ -450,6 +501,120 @@
         </button>
       </div>
     </div>
+
+    <!-- Document Upload Modal -->
+    <div 
+      class="side-panel document-panel"
+      :class="{ 'is-open': showDocumentUploadModal }"
+    >
+      <div class="side-panel-header">
+        <h2>
+          <span class="material-icons">upload_file</span>
+          Extract Questions from Document
+        </h2>
+        <button class="close-btn" @click="closeDocumentUploadModal">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="side-panel-content">
+        <div class="upload-instructions">
+          <p>Upload a PDF or DOCX file containing exam questions. The AI will automatically extract and format the questions for your exam.</p>
+          <p class="smaller">Supported formats: PDF, DOCX (max 10MB)</p>
+        </div>
+
+        <div class="document-upload-area" @click="triggerFileUpload" @dragover.prevent @drop.prevent="handleFileDrop">
+          <input 
+            type="file" 
+            ref="documentFileInput" 
+            @change="handleDocumentUpload"
+            accept=".pdf,.docx"
+            class="file-input"
+            style="display: none;"
+          />
+          
+          <div v-if="!documentFile" class="upload-placeholder">
+            <span class="material-icons large-icon">upload_file</span>
+            <p>Drag and drop your file here or click to browse</p>
+            <p class="smaller">PDF or DOCX format</p>
+          </div>
+          
+          <div v-else class="file-info">
+            <span class="material-icons file-icon">
+              {{ documentFile.name.endsWith('.pdf') ? 'picture_as_pdf' : 'description' }}
+            </span>
+            <div class="file-details">
+              <p class="file-name">{{ documentFile.name }}</p>
+              <p class="file-size">{{ formatFileSize(documentFile.size) }}</p>
+            </div>
+            <button type="button" class="remove-file-btn" @click.stop="removeDocumentFile">
+              <span class="material-icons">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div v-if="documentProcessing" class="processing-status">
+          <div class="spinner"></div>
+          <p>Processing document... This may take a minute.</p>
+        </div>
+
+        <div v-if="documentResult" class="document-result">
+          <div class="result-header">
+            <h3>Extracted Questions ({{ documentResult.length }})</h3>
+          </div>
+          
+          <div class="result-questions">
+            <div 
+              v-for="(question, index) in documentResult" 
+              :key="index"
+              class="result-question-item"
+            >
+              <div class="result-question-header">
+                <span class="question-number">Question {{ index + 1 }}</span>
+                <span class="question-type">{{ formatQuestionType(question.type) }}</span>
+              </div>
+              <p class="question-text">{{ question.text }}</p>
+              
+              <div v-if="question.type === 'multipleChoice'" class="question-options">
+                <p 
+                  v-for="(option, optIndex) in question.options" 
+                  :key="optIndex"
+                  :class="{ 'correct-answer': option === question.correctAnswer }"
+                >
+                  {{ optIndex + 1 }}. {{ option }}
+                </p>
+              </div>
+              
+              <div v-else-if="question.type === 'true_false'" class="question-options">
+                <p :class="{ 'correct-answer': question.correctAnswer === 'true' }">True</p>
+                <p :class="{ 'correct-answer': question.correctAnswer === 'false' }">False</p>
+              </div>
+              
+              <div v-else class="question-answer">
+                <p><strong>Answer:</strong> {{ question.correctAnswer }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="side-panel-footer">
+        <button 
+          class="cancel-btn" 
+          @click="closeDocumentUploadModal"
+        >
+          Cancel
+        </button>
+        <button 
+          class="import-btn" 
+          @click="importDocumentQuestions"
+          :disabled="!documentResult || documentResult.length === 0 || documentProcessing"
+        >
+          <span class="material-icons">add_circle</span>
+          Add to Exam
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -457,6 +622,8 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems } from '../../services/authService';
+import aiService from '../../services/aiService';
+import fileProcessingService from '../../services/fileProcessingService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -484,6 +651,123 @@ export default {
     const selectedBankSubject = ref('');
     const selectedBankDifficulty = ref('');
     const STORAGE_KEY = 'exam_creation_progress'; // Key for local storage
+
+    // Document upload functionality
+    const documentFileInput = ref(null);
+    const documentFile = ref(null);
+    const documentProcessing = ref(false);
+    const documentResult = ref(null);
+    const showDocumentUploadModal = ref(false);
+
+    const triggerFileUpload = () => {
+      documentFileInput.value.click();
+    };
+
+    const handleFileDrop = (e) => {
+      e.preventDefault();
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        const file = files[0];
+        if (isValidDocumentFile(file)) {
+          documentFile.value = file;
+        } else {
+          Swal.fire('Invalid File', 'Please upload a PDF or DOCX file (max 10MB)', 'error');
+        }
+      }
+    };
+
+    const handleDocumentUpload = (event) => {
+      const file = event.target.files[0];
+      if (file && isValidDocumentFile(file)) {
+        documentFile.value = file;
+      } else if (file) {
+        Swal.fire('Invalid File', 'Please upload a PDF or DOCX file (max 10MB)', 'error');
+      }
+    };
+
+    const isValidDocumentFile = (file) => {
+      const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const validExtensions = ['.pdf', '.docx'];
+      const maxSize = 10 * 1024 * 1024; // 10MB
+
+      const fileExtension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      
+      return (
+        validTypes.includes(file.type) || 
+        validExtensions.includes(fileExtension)
+      ) && file.size <= maxSize;
+    };
+
+    const formatFileSize = (bytes) => {
+      if (bytes < 1024) return bytes + ' bytes';
+      else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      else return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    };
+
+    const removeDocumentFile = () => {
+      documentFile.value = null;
+      if (documentFileInput.value) {
+        documentFileInput.value.value = '';
+      }
+    };
+
+    const processDocumentFile = async () => {
+      if (!documentFile.value) return;
+
+      try {
+        documentProcessing.value = true;
+        documentResult.value = null;
+
+        // Use the mock processing service for now until backend is ready
+        const result = await fileProcessingService.processDocumentFile(documentFile.value);
+        
+        documentResult.value = result;
+      } catch (error) {
+        console.error('Error processing document:', error);
+        Swal.fire('Processing Error', 'Failed to process the document. Please try again.', 'error');
+      } finally {
+        documentProcessing.value = false;
+      }
+    };
+
+    // Watch for file changes to automatically process
+    watch(documentFile, (newFile) => {
+      if (newFile) {
+        processDocumentFile();
+      } else {
+        documentResult.value = null;
+      }
+    });
+
+    const importDocumentQuestions = () => {
+      if (!documentResult.value || documentResult.value.length === 0) return;
+
+      // Add extracted questions to the exam
+      documentResult.value.forEach(extractedQuestion => {
+        questions.value.push({
+          text: extractedQuestion.text,
+          type: extractedQuestion.type,
+          options: extractedQuestion.options || [],
+          correctAnswer: extractedQuestion.correctAnswer,
+          imageUrl: null
+        });
+      });
+
+      closeDocumentUploadModal();
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Questions Added',
+        text: `${documentResult.value.length} questions have been added to your exam.`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    };
+
+    const closeDocumentUploadModal = () => {
+      showDocumentUploadModal.value = false;
+      // Don't reset file and results so user can still add them if they reopen
+    };
 
     // Add watchers to convert inputs to uppercase
     watch(() => examData.value.testCode, (newValue) => {
@@ -812,14 +1096,13 @@ export default {
     };
 
     const addQuestion = () => {
-      const newQuestion = {
+      questions.value.push({
         text: '',
         type: 'multipleChoice',
-        options: ['', '', '', ''], // Initialize with empty options
+        options: ['', ''],
         correctAnswer: '',
-        imageUrl: null // Initialize with no image
-      };
-      questions.value.push(newQuestion);
+        imageUrl: null
+      });
     };
 
     // Watch all questions to ensure enumeration answers are uppercase
@@ -1042,6 +1325,381 @@ export default {
       examData.value.testCode = code;
     };
 
+    // Add AI functions for exam creation
+    const generateAIQuestions = async () => {
+      const { value: formValues } = await Swal.fire({
+        title: '<span class="ai-modal-title"><i class="material-icons">psychology</i> Generate AI Questions</span>',
+        html: `
+          <div class="ai-modal-container">
+            <div class="ai-modal-intro">
+              <p>Let AI assist you in creating exam questions. Provide the details below, and the AI will generate relevant questions for your exam.</p>
+            </div>
+            
+            <div class="ai-form-fields">
+              <div class="ai-form-group">
+                <label for="swal-subject">Subject</label>
+                <input id="swal-subject" class="swal2-input ai-input" placeholder="e.g., Mathematics">
+              </div>
+              
+              <div class="ai-form-group">
+                <label for="swal-topic">Topic</label>
+                <input id="swal-topic" class="swal2-input ai-input" placeholder="e.g., Quadratic Equations">
+              </div>
+              
+              <div class="ai-form-row">
+                <div class="ai-form-group half">
+                  <label for="swal-count">Number of Questions</label>
+                  <select id="swal-count" class="swal2-select ai-select">
+                    <option value="1">1</option>
+                    <option value="3" selected>3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                  </select>
+                </div>
+                
+                <div class="ai-form-group half">
+                  <label for="swal-difficulty">Difficulty</label>
+                  <select id="swal-difficulty" class="swal2-select ai-select">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="ai-form-group">
+                <label for="swal-type">Question Type</label>
+                <select id="swal-type" class="swal2-select ai-select">
+                  <option value="multiple_choice" selected>Multiple Choice</option>
+                  <option value="true_false">True/False</option>
+                  <option value="enumeration">Enumeration</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        `,
+        customClass: {
+          container: 'ai-modal-custom-container',
+          popup: 'ai-modal-popup',
+          header: 'ai-modal-header',
+          title: 'ai-modal-title',
+          closeButton: 'ai-modal-close',
+          content: 'ai-modal-content',
+          input: 'ai-modal-input',
+          actions: 'ai-modal-actions',
+          confirmButton: 'ai-modal-confirm',
+          cancelButton: 'ai-modal-cancel',
+          footer: 'ai-modal-footer',
+          validationMessage: 'ai-modal-validation'
+        },
+        backdrop: 'rgba(0, 0, 0, 0.7)',
+        showClass: {
+          popup: 'animate__animated animate__fadeIn animate__faster'
+        },
+        hideClass: {
+          popup: 'animate__animated animate__fadeOut animate__faster'
+        },
+        buttonsStyling: false,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: '<i class="material-icons">auto_fix_high</i> Generate',
+        cancelButtonText: '<i class="material-icons">close</i> Cancel',
+        preConfirm: () => {
+          return {
+            subject: document.getElementById('swal-subject').value,
+            topic: document.getElementById('swal-topic').value,
+            count: document.getElementById('swal-count').value,
+            difficulty: document.getElementById('swal-difficulty').value,
+            type: document.getElementById('swal-type').value
+          };
+        }
+      });
+
+      if (!formValues) return;
+      
+      if (!formValues.subject || !formValues.topic) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Missing Information',
+          text: 'Subject and topic are required to generate questions.',
+          customClass: {
+            popup: 'ai-modal-popup',
+            title: 'ai-modal-title',
+            content: 'ai-modal-content',
+            confirmButton: 'ai-modal-confirm'
+          },
+          buttonsStyling: false
+        });
+        return;
+      }
+
+      try {
+        Swal.fire({
+          title: '<span class="ai-loading-title"><i class="material-icons rotating">settings</i> Generating Questions</span>',
+          html: '<p class="ai-loading-text">Please wait while the AI generates your questions...</p><div class="ai-loading-progress"></div>',
+          allowOutsideClick: false,
+          showConfirmButton: false,
+          customClass: {
+            popup: 'ai-loading-popup',
+            title: 'ai-loading-title',
+            content: 'ai-loading-content'
+          },
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const aiQuestions = await aiService.generateExamQuestions(
+          formValues.subject,
+          formValues.topic,
+          Number(formValues.count),
+          formValues.difficulty,
+          formValues.type
+        );
+
+        // Add generated questions to the exam
+        aiQuestions.forEach(q => {
+          const newQuestion = {
+            text: q.questionText,
+            type: formValues.type === 'multiple_choice' ? 'multipleChoice' : 
+                  formValues.type === 'true_false' ? 'true_false' : 'enumeration',
+            options: q.options || [],
+            correctAnswer: q.correctAnswer,
+            imageUrl: null
+          };
+          questions.value.push(newQuestion);
+        });
+
+        Swal.fire({
+          icon: 'success',
+          title: '<span class="ai-success-title">Questions Generated!</span>',
+          html: `<p class="ai-success-text">${aiQuestions.length} questions have been added to your exam.</p>`,
+          customClass: {
+            popup: 'ai-success-popup',
+            title: 'ai-success-title',
+            content: 'ai-success-content',
+            confirmButton: 'ai-success-confirm'
+          },
+          buttonsStyling: false
+        });
+      } catch (error) {
+        console.error('AI question generation failed:', error);
+        Swal.fire({
+          icon: 'error',
+          title: '<span class="ai-error-title">Generation Failed</span>',
+          html: '<p class="ai-error-text">There was an error generating questions. Please try again later.</p>',
+          customClass: {
+            popup: 'ai-error-popup',
+            title: 'ai-error-title',
+            content: 'ai-error-content',
+            confirmButton: 'ai-error-confirm'
+          },
+          buttonsStyling: false
+        });
+      }
+    };
+
+    const improveQuestionWithAI = async (question, index) => {
+      try {
+        const subject = examData.value.title.split(' ').pop() || 'General';
+        
+        Swal.fire({
+          title: 'Improving Question',
+          text: 'Please wait while the AI improves your question...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const improvedText = await aiService.improveQuestionWording(question.text, subject);
+        
+        // Update the question
+        questions.value[index].text = improvedText;
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Question Improved!',
+          text: 'The AI has improved your question wording.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('AI question improvement failed:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Improvement Failed',
+          text: 'There was an error improving the question. Please try again later.'
+        });
+      }
+    };
+
+    const generateOptionsWithAI = async (question, index) => {
+      if (question.type !== 'multipleChoice') return;
+      
+      if (!question.text) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Information',
+          text: 'Please enter the question first.'
+        });
+        return;
+      }
+      
+      // If no correct answer provided, we'll use AI to detect one
+      if (!question.correctAnswer) {
+        return detectOptionsWithAI(question, index);
+      }
+
+      try {
+        Swal.fire({
+          title: 'Generating Options',
+          text: 'Please wait while the AI generates answer options...',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        const options = await aiService.generateMultipleChoiceOptions(
+          question.text,
+          question.correctAnswer
+        );
+        
+        // Update the question's options
+        questions.value[index].options = options;
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Options Generated!',
+          text: 'The AI has generated answer options for your question.',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        console.error('AI option generation failed:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Generation Failed',
+          text: 'There was an error generating options. Please try again later.'
+        });
+      }
+    };
+    
+    const detectOptionsWithAI = async (question, index) => {
+      if (!question.text.trim()) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing Question',
+          text: 'Please enter a question first.'
+        });
+        return;
+      }
+
+      try {
+        Swal.fire({
+          title: 'Analyzing Question',
+          html: '<p>Please wait while the AI analyzes your question and determines the best answer format...</p><div class="ai-loading-progress"></div>',
+          allowOutsideClick: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // Get the best question type and answer from AI
+        const result = await aiService.detectQuestionTypeAndAnswer(question.text, question.type);
+        
+        if (result) {
+          // If AI detected a different question type, ask user if they want to change it
+          if (question.type && result.questionType && question.type !== result.questionType) {
+            const { isConfirmed } = await Swal.fire({
+              icon: 'question',
+              title: 'Question Type Suggestion',
+              html: `The AI suggests this may be better as a <b>${formatQuestionType(result.questionType)}</b> question. Would you like to change it?`,
+              showCancelButton: true,
+              confirmButtonText: 'Yes, change it',
+              cancelButtonText: 'No, keep current type'
+            });
+            
+            if (isConfirmed) {
+              // Change the question type
+              setQuestionType(question, result.questionType);
+            } else if (result.questionType !== question.type) {
+              // If user doesn't want to change type, reanalyze with forced type
+              Swal.fire({
+                title: 'Reanalyzing Question',
+                html: '<p>Generating answer for your specified question type...</p><div class="ai-loading-progress"></div>',
+                allowOutsideClick: false,
+                didOpen: () => {
+                  Swal.showLoading();
+                }
+              });
+              
+              const typeResult = await aiService.detectQuestionTypeAndAnswer(question.text, question.type);
+              // Update result to use the forced type result
+              Object.assign(result, typeResult);
+            }
+          }
+          
+          // Based on question type, update the fields
+          if (result.questionType === 'multipleChoice' || question.type === 'multipleChoice') {
+            if (result.options && result.options.length > 0) {
+              questions.value[index].options = result.options;
+              questions.value[index].correctAnswer = result.correctAnswer;
+              
+              Swal.fire({
+                icon: 'success',
+                title: 'Options Generated!',
+                html: `
+                  <p>The AI has generated multiple choice options with a suggested answer.</p>
+                  <p style="margin-top:10px;font-weight:600;color:#388E3C">Suggested correct answer: ${result.correctAnswer}</p>
+                `,
+                timer: 3000,
+                showConfirmButton: false
+              });
+            }
+          } else if (result.questionType === 'true_false' || question.type === 'true_false') {
+            // For true/false, just set the correct answer
+            questions.value[index].correctAnswer = result.answer;
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Answer Detected!',
+              html: `
+                <p>The AI suggests the correct answer is:</p>
+                <p style="margin-top:10px;font-weight:600;color:#388E3C;font-size:1.2rem;text-transform:uppercase;">${result.answer}</p>
+              `,
+              timer: 3000,
+              showConfirmButton: false
+            });
+          } else if (result.questionType === 'enumeration' || question.type === 'enumeration') {
+            // For enumeration, set the correct answer
+            questions.value[index].correctAnswer = result.answer;
+            
+            Swal.fire({
+              icon: 'success',
+              title: 'Enumeration Items Detected!',
+              html: `
+                <p>The AI suggests these items for enumeration:</p>
+                <p style="margin-top:10px;font-weight:600;color:#388E3C;line-height:1.5;">${result.answer}</p>
+              `,
+              timer: 3500,
+              showConfirmButton: false
+            });
+          }
+        } else {
+          throw new Error('Failed to analyze question');
+        }
+      } catch (error) {
+        console.error('AI question analysis failed:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Analysis Failed',
+          text: 'There was an error analyzing the question. Please try again or manually set the answer.'
+        });
+      }
+    };
+
     return {
       examData,
       questions,
@@ -1078,7 +1736,26 @@ export default {
       saveProgressToLocalStorage,
       loadProgressFromLocalStorage,
       clearLocalStorageProgress,
-      generateTestCode
+      generateTestCode,
+      generateAIQuestions,
+      improveQuestionWithAI,
+      generateOptionsWithAI,
+      detectOptionsWithAI,
+      
+      // Document upload related
+      documentFileInput,
+      documentFile,
+      documentProcessing,
+      documentResult,
+      showDocumentUploadModal,
+      triggerFileUpload,
+      handleFileDrop,
+      handleDocumentUpload,
+      removeDocumentFile,
+      processDocumentFile,
+      formatFileSize,
+      importDocumentQuestions,
+      closeDocumentUploadModal
     };
   }
 };
@@ -1263,18 +1940,20 @@ label {
 input[type="text"],
 textarea {
   width: 100%;
-  padding: 12px 15px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: all 0.3s ease;
   box-sizing: border-box;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  background-color: #ffffff;
 }
 
 input[type="text"]:focus,
 textarea:focus {
   border-color: #4CAF50;
-  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
   outline: none;
 }
 
@@ -1435,16 +2114,17 @@ small {
 }
 
 .options-header {
+  margin-bottom: 18px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .options-header h4 {
+  font-size: 1.1rem;
+  color: #333;
   margin: 0;
-  font-size: 1rem;
-  color: #444;
+  padding: 0;
 }
 
 .add-option-button {
@@ -1462,7 +2142,9 @@ small {
 }
 
 .add-option-button:hover {
-  background-color: #c8e6c9;
+  background-color: #f1f8e9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.2);
 }
 
 .options-list {
@@ -1604,13 +2286,16 @@ small {
 .publish-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+  gap: 10px;
+  padding: 14px 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-weight: 600;
+  font-size: 1.05rem;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .reset-button {
@@ -1621,30 +2306,71 @@ small {
 
 .reset-button:hover {
   background-color: #e0e0e0;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
 }
 
 .draft-button {
-  background-color: #e3f2fd;
-  color: #1976d2;
+  background: linear-gradient(135deg, #2196F3, #1976d2);
+  color: white;
+  box-shadow: 0 4px 10px rgba(33, 150, 243, 0.3);
+}
+
+.draft-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  z-index: 0;
 }
 
 .draft-button:hover {
-  background-color: #bbdefb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #1976d2, #0d47a1);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(33, 150, 243, 0.4);
 }
 
 .publish-button {
-  background-color: #4CAF50;
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
   color: white;
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.publish-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  z-index: 0;
 }
 
 .publish-button:hover {
-  background-color: #43A047;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+}
+
+.reset-button .material-icons-round,
+.draft-button .material-icons-round,
+.publish-button .material-icons-round {
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
+}
+
+.reset-button span:not(.material-icons-round),
+.draft-button span:not(.material-icons-round),
+.publish-button span:not(.material-icons-round) {
+  position: relative;
+  z-index: 1;
 }
 
 /* Transitions */
@@ -1675,6 +2401,10 @@ small {
 
 .fa-spinner {
   animation: spin 1s linear infinite;
+}
+
+.rotating {
+  animation: spin 2s linear infinite;
 }
 
 /* Responsive Adjustments */
@@ -1749,10 +2479,9 @@ small {
 
   /* Question form adjustments */
   .question-item {
-    margin: 0;
-    border-radius: 0;
-    box-shadow: none;
-    border-bottom: 1px solid #e0e0e0;
+    margin: 0 0 15px 0;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
   }
 
   .question-content {
@@ -1932,11 +2661,60 @@ small {
     font-size: 18px;
   }
 
-  /* Icons size */
-  .material-icons,
-  .material-icons-round {
-    font-size: 20px;
-  }
+  /* Question input with detect button */
+.question-input-wrapper {
+  position: relative;
+  margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.question-input-wrapper textarea {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+
+.detect-options-btn {
+  position: relative;
+  align-self: flex-end;
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  margin-top: 8px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+  z-index: 5;
+  max-width: fit-content;
+  height: auto;
+  min-height: 42px;
+}
+
+.detect-options-btn:hover {
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.detect-options-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Icons size */
+.material-icons,
+.material-icons-round {
+  font-size: 20px;
+}
 }
 
 /* Add iOS-specific fixes */
@@ -2031,14 +2809,19 @@ small {
 .add-option-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  gap: 8px;
+  padding: 10px 15px;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  background-color: white;
+  color: #388E3C;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.1);
+  height: auto;
+  min-height: 42px;
 }
 
 .add-option-btn .material-icons-round {
@@ -2391,12 +3174,23 @@ small {
 }
 
 .side-panel-footer {
-  padding: 15px 20px;
-  background: #f5f5f5;
-  border-top: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  cursor: pointer;
+}
+
+.import-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 .bank-questions-list {
@@ -2680,5 +3474,903 @@ small {
   .selection-info {
     font-size: 0.8rem;
   }
+}
+
+.ai-generate-button {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  width: 100%;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-generate-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  z-index: 0;
+}
+
+.ai-generate-button:hover {
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+}
+
+.ai-improve-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.ai-improve-btn:hover {
+  background-color: #388E3C;
+}
+
+.ai-options-btn {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+  height: auto;
+  min-height: 42px;
+}
+
+.ai-options-btn:hover {
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.ai-options-btn .material-icons-round {
+  font-size: 20px;
+}
+
+.option-header-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* SweetAlert custom styling */
+:global(.swal-form-group) {
+  margin-bottom: 1rem;
+  text-align: left;
+}
+
+:global(.swal-form-group label) {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+  color: #333;
+}
+
+:global(.swal2-select) {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Document upload button */
+.document-upload-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: #f0f4c3;
+  border: 2px dashed #cddc39;
+  color: #827717;
+}
+
+.document-upload-button:hover {
+  background-color: #e6ee9c;
+  border-color: #827717;
+  transform: translateY(-2px);
+}
+
+/* Document panel styles */
+.document-panel {
+  width: 600px;
+}
+
+.upload-instructions {
+  background-color: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.upload-instructions p {
+  margin: 0 0 10px 0;
+}
+
+.upload-instructions p.smaller {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.document-upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  cursor: pointer;
+  background-color: #f9f9f9;
+  transition: all 0.3s;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.document-upload-area:hover {
+  border-color: #4CAF50;
+  background-color: #f0f9f0;
+}
+
+.large-icon {
+  font-size: 48px;
+  color: #bbb;
+  margin-bottom: 15px;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 15px;
+  background-color: #e8f5e9;
+  border-radius: 8px;
+}
+
+.file-icon {
+  font-size: 36px;
+  margin-right: 15px;
+  color: #4CAF50;
+}
+
+.file-details {
+  flex: 1;
+  text-align: left;
+}
+
+.file-name {
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.file-size {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  color: #f44336;
+  cursor: pointer;
+}
+
+.processing-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #bbdefb;
+  border-top-color: #2196F3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.document-result {
+  margin-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  padding-top: 20px;
+}
+
+.result-header {
+  margin-bottom: 15px;
+}
+
+.result-header h3 {
+  margin: 0;
+}
+
+.result-questions {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.result-question-item {
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.result-question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.question-number {
+  font-weight: 500;
+}
+
+.question-type {
+  font-size: 0.85rem;
+  background-color: #f5f5f5;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.question-text {
+  margin-bottom: 15px;
+}
+
+.question-options p, .question-answer p {
+  margin: 5px 0;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.correct-answer {
+  background-color: #e8f5e9;
+  font-weight: 500;
+}
+
+.side-panel-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  cursor: pointer;
+}
+
+.import-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Responsive styles for document upload */
+@media (max-width: 768px) {
+  .document-panel {
+    width: 100%;
+  }
+  
+  .document-upload-area {
+    padding: 15px;
+    min-height: 150px;
+  }
+  
+  .large-icon {
+    font-size: 36px;
+  }
+  
+  .result-questions {
+    max-height: 300px;
+  }
+}
+
+/* AI Modal Styling - Updated to match theme */
+:global(.ai-modal-custom-container) {
+  padding: 0;
+}
+
+:global(.ai-modal-popup) {
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  border: none;
+  max-width: 500px;
+  width: 95%;
+  padding: 0;
+  overflow: visible;
+  margin: 20px auto;
+  position: relative;
+}
+
+:global(.ai-modal-header) {
+  padding: 20px 20px 12px;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  position: relative;
+  border-bottom: none;
+}
+
+:global(.ai-modal-header::before) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+:global(.ai-modal-title) {
+  font-size: 1.7rem;
+  color: #ffffff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+:global(.ai-modal-title i) {
+  color: #ffffff;
+  font-size: 1.7rem;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+:global(.ai-modal-content) {
+  padding: 25px;
+  overflow: hidden;
+}
+
+:global(.ai-modal-intro) {
+  margin-bottom: 25px;
+  color: #444;
+  background-color: #e8f5e9;
+  padding: 18px;
+  border-radius: 12px;
+  border-left: 5px solid #4CAF50;
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.1);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+:global(.ai-form-fields) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+}
+
+:global(.ai-form-group) {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:global(.ai-form-group label) {
+  font-weight: 600;
+  color: #444;
+  font-size: 1rem;
+  margin-bottom: 5px;
+}
+
+:global(.ai-form-row) {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+:global(.ai-form-group.half) {
+  flex: 1;
+}
+
+:global(.ai-input) {
+  padding: 12px 15px !important;
+  border-radius: 10px !important;
+  border: 2px solid #e0e0e0 !important;
+  background-color: #ffffff !important;
+  transition: all 0.3s ease !important;
+  font-size: 1rem !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+  outline: none !important;
+}
+
+:global(.ai-input:focus) {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15) !important;
+  background-color: #fff !important;
+}
+
+:global(.ai-input::placeholder) {
+  color: #aaa !important;
+}
+
+:global(.ai-select) {
+  padding: 12px 15px !important;
+  border-radius: 10px !important;
+  border: 2px solid #e0e0e0 !important;
+  background-color: #ffffff !important;
+  transition: all 0.3s ease !important;
+  font-size: 1rem !important;
+  height: auto !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%234CAF50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 16px !important;
+  padding-right: 40px !important;
+}
+
+:global(.ai-select:focus) {
+  border-color: #4CAF50 !important;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15) !important;
+  background-color: #fff !important;
+}
+
+:global(.ai-modal-actions) {
+  padding: 15px 20px;
+  border-top: 1px solid #eaeaea;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  background-color: #fafafa;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:global(.ai-modal-confirm) {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+:global(.ai-modal-confirm:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+}
+
+:global(.ai-modal-cancel) {
+  background-color: #f5f5f5;
+  color: #444;
+  border: 1px solid #e0e0e0;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  transition: all 0.2s;
+}
+
+:global(.ai-modal-cancel:hover) {
+  background-color: #eeeeee;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Loading Modal */
+:global(.ai-loading-popup) {
+  border-radius: 16px;
+  width: 420px;
+  padding: 35px;
+  background: #ffffff;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+:global(.ai-loading-title) {
+  color: #4CAF50;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  font-weight: 700;
+}
+
+:global(.ai-loading-text) {
+  color: #555;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+:global(.ai-loading-progress) {
+  height: 6px;
+  background: linear-gradient(to right, #4CAF50, #81c784);
+  border-radius: 3px;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+}
+
+:global(.ai-loading-progress::after) {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.2),
+    rgba(255, 255, 255, 0.8),
+    rgba(255, 255, 255, 0.2)
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+/* Success Modal */
+:global(.ai-success-popup) {
+  border-radius: 16px;
+  width: 420px;
+  padding: 35px;
+  background: #ffffff;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+:global(.ai-success-title) {
+  color: #4CAF50;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+:global(.ai-success-text) {
+  color: #555;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+:global(.ai-success-confirm) {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  border: none;
+  padding: 13px 30px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  margin: 0 auto;
+  display: block;
+}
+
+:global(.ai-success-confirm:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* Error Modal */
+:global(.ai-error-popup) {
+  border-radius: 16px;
+  width: 420px;
+  padding: 35px;
+  background: #ffffff;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+}
+
+:global(.ai-error-title) {
+  color: #f44336;
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+:global(.ai-error-text) {
+  color: #555;
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+  line-height: 1.5;
+}
+
+:global(.ai-error-confirm) {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  color: white;
+  border: none;
+  padding: 13px 30px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+  margin: 0 auto;
+  display: block;
+}
+
+:global(.ai-error-confirm:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(244, 67, 54, 0.4);
+}
+
+/* Mobile optimization for AI Modal */
+@media (max-width: 768px) {
+  :global(.ai-modal-popup) {
+    width: 92%;
+    margin: 10px auto;
+    max-height: 90vh;
+    overflow: visible;
+  }
+  
+  :global(.ai-modal-container) {
+    overflow: hidden;
+    width: 100%;
+  }
+  
+  :global(.ai-modal-header) {
+    padding: 18px 15px 10px;
+  }
+  
+  :global(.ai-modal-content) {
+    padding: 15px;
+  }
+  
+  :global(.ai-modal-intro) {
+    padding: 12px;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+  }
+  
+  :global(.ai-form-row) {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  :global(.ai-form-fields) {
+    gap: 15px;
+  }
+  
+  :global(.ai-modal-title) {
+    font-size: 1.3rem;
+  }
+  
+  :global(.ai-modal-title i) {
+    font-size: 1.3rem;
+  }
+  
+  :global(.ai-form-group) {
+    gap: 5px;
+  }
+  
+  :global(.ai-form-group label) {
+    font-size: 0.9rem;
+  }
+  
+  :global(.ai-input), 
+  :global(.ai-select) {
+    font-size: 16px !important; /* Prevents iOS zoom */
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
+  }
+  
+  :global(.ai-select) {
+    padding-right: 35px !important;
+  }
+  
+  :global(.ai-modal-actions) {
+    padding: 15px;
+    flex-direction: column-reverse;
+    gap: 10px;
+  }
+  
+  :global(.ai-modal-confirm),
+  :global(.ai-modal-cancel) {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  
+  :global(.ai-loading-popup),
+  :global(.ai-success-popup),
+  :global(.ai-error-popup) {
+    width: 90%;
+    padding: 20px;
+  }
+  
+  :global(.ai-loading-title),
+  :global(.ai-success-title),
+  :global(.ai-error-title) {
+    font-size: 1.2rem;
+  }
+  
+  :global(.ai-loading-text),
+  :global(.ai-success-text),
+  :global(.ai-error-text) {
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+  }
+  
+  :global(.ai-success-confirm),
+  :global(.ai-error-confirm) {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+}
+
+/* Icons size */
+.material-icons,
+.material-icons-round {
+  font-size: 20px;
+}
+
+/* Mobile styling for detect options button */
+@media (max-width: 768px) {
+  .detect-options-btn {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    width: 100%;
+    justify-content: center;
+    max-width: 100%;
+    margin-top: 5px;
+  }
+  
+  .detect-options-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .question-input-wrapper {
+    gap: 5px;
+  }
+  
+  .question-input-wrapper textarea {
+    min-height: 100px;
+    margin-bottom: 0;
+  }
+}
+
+/* AI component mobile improvements */
+.ai-generate-button {
+  padding: 15px 12px;
+  gap: 8px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.ai-generate-button span:not(.material-icons) {
+  font-size: 1rem;
+}
+
+.ai-improve-btn,
+.ai-options-btn {
+  width: auto;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.options-header {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.option-header-buttons {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.questions-actions {
+  padding: 12px;
+  gap: 8px;
+}
+
+:global(.ai-modal-container) {
+  width: 100%;
+  overflow: hidden;
+}
+
+:global(.ai-form-fields) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
 }
 </style>
