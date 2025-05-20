@@ -136,11 +136,11 @@
                 <div class="form-group">
                   <label>Question Text</label>
                   <div class="question-input-wrapper">
-                    <textarea 
-                      v-model="question.text" 
-                      required 
-                      placeholder="Enter your question here"
-                    ></textarea>
+                  <textarea 
+                    v-model="question.text" 
+                    required 
+                    placeholder="Enter your question here"
+                  ></textarea>
                     <button 
                       type="button"
                       v-if="question.text.trim().length > 10"
@@ -2707,14 +2707,14 @@ small {
 }
 
 .detect-options-btn .material-icons {
-  font-size: 18px;
-}
+    font-size: 18px;
+  }
 
-/* Icons size */
-.material-icons,
-.material-icons-round {
-  font-size: 20px;
-}
+  /* Icons size */
+  .material-icons,
+  .material-icons-round {
+    font-size: 20px;
+  }
 }
 
 /* Add iOS-specific fixes */

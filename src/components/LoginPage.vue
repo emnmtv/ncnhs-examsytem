@@ -85,6 +85,10 @@ const handleLogin = async () => {
 const togglePassword = () => {
   showPassword.value = !showPassword.value;
 };
+
+const goToSurvey = () => {
+  router.push('/answer-survey');
+};
 </script>
 
 <template>
@@ -171,6 +175,12 @@ const togglePassword = () => {
         </div>
       </div>
     </div>
+    
+    <!-- Survey Button -->
+    <button @click="goToSurvey" class="survey-button" :class="{ 'button-visible': pageLoaded }">
+      <span class="material-icons">poll</span>
+      <span class="button-text">Answer Survey</span>
+    </button>
   </div>
 </template>
 
@@ -194,6 +204,50 @@ const togglePassword = () => {
   margin: 0;
   overflow: hidden;
   position: relative;
+}
+
+/* Survey Button Styles */
+.survey-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(25, 167, 89, 0.7);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 8px 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(20px);
+  z-index: 1000;
+  font-size: 0.9rem;
+}
+
+.survey-button.button-visible {
+  opacity: 0.8;
+  transform: translateY(0);
+  transition-delay: 1.2s;
+}
+
+.survey-button:hover {
+  background: rgba(25, 167, 89, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  opacity: 1;
+}
+
+.survey-button .material-icons {
+  font-size: 18px;
+}
+
+.button-text {
+  font-weight: 500;
 }
 
 .login-content {
@@ -532,6 +586,29 @@ label {
   .login-header {
     margin-top: 1rem;
   }
+  
+  /* Reposition survey button for mobile */
+  .survey-button {
+    bottom: auto;
+    top: 60px;
+    right: 15px;
+    z-index: 10;
+  }
+  
+  /* Hide text, show only icon on mobile */
+  .survey-button .button-text {
+    display: none;
+  }
+  
+  /* Make the button smaller and circular for icon-only view */
+  .survey-button {
+    padding: 8px;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 576px) {
@@ -584,6 +661,17 @@ label {
   
   .login-button {
     padding: 0.9rem;
+  }
+  
+  .survey-button {
+    top: 50px;
+    right: 10px;
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .survey-button .material-icons {
+    font-size: 16px;
   }
 }
 </style>

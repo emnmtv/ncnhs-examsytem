@@ -95,22 +95,22 @@
     <!-- View toggle and export buttons -->
     <div class="view-controls">
       <div class="view-toggle-group">
-        <button 
-          class="view-toggle-btn" 
-          :class="{ active: viewMode === 'grid' }"
-          @click="viewMode = 'grid'"
-        >
-          <span class="material-icons">grid_view</span>
-          Grid View
-        </button>
-        <button 
-          class="view-toggle-btn" 
-          :class="{ active: viewMode === 'table' }"
-          @click="viewMode = 'table'"
-        >
-          <span class="material-icons">table_rows</span>
-          Table View
-        </button>
+      <button 
+        class="view-toggle-btn" 
+        :class="{ active: viewMode === 'grid' }"
+        @click="viewMode = 'grid'"
+      >
+        <span class="material-icons">grid_view</span>
+        Grid View
+      </button>
+      <button 
+        class="view-toggle-btn" 
+        :class="{ active: viewMode === 'table' }"
+        @click="viewMode = 'table'"
+      >
+        <span class="material-icons">table_rows</span>
+        Table View
+      </button>
       </div>
       
       <div class="export-controls">
@@ -663,7 +663,7 @@
           <div class="modal-title">
             <span class="material-icons" :style="{ color: batchModalType === 'student' ? '#4CAF50' : batchModalType === 'teacher' ? '#2196F3' : '#9C27B0' }">psychology</span>
             <h2>AI Batch {{ batchModalType === 'section' ? 'Grade Section' : batchModalType.charAt(0).toUpperCase() + batchModalType.slice(1) }} Creation</h2>
-          </div>
+  </div>
           <button class="close-btn" @click="showBatchModal = false">
             <span class="material-icons">close</span>
           </button>

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue';
-import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl, deleteProfilePicture } from '@/services/authService';
+import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl, deleteProfilePicture, getProfileEditPermissions } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -15,6 +15,12 @@ const profile = ref({
   role: '',
   createdAt: '',
   profilePicture: null
+});
+
+// Add profile edit permissions
+const editPermissions = ref({
+  canEditLRN: false,
+  canEditGradeSection: false
 });
 
 // Add profile picture data
@@ -60,6 +66,7 @@ const selectedCameraId = ref('');
 
 onMounted(async () => {
   await loadProfile();
+  await loadProfileEditPermissions();
 });
 
 const loadProfile = async () => {
@@ -83,6 +90,18 @@ const loadProfile = async () => {
     });
   } finally {
     loading.value = false;
+  }
+};
+
+// Load profile edit permissions
+const loadProfileEditPermissions = async () => {
+  try {
+    const permissions = await getProfileEditPermissions();
+    editPermissions.value = permissions;
+    console.log('Profile edit permissions loaded:', permissions);
+  } catch (err) {
+    console.error('Failed to load profile edit permissions:', err);
+    // Keep default (false) permissions on error
   }
 };
 
@@ -823,26 +842,37 @@ onUnmounted(() => {
             </div>
 
             <div class="form-group">
-              <label>LRN</label>
+              <label>
+                LRN
+                <span v-if="!editPermissions.canEditLRN && isEditing" class="permission-note">
+                  (Editing disabled by admin)
+                </span>
+              </label>
               <div class="input-wrapper">
                 <span class="material-icons-round">badge</span>
                 <input 
                   v-model="profile.lrn" 
-                  type="number" 
-                  readonly
-                  placeholder="LRN cannot be changed"
+                  type="text" 
+                  :readonly="!isEditing || !editPermissions.canEditLRN"
+                  :class="{ 'editable': isEditing && editPermissions.canEditLRN }"
+                  :placeholder="!editPermissions.canEditLRN ? 'LRN cannot be changed' : ''"
                 />
               </div>
             </div>
 
             <div class="form-group">
-              <label>Grade Level</label>
+              <label>
+                Grade Level
+                <span v-if="!editPermissions.canEditGradeSection && isEditing" class="permission-note">
+                  (Editing disabled by admin)
+                </span>
+              </label>
               <div class="input-wrapper">
                 <span class="material-icons-round">school</span>
                 <select 
                   v-model="profile.gradeLevel" 
-                  :disabled="!isEditing"
-                  :class="{ 'editable': isEditing }"
+                  :disabled="!isEditing || !editPermissions.canEditGradeSection"
+                  :class="{ 'editable': isEditing && editPermissions.canEditGradeSection }"
                 >
                   <option value="">Select Grade</option>
                   <option v-for="grade in [7, 8, 9, 10, 11, 12]" :key="grade" :value="grade">
@@ -853,13 +883,18 @@ onUnmounted(() => {
             </div>
 
             <div class="form-group">
-              <label>Section</label>
+              <label>
+                Section
+                <span v-if="!editPermissions.canEditGradeSection && isEditing" class="permission-note">
+                  (Editing disabled by admin)
+                </span>
+              </label>
               <div class="input-wrapper">
                 <span class="material-icons-round">groups</span>
                 <select 
                   v-model="profile.section" 
-                  :disabled="!isEditing"
-                  :class="{ 'editable': isEditing }"
+                  :disabled="!isEditing || !editPermissions.canEditGradeSection"
+                  :class="{ 'editable': isEditing && editPermissions.canEditGradeSection }"
                 >
                   <option value="">Select Section</option>
                   <option v-for="section in availableSections" :key="section.id" :value="section.section">
@@ -1641,5 +1676,12 @@ onUnmounted(() => {
     flex: 1;
     min-width: 100px;
   }
+}
+
+.permission-note {
+  font-size: 0.75rem;
+  color: #f44336;
+  font-style: italic;
+  margin-left: 0.5rem;
 }
 </style>

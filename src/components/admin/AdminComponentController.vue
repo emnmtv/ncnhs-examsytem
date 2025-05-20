@@ -11,6 +11,55 @@
       <div class="header-background">CONTROL</div>
     </div>
 
+    <!-- Profile Edit Permissions Section -->
+    <div class="permissions-section">
+      <h2 class="section-title">
+        <span class="material-icons">settings</span>
+        Profile Edit Permissions
+      </h2>
+      <p class="section-description">Control which profile fields students can edit</p>
+
+      <div class="permissions-grid">
+        <div class="permission-card">
+          <div class="permission-header">
+            <span class="material-icons">badge</span>
+            <h3>LRN Editing</h3>
+          </div>
+          <p class="permission-description">Allow students to edit their Learner Reference Number (LRN)</p>
+          <div class="permission-controls">
+            <label class="switch">
+              <input 
+                type="checkbox" 
+                v-model="profilePermissions.canEditLRN"
+                @change="updateProfilePermissions"
+              >
+              <span class="slider"></span>
+            </label>
+            <span class="status-text">{{ profilePermissions.canEditLRN ? 'Enabled' : 'Disabled' }}</span>
+          </div>
+        </div>
+
+        <div class="permission-card">
+          <div class="permission-header">
+            <span class="material-icons">school</span>
+            <h3>Grade & Section Editing</h3>
+          </div>
+          <p class="permission-description">Allow students to edit their grade level and section</p>
+          <div class="permission-controls">
+            <label class="switch">
+              <input 
+                type="checkbox" 
+                v-model="profilePermissions.canEditGradeSection"
+                @change="updateProfilePermissions"
+              >
+              <span class="slider"></span>
+            </label>
+            <span class="status-text">{{ profilePermissions.canEditGradeSection ? 'Enabled' : 'Disabled' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="controls-section">
       <div class="role-tabs">
         <button 
@@ -51,7 +100,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { getComponentSettings, updateComponentSetting, initializeComponentSettings } from '@/services/authService';
+import { getComponentSettings, updateComponentSetting, initializeComponentSettings, getProfileEditPermissions, updateProfileEditPermissions } from '@/services/authService';
 import Swal from 'sweetalert2';
 
 const selectedRole = ref('student');
@@ -61,9 +110,16 @@ const componentSettings = ref({
   admin: []
 });
 
+// Add profile edit permissions state
+const profilePermissions = ref({
+  canEditLRN: false,
+  canEditGradeSection: false
+});
+
 // Load component settings on mount
 onMounted(async () => {
   await loadComponentSettings();
+  await loadProfilePermissions();
 });
 
 const loadComponentSettings = async () => {
@@ -92,6 +148,51 @@ const loadComponentSettings = async () => {
   }
 };
 
+// Load profile edit permissions
+const loadProfilePermissions = async () => {
+  try {
+    const permissions = await getProfileEditPermissions();
+    profilePermissions.value = permissions;
+  } catch (error) {
+    console.error('Failed to load profile edit permissions:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load profile edit permissions'
+    });
+  }
+};
+
+// Update profile edit permissions
+const updateProfilePermissions = async () => {
+  try {
+    await updateProfileEditPermissions({
+      canEditLRN: profilePermissions.value.canEditLRN,
+      canEditGradeSection: profilePermissions.value.canEditGradeSection
+    });
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Updated Successfully',
+      text: `Profile edit permissions have been updated`,
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000
+    });
+  } catch (error) {
+    console.error('Failed to update profile edit permissions:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: 'Failed to update profile edit permissions'
+    });
+    
+    // Revert the toggle if the update failed
+    await loadProfilePermissions();
+  }
+};
+
 const getIconForPath = (path) => {
   const iconMap = {
     // Student paths
@@ -101,7 +202,7 @@ const getIconForPath = (path) => {
     '/student-exams': 'assignment',
     '/exam-history': 'history',
     '/student-profile': 'person',
-    
+    '/answer-survey': 'assignment',
     // Teacher paths
     '/teacher-subjects': 'subject',
     '/create-exam': 'note_add',
@@ -205,6 +306,70 @@ const getComponentsByRole = computed(() => {
   height: 1px;
   background-color: #e0e0e0;
   margin: 1.5rem 0;
+}
+
+/* Permissions Section Styles */
+.permissions-section {
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #159750;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.section-description {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.permissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.permission-card {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.permission-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.permission-header h3 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.permission-header .material-icons {
+  color: #159750;
+}
+
+.permission-description {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 15px;
+}
+
+.permission-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .role-tabs {
@@ -316,6 +481,10 @@ input:checked + .slider:before {
   }
   
   .components-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .permissions-grid {
     grid-template-columns: 1fr;
   }
   

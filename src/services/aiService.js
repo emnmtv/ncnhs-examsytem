@@ -1152,4 +1152,4 @@ export default {
   detectQuestionTypeAndAnswer,
   parseAndGenerateUsers,
   parseAndGenerateGradeSections
-};
+}; 

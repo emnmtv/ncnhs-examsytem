@@ -1,4 +1,3 @@
-
 export const BASE_URL = 'http://192.168.0.101:3300/auth';
 export const SOCKET_URL = 'http://192.168.0.101:3300';
 const decodeToken = (token) => {
@@ -165,9 +164,15 @@ export const updateProfile = async (profileData) => {
       throw new Error("Password must be at least 8 characters");
     }
 
+    // Ensure lrn is sent as a string
+    if (profileData.lrn !== undefined && profileData.lrn !== null) {
+      profileData.lrn = String(profileData.lrn);
+    }
+
     console.log('AuthService: Updating profile', { 
       ...profileData, 
-      password: profileData.password ? '********' : undefined 
+      password: profileData.password ? '********' : undefined,
+      lrn: profileData.lrn
     });
 
     const response = await fetch(`${BASE_URL}/profile`, {
@@ -2519,6 +2524,69 @@ export const initializeComponentSettings = async () => {
     return await response.json();
   } catch (error) {
     console.error('Error initializing component settings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get profile edit permissions
+ * @returns {Promise<Object>} Object with permission settings
+ */
+export const getProfileEditPermissions = async () => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/profile-edit-permissions`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch profile edit permissions");
+    }
+
+    const data = await response.json();
+    return data.permissions;
+  } catch (error) {
+    console.error("Error fetching profile edit permissions:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update profile edit permissions
+ * @param {Object} permissions Object containing permission settings
+ * @param {boolean} [permissions.canEditLRN] Whether students can edit their LRN
+ * @param {boolean} [permissions.canEditGradeSection] Whether students can edit their grade and section
+ * @returns {Promise<Object>} Updated permissions
+ */
+export const updateProfileEditPermissions = async (permissions) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/profile-edit-permissions`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(permissions)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update profile edit permissions");
+    }
+
+    const data = await response.json();
+    return data.permissions;
+  } catch (error) {
+    console.error("Error updating profile edit permissions:", error);
     throw error;
   }
 };

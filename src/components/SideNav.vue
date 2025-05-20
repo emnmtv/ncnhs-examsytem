@@ -141,7 +141,7 @@ const navigationItems = {
    
     { name: 'Exams', path: '/student-exams', icon: 'assignment' },
     { name: 'Exam History', path: '/exam-history', icon: 'history' },
-    
+    { name: 'Survey', path: '/answer-survey', icon: 'assignment' },
     // {name:'Game', path:'/game', icon:'controller'},
     { name: 'Profile', path: '/student-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
