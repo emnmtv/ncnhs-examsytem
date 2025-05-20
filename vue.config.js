@@ -2,10 +2,7 @@ const { defineConfig } = require('@vue/cli-service')
 
 module.exports = defineConfig({
   transpileDependencies: true,
-  
-  // Disable source maps in production
   productionSourceMap: false,
-  
   // Set the title consistently for webpack
   chainWebpack: config => {
     config.plugin('html').tap(args => {
@@ -13,22 +10,42 @@ module.exports = defineConfig({
       return args;
     });
     
-    // Add code obfuscation in production
+    // Optimize production build to avoid stack overflow
     if (process.env.NODE_ENV === 'production') {
-      const JavaScriptObfuscator = require('webpack-obfuscator');
-      config.plugin('obfuscator').use(JavaScriptObfuscator, [{
-        rotateStringArray: true,
-        stringArray: true,
-        stringArrayEncoding: ['base64'],
-        identifierNamesGenerator: 'hexadecimal',
-        renameGlobals: false,
-        selfDefending: true
-      }]);
+      // Increase optimization concatenation limit
+      config.optimization.concatenateModules(true);
+      config.optimization.set('concatenateModules', true);
+      
+      // Add terser options to prevent excessive optimization that may cause recursion
+      config.optimization.minimizer('terser').tap((args) => {
+        args[0].terserOptions = {
+          ...args[0].terserOptions,
+          compress: {
+            ...args[0].terserOptions.compress,
+            drop_console: true,
+            pure_funcs: ['console.log'],
+            passes: 2,
+            keep_infinity: true
+          },
+          safari10: true,
+          output: {
+            comments: false,
+            ascii_only: true
+          }
+        };
+        return args;
+      });
     }
   },
   
   devServer: {
     port: 4201,
+    https: process.env.NODE_ENV === 'production',
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+      'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
+    }
   },
   pwa: {
     name: 'NCNHS Assessment Portal',
@@ -93,6 +110,9 @@ module.exports = defineConfig({
       skipWaiting: true,
       clientsClaim: true,
       exclude: [/\.map$/, /_redirects/],
+      navigateFallback: '/index.html',
+      navigateFallbackDenylist: [/^\/api/, /^\/admin/],
+      directoryIndex: 'index.html',
       runtimeCaching: [
         {
           urlPattern: new RegExp('^https://fonts.(?:googleapis|gstatic).com/(.*)'),
@@ -104,8 +124,45 @@ module.exports = defineConfig({
               maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
             }
           }
+        },
+        {
+          urlPattern: /\.(?:js|css)$/,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'static-resources',
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 60 * 60 * 24 * 7 // 1 week
+            }
+          }
+        },
+        {
+          urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images',
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+            }
+          }
         }
       ]
+    }
+  },
+  configureWebpack: {
+    optimization: {
+      splitChunks: {
+        chunks: 'all',
+        minSize: 30000,
+        maxSize: 250000,
+        minChunks: 1,
+        maxAsyncRequests: 5,
+        maxInitialRequests: 3
+      }
+    },
+    performance: {
+      hints: false
     }
   }
 })
