@@ -23,6 +23,9 @@
       <button class="action-btn export-btn" @click="exportData">
         <i class="fas fa-file-export"></i> Export Data
       </button>
+      <button class="action-btn pdf-btn" @click="downloadPDF">
+        <i class="fas fa-file-pdf"></i> Download PDF
+      </button>
     </div>
 
     <!-- Loading State -->
@@ -67,11 +70,17 @@
           </div>
           <div class="stat-item">
             <div class="stat-label">Highest Score</div>
-            <div class="stat-value excellent">{{ mpsData.overallStats.highestScore.toFixed(1) }}%</div>
+            <div class="stat-value excellent">
+              {{ mpsData.overallStats.highestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+              ({{ mpsData.overallStats.highestPercentage?.toFixed(1) || 0 }}%)
+            </div>
           </div>
           <div class="stat-item">
             <div class="stat-label">Lowest Score</div>
-            <div class="stat-value needs-improvement">{{ mpsData.overallStats.lowestScore.toFixed(1) }}%</div>
+            <div class="stat-value needs-improvement">
+              {{ mpsData.overallStats.lowestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+              ({{ mpsData.overallStats.lowestPercentage?.toFixed(1) || 0 }}%)
+            </div>
           </div>
         </div>
       </div>
@@ -240,6 +249,17 @@
               </div>
             </div>
           </div>
+
+          <div class="settings-section">
+            <h3>Data Display</h3>
+            <div class="toggle-option">
+              <label>
+                <input type="checkbox" v-model="showRawScores">
+                <span>Emphasize Raw Scores</span>
+              </label>
+              <div class="option-help">When enabled, raw scores (e.g., 18/20) will be emphasized in charts</div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -282,8 +302,14 @@
                   <strong>{{ section.mps.toFixed(1) }}%</strong>
                 </td>
                 <td>{{ section.studentCount }}</td>
-                <td class="excellent">{{ section.highestScore.toFixed(1) }}%</td>
-                <td class="needs-improvement">{{ section.lowestScore.toFixed(1) }}%</td>
+                <td class="excellent">
+                  {{ section.highestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                  ({{ section.highestPercentage?.toFixed(1) || 0 }}%)
+                </td>
+                <td class="needs-improvement">
+                  {{ section.lowestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                  ({{ section.lowestPercentage?.toFixed(1) || 0 }}%)
+                </td>
                 <td>
                   <div class="distribution-badges">
                     <span class="badge excellent">{{ section.distribution.excellent }}</span>
@@ -308,6 +334,119 @@
         </div>
       </div>
     </div>
+
+    <!-- Add this template for print that shows only when printing -->
+    <div v-if="mpsData" class="print-only">
+      <div class="print-header">
+        <img :src="NcnhsLogo" alt="NCNHS Logo" class="print-logo">
+        <div class="print-title">
+          <h1>New Cabalan National High School</h1>
+          <h2>Exam Mean Percentage Score Report</h2>
+          <div class="print-exam-info">
+            <p><strong>Exam:</strong> {{ mpsData.exam.title }}</p>
+            <p><strong>Test Code:</strong> {{ mpsData.exam.testCode }}</p>
+            <p><strong>Date:</strong> {{ new Date().toLocaleDateString() }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="print-summary">
+        <div class="summary-title">Summary Statistics</div>
+        <table class="summary-table" key="summary-stats">
+          <thead>
+            <tr>
+              <th>Overall MPS</th>
+              <th>Total Students</th>
+              <th>Highest Score</th>
+              <th>Lowest Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="center">{{ mpsData.overallMPS.toFixed(1) }}%</td>
+              <td class="center">{{ mpsData.totalStudents }}</td>
+              <td class="center">
+                {{ mpsData.overallStats.highestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+                ({{ mpsData.overallStats.highestPercentage?.toFixed(1) || 0 }}%)
+              </td>
+              <td class="center">
+                {{ mpsData.overallStats.lowestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+                ({{ mpsData.overallStats.lowestPercentage?.toFixed(1) || 0 }}%)
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-distribution">
+        <div class="summary-title">Score Distribution</div>
+        <table class="summary-table" key="distribution">
+          <thead>
+            <tr>
+              <th>Excellent (90-100%)</th>
+              <th>Good (80-89%)</th>
+              <th>Satisfactory (70-79%)</th>
+              <th>Fair (60-69%)</th>
+              <th>Poor (Below 60%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="center">{{ mpsData.overallStats.scoreDistribution.excellent }}</td>
+              <td class="center">{{ mpsData.overallStats.scoreDistribution.good }}</td>
+              <td class="center">{{ mpsData.overallStats.scoreDistribution.satisfactory }}</td>
+              <td class="center">{{ mpsData.overallStats.scoreDistribution.fair }}</td>
+              <td class="center">{{ mpsData.overallStats.scoreDistribution.poor }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-details">
+        <div class="summary-title">Section Performance</div>
+        <table class="details-table" key="section-performance">
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>MPS</th>
+              <th>Students</th>
+              <th>Highest</th>
+              <th>Lowest</th>
+              <th>Excellent</th>
+              <th>Good</th>
+              <th>Satisfactory</th>
+              <th>Fair</th>
+              <th>Poor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(section, index) in mpsData.sectionMPS" :key="index">
+              <td>{{ section.section }}</td>
+              <td class="center">{{ section.mps.toFixed(1) }}%</td>
+              <td class="center">{{ section.studentCount }}</td>
+              <td class="center">
+                {{ section.highestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                ({{ section.highestPercentage?.toFixed(1) || 0 }}%)
+              </td>
+              <td class="center">
+                {{ section.lowestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                ({{ section.lowestPercentage?.toFixed(1) || 0 }}%)
+              </td>
+              <td class="center">{{ section.distribution.excellent }}</td>
+              <td class="center">{{ section.distribution.good }}</td>
+              <td class="center">{{ section.distribution.satisfactory }}</td>
+              <td class="center">{{ section.distribution.fair }}</td>
+              <td class="center">{{ section.distribution.poor }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="print-footer">
+        <p>Report Generated: {{ new Date().toLocaleString() }}</p>
+        <p>New Cabalan National High School - Examination Analysis System</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -316,6 +455,8 @@ import { ref, onMounted, watch, nextTick, computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { getExamMPS } from '@/services/authService';
 import Chart from 'chart.js/auto';
+import NcnhsLogo from '@/assets/ncnhs-icon.png';
+import html2pdf from 'html2pdf.js';
 
 const route = useRoute();
 const loading = ref(true);
@@ -352,6 +493,7 @@ const chartSettings = ref({
   enableAnimations: true,
   rounded: true
 });
+const showRawScores = ref(false);
 
 // Add chart type options
 const chartTypeOptions = [
@@ -487,6 +629,19 @@ const renderChart = () => {
     const scores = mpsData.value.sectionMPS.map(s => s.mps);
     const studentCounts = mpsData.value.sectionMPS.map(s => s.studentCount);
     
+    // Calculate raw score percentages for display
+    const rawScoreData = mpsData.value.sectionMPS.map(s => {
+      const total = s.totalPossible || 1; // Avoid division by zero
+      
+      return {
+        section: s.section,
+        avgRawScore: (s.mps * total / 100).toFixed(1),
+        highRaw: s.highestScoreRaw || 0,
+        lowRaw: s.lowestScoreRaw || 0,
+        total: total
+      };
+    });
+    
     // Get colors based on theme
     const colors = getChartColors(scores, colorTheme.value);
     
@@ -578,10 +733,34 @@ const renderChart = () => {
             label: function(context) {
               const datasetLabel = context.dataset.label || '';
               const value = context.parsed.y || context.parsed || 0;
+              const index = context.dataIndex;
+              
               if (datasetLabel === 'Mean Percentage Score') {
+                if (showRawScores.value && index >= 0 && index < rawScoreData.length) {
+                  const rawData = rawScoreData[index];
+                  return `${datasetLabel}: ${rawData.avgRawScore}/${rawData.total} (${value.toFixed(1)}%)`;
+                }
                 return `${datasetLabel}: ${typeof value === 'number' ? value.toFixed(1) : value}%`;
+              } else if (datasetLabel === 'Number of Students') {
+                return `${datasetLabel}: ${value}`;
               }
+              
               return `${datasetLabel}: ${value}`;
+            },
+            // Add footer to display raw scores
+            footer: function(tooltipItems) {
+              const idx = tooltipItems[0].dataIndex;
+              if (idx >= 0 && idx < mpsData.value.sectionMPS.length) {
+                const section = mpsData.value.sectionMPS[idx];
+                const rawHigh = section.highestScoreRaw || 0;
+                const rawLow = section.lowestScoreRaw || 0;
+                const total = section.totalPossible || 0;
+                return [
+                  `High Score: ${rawHigh}/${total} (${section.highestPercentage?.toFixed(1) || 0}%)`,
+                  `Low Score: ${rawLow}/${total} (${section.lowestPercentage?.toFixed(1) || 0}%)`
+                ];
+              }
+              return [];
             }
           }
         }
@@ -690,45 +869,181 @@ const getScoreClass = (score) => {
 const exportData = () => {
   if (!mpsData.value) return;
   
-  const rows = [
-    ['Section', 'MPS (%)', 'Students', 'Highest Score (%)', 'Lowest Score (%)', 'Excellent', 'Good', 'Satisfactory', 'Fair', 'Poor'],
-    ...mpsData.value.sectionMPS.map(section => [
-      section.section,
-      section.mps.toFixed(1),
-      section.studentCount,
-      section.highestScore.toFixed(1),
-      section.lowestScore.toFixed(1),
-      section.distribution.excellent,
-      section.distribution.good,
-      section.distribution.satisfactory,
-      section.distribution.fair,
-      section.distribution.poor
-    ])
-  ];
+  // Create HTML for a styled table export
+  const htmlTable = `
+    <html>
+      <head>
+        <style>
+          body { 
+            font-family: Arial, sans-serif;
+            color: #333;
+            line-height: 1.4;
+          }
+          table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+          }
+          th, td { 
+            border: 1px solid #ddd; 
+            padding: 8px; 
+            text-align: center;
+          }
+          th { 
+            background-color: #f8f8f8; 
+            font-weight: bold;
+            text-align: center;
+            border-bottom: 2px solid #ddd;
+          }
+          .center { text-align: center; }
+          .header { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 20px; 
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 15px;
+          }
+          .header img { height: 80px; margin-right: 20px; }
+          .title { 
+            font-size: 22px; 
+            font-weight: bold; 
+            color: #333;
+            margin: 0;
+          }
+          .subtitle { 
+            font-size: 16px; 
+            margin: 5px 0 15px 0;
+            color: #555;
+          }
+          .info { margin-bottom: 20px; }
+          .section-title { 
+            background-color: #f8f8f8; 
+            padding: 8px; 
+            font-weight: bold; 
+            margin-top: 20px; 
+            margin-bottom: 10px;
+            border-left: 4px solid #ddd;
+          }
+          tr:nth-child(even) {
+            background-color: #f9f9f9;
+          }
+          .footer {
+            margin-top: 20px; 
+            font-size: 12px; 
+            color: #666; 
+            text-align: center; 
+            border-top: 1px solid #ddd; 
+            padding-top: 10px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <img src="${NcnhsLogo}" alt="School Logo" style="height: 80px; margin-right: 20px;">
+          <div>
+            <div class="title">New Cabalan National High School</div>
+            <div class="subtitle">Exam Mean Percentage Score Report</div>
+            <div class="info">
+              <p><strong>Exam:</strong> ${mpsData.value.exam.title}</p>
+              <p><strong>Test Code:</strong> ${mpsData.value.exam.testCode}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="section-title">Summary Statistics</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Overall MPS</th>
+              <th>Total Students</th>
+              <th>Highest Score</th>
+              <th>Lowest Score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="center">${mpsData.value.overallMPS.toFixed(1)}%</td>
+              <td class="center">${mpsData.value.totalStudents}</td>
+              <td class="center">${mpsData.value.overallStats.highestScoreRaw || 0}/${mpsData.value.overallStats.totalPossible || 0} (${mpsData.value.overallStats.highestPercentage?.toFixed(1) || 0}%)</td>
+              <td class="center">${mpsData.value.overallStats.lowestScoreRaw || 0}/${mpsData.value.overallStats.totalPossible || 0} (${mpsData.value.overallStats.lowestPercentage?.toFixed(1) || 0}%)</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="section-title">Score Distribution</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Excellent (90-100%)</th>
+              <th>Good (80-89%)</th>
+              <th>Satisfactory (70-79%)</th>
+              <th>Fair (60-69%)</th>
+              <th>Poor (Below 60%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="center">${mpsData.value.overallStats.scoreDistribution.excellent}</td>
+              <td class="center">${mpsData.value.overallStats.scoreDistribution.good}</td>
+              <td class="center">${mpsData.value.overallStats.scoreDistribution.satisfactory}</td>
+              <td class="center">${mpsData.value.overallStats.scoreDistribution.fair}</td>
+              <td class="center">${mpsData.value.overallStats.scoreDistribution.poor}</td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <div class="section-title">Section Performance</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Section</th>
+              <th>MPS (%)</th>
+              <th>Students</th>
+              <th>Highest Score</th>
+              <th>Lowest Score</th>
+              <th>Excellent</th>
+              <th>Good</th>
+              <th>Satisfactory</th>
+              <th>Fair</th>
+              <th>Poor</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${mpsData.value.sectionMPS.map(section => {
+              return `
+                <tr>
+                  <td>${section.section}</td>
+                  <td class="center">${section.mps.toFixed(1)}%</td>
+                  <td class="center">${section.studentCount}</td>
+                  <td class="center">${section.highestScoreRaw || 0}/${section.totalPossible || 0} (${section.highestPercentage?.toFixed(1) || 0}%)</td>
+                  <td class="center">${section.lowestScoreRaw || 0}/${section.totalPossible || 0} (${section.lowestPercentage?.toFixed(1) || 0}%)</td>
+                  <td class="center">${section.distribution.excellent}</td>
+                  <td class="center">${section.distribution.good}</td>
+                  <td class="center">${section.distribution.satisfactory}</td>
+                  <td class="center">${section.distribution.fair}</td>
+                  <td class="center">${section.distribution.poor}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+        
+        <div class="footer">
+          <p>Report Generated: ${new Date().toLocaleString()}</p>
+          <p>New Cabalan National High School - Examination Analysis System</p>
+        </div>
+      </body>
+    </html>
+  `;
   
-  // Add overall summary row
-  rows.push([
-    'OVERALL',
-    mpsData.value.overallMPS.toFixed(1),
-    mpsData.value.totalStudents,
-    mpsData.value.overallStats.highestScore.toFixed(1),
-    mpsData.value.overallStats.lowestScore.toFixed(1),
-    mpsData.value.overallStats.scoreDistribution.excellent,
-    mpsData.value.overallStats.scoreDistribution.good,
-    mpsData.value.overallStats.scoreDistribution.satisfactory,
-    mpsData.value.overallStats.scoreDistribution.fair,
-    mpsData.value.overallStats.scoreDistribution.poor
-  ]);
-  
-  // Convert to CSV
-  const csvContent = rows.map(row => row.join(',')).join('\n');
-  
-  // Create download link
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // Create a Blob with the HTML content
+  const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `MPS_${mpsData.value.exam.testCode}.csv`);
+  link.setAttribute('download', `MPS_${mpsData.value.exam.testCode}.xls`);
   link.style.display = 'none';
   document.body.appendChild(link);
   link.click();
@@ -737,7 +1052,22 @@ const exportData = () => {
 
 // Print the report
 const printReport = () => {
+  // Switch to table view for printing
+  const originalView = viewMode.value;
+  viewMode.value = 'table';
+  
+  // Wait for DOM to update
+  nextTick(() => {
+    // Use a small delay to ensure styles are applied
+    setTimeout(() => {
   window.print();
+      
+      // Reset to original view after printing dialog closes
+      setTimeout(() => {
+        viewMode.value = originalView;
+      }, 500);
+    }, 100);
+  });
 };
 
 // Watch for changes in exam ID
@@ -755,7 +1085,7 @@ watch(viewMode, (newMode) => {
 });
 
 // Watch for changes in chart settings
-watch([chartType, showStudentLine, colorTheme], () => {
+watch([chartType, showStudentLine, colorTheme, showRawScores], () => {
   if (viewMode.value === 'chart') {
     console.log('Chart settings changed, re-rendering');
     nextTick(() => {
@@ -774,10 +1104,28 @@ watch(() => chartSettings.value, () => {
   }
 }, { deep: true, immediate: false });
 
-// Load data on component mount
-onMounted(() => {
+// Add ref for the school logo in base64 format
+const schoolLogoBase64 = ref('');
+
+// Function to convert image to base64
+const getBase64Image = () => {
+  return new Promise((resolve) => {
+    // Since we're importing the image directly, we can use it as is
+    resolve(NcnhsLogo);
+  });
+};
+
+// In onMounted, load the school logo
+onMounted(async () => {
   console.log('Component mounted, loading data');
   loadMPSData();
+  
+  // Load school logo
+  try {
+    schoolLogoBase64.value = await getBase64Image();
+  } catch (err) {
+    console.error('Failed to load school logo:', err);
+  }
   
   // Add window resize handler to redraw chart when window is resized
   window.addEventListener('resize', () => {
@@ -788,6 +1136,97 @@ onMounted(() => {
     }
   });
 });
+
+// Improve the downloadPDF function to ensure proper HTML structure
+const downloadPDF = () => {
+  if (!mpsData.value) return;
+
+  // First switch to table view for better PDF output
+  const originalView = viewMode.value;
+  viewMode.value = 'table';
+  
+  // Wait for DOM to update
+  nextTick(() => {
+    // Use a small delay to ensure styles are applied
+    setTimeout(() => {
+      try {
+        // Create a clone of the print view to work with
+        const element = document.createElement('div');
+        element.innerHTML = document.querySelector('.print-only').innerHTML;
+        element.classList.add('pdf-container');
+        
+        // Fix potential HTML issues - ensure all tables have proper structure
+        const tables = element.querySelectorAll('table');
+        tables.forEach(table => {
+          // Check if table already has thead and tbody
+          if (!table.querySelector('thead')) {
+            const thead = document.createElement('thead');
+            const firstRow = table.querySelector('tr');
+            if (firstRow) {
+              thead.appendChild(firstRow.cloneNode(true));
+              firstRow.parentNode.replaceChild(thead, firstRow);
+            }
+          }
+          
+          // Check if table has tbody
+          if (!table.querySelector('tbody')) {
+            const tbody = document.createElement('tbody');
+            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip first row (header)
+            rows.forEach(row => {
+              tbody.appendChild(row.cloneNode(true));
+              if (row.parentNode) {
+                row.parentNode.removeChild(row);
+              }
+            });
+            table.appendChild(tbody);
+          }
+        });
+        
+        document.body.appendChild(element);
+      
+        // Setup PDF options
+        const options = {
+          margin: 10,
+          filename: `MPS_${mpsData.value.exam.testCode}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            logging: false
+          },
+          jsPDF: { 
+            unit: 'mm', 
+            format: 'a4', 
+            orientation: 'portrait'
+          }
+        };
+        
+        // Generate PDF
+        html2pdf()
+          .set(options)
+          .from(element)
+          .save()
+          .then(() => {
+            // Cleanup - remove the cloned element
+            document.body.removeChild(element);
+            // Reset view mode
+            viewMode.value = originalView;
+          })
+          .catch(error => {
+            console.error('PDF generation failed:', error);
+            // Cleanup even on error
+            if (document.body.contains(element)) {
+              document.body.removeChild(element);
+            }
+            viewMode.value = originalView;
+          });
+      } catch (error) {
+        console.error('Error preparing PDF:', error);
+        viewMode.value = originalView;
+      }
+    }, 100);
+  });
+};
 </script>
 
 <style scoped>
@@ -1011,6 +1450,10 @@ onMounted(() => {
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stat-item:hover {
@@ -1025,8 +1468,9 @@ onMounted(() => {
 }
 
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 /* Distribution Card */
@@ -1311,36 +1755,158 @@ th {
 
 /* Print Styles */
 @media print {
-  .mps-container {
+  /* Hide non-printable elements */
+  .header-container, .header-actions, .view-controls, 
+  .settings-card, .chart-container, .table-view,
+  .exam-info-card, .distribution-card, .back-btn {
+    display: none !important;
+  }
+  
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+    width: 100%;
+    max-width: 100%;
+  }
+  
+  body {
+    margin: 0;
     padding: 0;
+    font-family: Arial, sans-serif;
+    background: white;
+    color: black;
   }
   
-  .header-container {
-    box-shadow: none;
-  }
-  
-  .back-btn, .action-btn, .view-toggle-btn {
-    display: none !important;
-  }
-  
-  .header-actions, .view-controls {
-    display: none !important;
-  }
-  
-  .exam-info-card, .distribution-card, .chart-container, .table-view {
-    box-shadow: none;
-    break-inside: avoid;
-    page-break-inside: avoid;
+  .print-header {
+    display: flex;
+    align-items: center;
     margin-bottom: 30px;
+    padding: 10px 0;
+    border-bottom: 2px solid #333;
   }
   
-  .chart-wrapper {
-    height: 350px;
+  .print-logo {
+    height: 80px;
+    margin-right: 20px;
   }
   
-  .table-container {
-    overflow: visible;
+  .print-title {
+    flex: 1;
   }
+  
+  .print-title h1 {
+    font-size: 22px;
+    margin: 0 0 5px 0;
+    color: #333;
+  }
+  
+  .print-title h2 {
+    font-size: 16px;
+    margin: 0 0 10px 0;
+    font-weight: normal;
+    color: #555;
+  }
+  
+  .print-exam-info {
+    display: flex;
+    font-size: 12px;
+    gap: 20px;
+  }
+  
+  .print-exam-info p {
+    margin: 0;
+  }
+  
+  .print-summary, .print-distribution, .print-details {
+    margin-bottom: 20px;
+  }
+  
+  .summary-title {
+    font-size: 14px;
+    font-weight: bold;
+    background-color: #f8f8f8;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-left: 4px solid #ddd;
+  }
+  
+  .summary-table, .details-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 20px;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .summary-table th, .summary-table td,
+  .details-table th, .details-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .summary-table th, .details-table th {
+    background-color: #f8f8f8 !important;
+    font-weight: bold;
+    border-bottom: 2px solid #ddd;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .summary-table thead, .details-table thead {
+    display: table-header-group;
+  }
+  
+  .summary-table tbody, .details-table tbody {
+    display: table-row-group;
+  }
+  
+  .summary-table tr:nth-child(even), 
+  .details-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+  
+  .center {
+    text-align: center;
+  }
+  
+  .print-footer {
+    margin-top: 30px;
+    padding-top: 10px;
+    border-top: 1px solid #ddd;
+    font-size: 10px;
+    color: #666;
+    text-align: center;
+  }
+  
+  /* Add header and footer for each page */
+  @page {
+    size: landscape;
+    margin: 0.5cm;
+  }
+  
+  /* Ensure table headers repeat on page breaks */
+  thead {
+    display: table-header-group;
+  }
+  
+  tbody {
+    display: table-row-group;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+  }
+  
+  .print-details {
+    page-break-before: auto;
+  }
+}
+
+.print-only {
+  display: none;
+  padding: 20px;
 }
 
 /* Responsive Styles */
@@ -1565,5 +2131,34 @@ th {
   .options-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.option-help {
+  font-size: 0.8rem;
+  color: #666;
+  margin-top: 4px;
+  margin-left: 26px;
+  font-style: italic;
+}
+
+/* PDF Button and Container Styles */
+.pdf-btn {
+  background-color: #e8eaf6;
+  color: #3f51b5;
+}
+
+.pdf-btn:hover {
+  background-color: #c5cae9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pdf-container {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 297mm; /* A4 landscape width */
+  padding: 20px;
+  background-color: white;
 }
 </style> 

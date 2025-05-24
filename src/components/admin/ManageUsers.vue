@@ -2335,6 +2335,7 @@ onBeforeUnmount(() => {
   align-items: center;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   transition: all 0.3s ease;
+  position: relative; /* Add position relative for better control */
 }
 
 .user-card:hover {
@@ -2347,6 +2348,7 @@ onBeforeUnmount(() => {
   height: 50px;
   border-radius: 50%;
   overflow: hidden;
+  flex-shrink: 0; /* Prevent avatar from shrinking */
 }
 
 .user-avatar-img {
@@ -2355,25 +2357,47 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
+.user-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #666;
+  flex-shrink: 0; /* Prevent avatar from shrinking */
+}
+
 .user-info {
   flex: 1;
+  min-width: 0; /* Allow text truncation */
+  overflow: hidden; /* Ensure content doesn't overflow */
 }
 
 .user-info h3 {
   margin: 0;
   font-size: 1.1rem;
   color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .email {
   color: #666;
   font-size: 0.9rem;
   margin: 0.25rem 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .details {
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
@@ -2383,11 +2407,13 @@ onBeforeUnmount(() => {
   gap: 0.25rem;
   font-size: 0.85rem;
   color: #666;
+  white-space: nowrap;
 }
 
 .user-actions {
   display: flex;
   gap: 0.5rem;
+  flex-shrink: 0; /* Prevent action buttons from shrinking */
 }
 
 .action-btn {
@@ -2400,6 +2426,11 @@ onBeforeUnmount(() => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.action-btn.view {
+  background: #e3f2fd;
+  color: #2196F3;
 }
 
 .action-btn.edit {
@@ -2655,6 +2686,61 @@ onBeforeUnmount(() => {
   
   .users-grid {
     grid-template-columns: 1fr;
+  }
+  
+  /* Updated mobile card styles */
+  .user-card {
+    padding: 1rem;
+    flex-wrap: wrap; /* Allow wrapping on mobile */
+    gap: 0.75rem;
+    width: 100%;
+    overflow: visible; /* Ensure content is visible */
+  }
+  
+  .user-avatar-container, 
+  .user-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .user-info {
+    width: calc(100% - 130px); /* Account for avatar and action buttons */
+  }
+  
+  .user-info h3 {
+    font-size: 0.95rem;
+  }
+  
+  .email {
+    font-size: 0.8rem;
+  }
+  
+  .details {
+    width: 100%;
+    margin-top: 0.5rem;
+    margin-left: 40px; /* Align with avatar */
+    padding-right: 40px; /* Make space for action buttons */
+  }
+  
+  .detail-item {
+    font-size: 0.75rem;
+    margin-right: 0.75rem;
+  }
+  
+  .user-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    gap: 0.35rem;
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .action-btn .material-icons {
+    font-size: 16px;
   }
 }
 

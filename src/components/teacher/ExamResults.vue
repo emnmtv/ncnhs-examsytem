@@ -5,9 +5,80 @@
         <h1>{{ $route.query.title }}</h1>
         <p class="test-code">Test Code: {{ $route.query.testCode }}</p>
       </div>
-      <button @click="$router.back()" class="back-btn">
-        <i class="fas fa-arrow-left"></i> Back
-      </button>
+      <div class="header-actions">
+        <button @click="$router.back()" class="back-btn">
+          <i class="fas fa-arrow-left"></i> Back
+        </button>
+        <!-- Update export button with FontAwesome icons -->
+        <div class="export-container">
+          <button @click="toggleExportOptions" class="export-btn">
+            <i class="fas fa-download"></i> Export
+            <i class="fas fa-chevron-down dropdown-icon" :class="{ 'rotated': showExportOptions }"></i>
+          </button>
+          
+          <!-- Fix export dropdown positioning -->
+          <div v-if="showExportOptions" class="export-dropdown">
+            <div class="export-options-header">
+              <h3>Export Options</h3>
+            </div>
+            
+            <div class="export-data-selection">
+              <h4>Select data to export:</h4>
+              <div class="export-checkboxes">
+                <label>
+                  <input type="checkbox" v-model="exportOptions.fields.studentName" checked>
+                  Student Name
+                </label>
+                <label>
+                  <input type="checkbox" v-model="exportOptions.fields.gradeSection">
+                  Grade & Section
+                </label>
+                <label>
+                  <input type="checkbox" v-model="exportOptions.fields.score">
+                  Score
+                </label>
+                <label>
+                  <input type="checkbox" v-model="exportOptions.fields.percentage">
+                  Percentage
+                </label>
+                <label>
+                  <input type="checkbox" v-model="exportOptions.fields.submittedAt">
+                  Submission Date
+                </label>
+              </div>
+
+              <div class="export-section-selector">
+                <h4>Export Section:</h4>
+                <div class="export-radio-options">
+                  <label>
+                    <input type="radio" v-model="exportOptions.section" value="results">
+                    Student Results
+                  </label>
+                  <label>
+                    <input type="radio" v-model="exportOptions.section" value="analysis">
+                    Item Analysis
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div class="export-actions">
+              <button @click="exportToExcel" class="export-action-btn excel">
+                <i class="fas fa-file-excel"></i>
+                Excel
+              </button>
+              <button @click="exportToPDF" class="export-action-btn pdf">
+                <i class="fas fa-file-pdf"></i>
+                PDF
+              </button>
+              <button @click="printData" class="export-action-btn print">
+                <i class="fas fa-print"></i>
+                Print
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div v-if="loading" class="loading">
@@ -64,10 +135,10 @@
           <h3>Average Score</h3>
           <p class="stat-value">{{ getAverageScore(filteredResults) }}</p>
         </div>
-        <div class="stat-card">
-          <h3>Total Submissions</h3>
-          <p class="stat-value">{{ filteredResults.length }}</p>
-        </div>
+              <div class="stat-card">
+        <h3>Total Students</h3>
+        <p class="stat-value">{{ filteredResults.length }}</p>
+      </div>
         <div class="stat-card">
           <h3>Highest Score</h3>
           <p class="stat-value">{{ getHighestScore(filteredResults) }}</p>
@@ -146,6 +217,13 @@
               <span class="label">Submitted:</span>
               <span class="value">{{ formatDate(result.submittedAt) }}</span>
             </div>
+            
+            <div class="detail-item">
+              <span class="label">Submitted:</span>
+              <span class="attempt-badge" v-if="getCurrentAttemptNumber(result)">
+                Attempt #{{ getCurrentAttemptNumber(result) }}
+              </span>
+            </div>
           </div>
           <div class="result-actions">
             <button 
@@ -164,20 +242,21 @@
         <table>
           <thead>
             <tr>
-              <th>Grade & Section</th>
+              <th class="mobile-hide">Grade & Section</th>
               <th>Student</th>
               <th>Score</th>
-              <th>Percentage</th>
-              <th>Submitted At</th>
+              <th class="mobile-hide">Percentage</th>
+              <th>History</th>
+              <th class="mobile-hide">Submitted At</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="result in paginatedResults" :key="result.id">
-              <td>Grade {{ result.user.gradeLevel }}-{{ result.user.section }}</td>
+              <td class="mobile-hide">Grade {{ result.user.gradeLevel }}-{{ result.user.section }}</td>
               <td>{{ result.user.firstName }} {{ result.user.lastName }}</td>
               <td>{{ result.score }}/{{ result.total }}</td>
-              <td>
+              <td class="mobile-hide">
                 <span 
                   class="percentage-badge"
                   :class="{
@@ -190,16 +269,35 @@
                   {{ result.percentage }}%
                 </span>
               </td>
-              <td>{{ formatDate(result.submittedAt) }}</td>
               <td>
-                <button 
-                  class="view-answers-btn"
-                  @click="viewStudentAnswers(result)"
-                >
-                  <span class="material-icons">assignment</span>
-                  View Answers
-                </button>
-              </td>
+                <!-- Improved attempt dropdown for table view -->
+                <div class="attempt-controls-table">
+                  <!-- Only keep the restore history button -->
+                  <button 
+                    v-if="result.exam && result.exam.attempts && result.exam.attempts.some(a => a.records && a.records.length)"
+                    @click.stop="showAttemptRecordsModal(result.userId)"
+                    class="restore-record-btn"
+                    title="View and restore attempt history"
+                  >
+                    <span class="material-icons">history</span>
+                    <span class="restore-text">History</span>
+                  </button>
+                  <span v-else>-</span>
+                </div>
+                <div class="attempt-date" v-if="result.submittedAt">
+                  {{ formatShortDate(result.submittedAt) }}
+                </div>
+                              </td>
+                <td class="mobile-hide">{{ formatDate(result.submittedAt) }}</td>
+                <td>
+                  <button 
+                    class="view-answers-btn"
+                    @click="viewStudentAnswers(result)"
+                  >
+                    <span class="material-icons">assignment</span>
+                    <span class="btn-text">View</span>
+                  </button>
+                </td>
             </tr>
           </tbody>
         </table>
@@ -589,13 +687,69 @@
         </div>
       </div>
     </div>
+
+    <!-- Add attempt records modal -->
+    <div v-if="showAttemptModal" class="attempt-records-modal" @click.self="closeAttemptRecordsModal">
+      <div class="attempt-records-modal-content">
+        <h2 class="attempt-modal-title">
+          <span>Attempt History</span>
+          <button class="close-modal-btn" @click="closeAttemptRecordsModal">
+            <span class="material-icons">close</span>
+          </button>
+        </h2>
+        
+        <div class="attempt-modal-body">
+          <div v-if="!attemptRecordsModalData.records || attemptRecordsModalData.records.length === 0" class="no-records">
+            No attempt records found.
+          </div>
+          <div v-else class="records-list">
+            <div v-for="record in attemptRecordsModalData.records" :key="record.id" class="record-item">
+              <div class="record-info">
+                <div class="record-header">
+                  <span class="record-number">Attempt #{{ record.attemptNumber }}</span>
+                  <span class="record-score">{{ record.score }}/{{ record.total }} ({{ record.percentage }}%)</span>
+                </div>
+                
+                <div class="record-details">
+                  <div class="record-detail">
+                    <span class="material-icons">event</span>
+                    <span>{{ formatDate(record.completedAt) }}</span>
+                  </div>
+                  
+                  <div class="record-detail">
+                    <span class="material-icons">timelapse</span>
+                    <span>{{ formatTimeSpent(record.timeSpent) }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="record-actions">
+                <button 
+                  @click="restoreRecord(record.id)" 
+                  class="restore-record-action"
+                  :disabled="isRestoringRecord === record.id"
+                >
+                  <span v-if="isRestoringRecord === record.id" class="material-icons spinning">sync</span>
+                  <span v-else class="material-icons">restore</span>
+                  Restore
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchStudentScores, fetchExamAnalysis } from '../../services/authService';
+import { fetchStudentScores, fetchExamAnalysis, restoreAttemptScore } from '../../services/authService';
+// Import libraries for export functionality
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default {
   name: 'ExamResults',
@@ -614,6 +768,27 @@ export default {
     const analysisFilters = ref({
       difficulty: '',
       successRate: ''
+    });
+
+    // Add export-related states
+    const showExportOptions = ref(false);
+    const exportOptions = ref({
+      section: 'results', // 'results' or 'analysis'
+      fields: {
+        studentName: true,
+        gradeSection: false,
+        score: true,
+        percentage: true,
+        submittedAt: false,
+        // Analysis fields
+        questionNumber: true,
+        questionText: true,
+        correctAnswer: true,
+        correctCount: true,
+        incorrectCount: false,
+        difficulty: true,
+        successRate: true
+      }
     });
 
     const resultsTableWrapper = ref(null);
@@ -636,6 +811,19 @@ export default {
 
     const isMobile = ref(false);
 
+    // Add state for tracking attempts
+    const processedResults = ref([]);
+    const allAttempts = ref({}); // userId -> array of attempts
+
+    // Add attempt records modal state
+    const showAttemptModal = ref(false);
+    const attemptRecordsModalData = ref({
+      studentId: null,
+      student: null,
+      records: []
+    });
+    const isRestoringRecord = ref(null);
+
     const checkMobile = () => {
       isMobile.value = window.innerWidth <= 768;
     };
@@ -648,7 +836,29 @@ export default {
           fetchStudentScores(null, parseInt(route.params.examId)),
           fetchExamAnalysis(parseInt(route.params.examId))
         ]);
+        
+        // Log the structure to help with debugging
+        console.log('API response structure:', {
+          hasScores: !!scores,
+          scoresLength: scores?.length,
+          sampleScore: scores && scores.length > 0 ? {
+            hasAttemptRecords: !!scores[0].attemptRecords,
+            hasRecords: !!scores[0].records,
+            records: scores[0].records || scores[0].attemptRecords
+          } : null
+        });
+        
         results.value = scores;
+        
+        // Process attempts by student
+        processAttempts();
+        
+        // Process results to get only latest attempt per student
+        processLatestAttempts();
+        
+        // Update item analysis with proper student counts using latest attempts
+        updateItemAnalysis(analysis);
+        
         itemAnalysis.value = analysis;
       } catch (err) {
         error.value = err.message;
@@ -657,9 +867,182 @@ export default {
         loading.value = false;
       }
     };
+    
+    // Process all attempts and organize by student
+    const processAttempts = () => {
+      const attemptsByStudent = {};
+      
+      results.value.forEach(result => {
+        const studentId = result.user.id;
+        
+        // Initialize the array if it doesn't exist yet
+        if (!attemptsByStudent[studentId]) {
+          attemptsByStudent[studentId] = [];
+        }
+        
+        // Add attempt info from either the attempt object or attempts array
+        if (result.attempt) {
+          // Make sure we don't add duplicates
+          if (!attemptsByStudent[studentId].some(a => a.id === result.attempt.id)) {
+            attemptsByStudent[studentId].push({
+              ...result.attempt,
+              resultId: result.id,
+              score: result.score,
+              total: result.total,
+              percentage: result.percentage
+            });
+          }
+        } else if (result.attempts && Array.isArray(result.attempts) && result.attempts.length > 0) {
+          result.attempts.forEach(attempt => {
+            // Make sure we don't add duplicates
+            if (!attemptsByStudent[studentId].some(a => a.id === attempt.id)) {
+              attemptsByStudent[studentId].push({
+                ...attempt,
+                resultId: result.id,
+                score: result.score,
+                total: result.total,
+                percentage: result.percentage
+              });
+            }
+          });
+        }
+        
+        // NEW STRUCTURE: Process nested attempt records from exam.attempts
+        if (result.exam && result.exam.attempts && Array.isArray(result.exam.attempts)) {
+          result.exam.attempts.forEach(attempt => {
+            // Process records within each attempt
+            if (attempt.records && Array.isArray(attempt.records)) {
+              attempt.records.forEach(record => {
+                // Only add records that aren't duplicates
+                if (!attemptsByStudent[studentId].some(a => a.id === record.id)) {
+                  attemptsByStudent[studentId].push({
+                    id: record.id,
+                    attemptId: attempt.id, // Link to parent attempt
+                    attemptNumber: attempt.attemptNumber,
+                    startedAt: record.startedAt || attempt.startedAt,
+                    completedAt: record.completedAt || attempt.completedAt,
+                    timeSpent: record.timeSpent || attempt.timeSpent,
+                    resultId: result.id,
+                    score: record.score || 0,
+                    total: record.total || result.total,
+                    percentage: record.percentage || 0,
+                    isHistoricalRecord: true
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
+      
+      // Sort attempts by attemptNumber in descending order for each student
+      Object.keys(attemptsByStudent).forEach(studentId => {
+        attemptsByStudent[studentId].sort((a, b) => b.attemptNumber - a.attemptNumber);
+      });
+      
+      // Log the processed attempt data for debugging
+      console.log('Processed attempts by student:', attemptsByStudent);
+      
+      allAttempts.value = attemptsByStudent;
+    };
+    
+    // Add new function to process latest attempts
+    const processLatestAttempts = () => {
+      const latestByStudent = new Map();
+      
+      results.value.forEach(result => {
+        const studentId = result.user.id;
+        const existingResult = latestByStudent.get(studentId);
+        
+        // If no existing result or current result is newer
+        if (!existingResult || new Date(result.submittedAt) > new Date(existingResult.submittedAt)) {
+          latestByStudent.set(studentId, result);
+        }
+      });
+      
+      // Store the processed results
+      processedResults.value = Array.from(latestByStudent.values());
+    };
+    
+    // Add method to get attempts for a specific student
+    const getStudentAttempts = (studentId) => {
+      return allAttempts.value[studentId] || [];
+    };
+    
+    // Add method to get current attempt number for a result
+    const getCurrentAttemptNumber = (result) => {
+      if (result.attempt) {
+        return result.attempt.attemptNumber;
+      } else if (result.attempts && result.attempts.length > 0) {
+        // Just return the first attempt number (latest attempt)
+        return result.attempts[0].attemptNumber;
+      }
+      return null;
+    };
+    
+    // Removed attempt selection dropdown and handleAttemptChange function
+    
+    // Add new function to update item analysis
+    const updateItemAnalysis = (analysis) => {
+      if (!analysis || !analysis.length || !processedResults.value.length) return;
+      
+      // Log the analysis data received from API
+      console.log('Raw Analysis Data before processing:', JSON.stringify(analysis));
+      
+      // Get unique student count - this is the actual number of students who took the exam
+      const uniqueStudentCount = processedResults.value.length;
+      console.log('Unique student count:', uniqueStudentCount);
+      
+      // Create a map of the latest attempt answer data for each student
+      const latestAnswersMap = new Map();
+      
+      // Check if we actually have answer data to update the analysis with
+      let hasAnswerData = false;
+      
+      processedResults.value.forEach(result => {
+        if (result.answers && Array.isArray(result.answers)) {
+          latestAnswersMap.set(result.user.id, result.answers);
+          hasAnswerData = true;
+        }
+      });
+      
+      console.log('Has student answer data to process?', hasAnswerData);
+      
+      // If we don't have any answer data, preserve the analysis data as-is
+      if (!hasAnswerData) {
+        console.log('No student answer data available, using API analysis data as-is');
+        return;
+      }
+      
+      // Only update the analysis if we have answer data from students
+      analysis.forEach(item => {
+        let correctCount = 0;
+        
+        // Count correct answers from latest attempts only
+        latestAnswersMap.forEach(answers => {
+          const answer = answers.find(a => a.questionId === item.questionId);
+          if (answer && answer.isCorrect) {
+            correctCount++;
+          }
+        });
+        
+        if (hasAnswerData) {
+          // ONLY update if we have answer data
+          // Update the analysis item with accurate counts
+          item.totalStudents = uniqueStudentCount;
+          item.correctCount = correctCount;
+          item.incorrectCount = uniqueStudentCount - correctCount;
+          item.percentageCorrect = Math.round((correctCount / uniqueStudentCount) * 100);
+        }
+      });
+      
+      console.log('Analysis data after processing:', JSON.stringify(analysis));
+    };
 
     const getAverageScore = (results) => {
       if (!results.length) return '0/0';
+      // Since we're already filtering to latest attempts by student in filteredResults,
+      // this calculation is now correct for unique students
       const totalScore = results.reduce((sum, result) => sum + result.score, 0);
       const totalItems = results[0].total; // Assuming all have same total
       return `${Math.round(totalScore/results.length)}/${totalItems}`;
@@ -683,7 +1066,8 @@ export default {
     });
 
     const filteredResults = computed(() => {
-      return results.value.filter(result => {
+      // First, get all matching results based on filters and search
+      const matchingResults = processedResults.value.filter(result => {
         const matchesGrade = !filters.value.gradeLevel || 
           result.user.gradeLevel === filters.value.gradeLevel;
         const matchesSection = !filters.value.section || 
@@ -699,6 +1083,8 @@ export default {
         
         return matchesGrade && matchesSection && matchesSearch;
       });
+      
+      return matchingResults;
     });
 
     const getDifficultyLabel = (percentage) => {
@@ -764,6 +1150,28 @@ export default {
 
     const formatDate = (date) => {
       return new Date(date).toLocaleString();
+    };
+
+    const formatTimeSpent = (timeInSeconds) => {
+      if (!timeInSeconds) return '--';
+      
+      const hours = Math.floor(timeInSeconds / 3600);
+      const minutes = Math.floor((timeInSeconds % 3600) / 60);
+      const seconds = timeInSeconds % 60;
+      
+      let formattedTime = '';
+      
+      if (hours > 0) {
+        formattedTime += `${hours}h `;
+      }
+      
+      if (minutes > 0 || hours > 0) {
+        formattedTime += `${minutes}m `;
+      }
+      
+      formattedTime += `${seconds}s`;
+      
+      return formattedTime;
     };
 
     const checkTableScroll = () => {
@@ -919,15 +1327,377 @@ export default {
       });
     };
 
+    // Toggle export options dropdown
+    const toggleExportOptions = () => {
+      showExportOptions.value = !showExportOptions.value;
+    };
+
+    // Close export dropdown when clicking outside
+    const closeExportOptionsOnClickOutside = (event) => {
+      if (showExportOptions.value && !event.target.closest('.export-btn') && !event.target.closest('.export-dropdown')) {
+        showExportOptions.value = false;
+      }
+    };
+
+    // Prepare data for export based on selected options
+    const getExportData = () => {
+      let dataToExport = [];
+      let headers = [];
+      
+      if (exportOptions.value.section === 'results') {
+        const fields = exportOptions.value.fields;
+        
+        // Build headers array for results
+        if (fields.studentName) headers.push('Student Name');
+        if (fields.gradeSection) headers.push('Grade & Section');
+        if (fields.score) headers.push('Score');
+        if (fields.percentage) headers.push('Percentage');
+        if (fields.submittedAt) headers.push('Submitted At');
+        
+        // Build rows for results
+        dataToExport = filteredResults.value.map(result => {
+          const row = {};
+          if (fields.studentName) row['Student Name'] = `${result.user.firstName} ${result.user.lastName}`;
+          if (fields.gradeSection) row['Grade & Section'] = `Grade ${result.user.gradeLevel}-${result.user.section}`;
+          if (fields.score) row['Score'] = `${result.score}/${result.total}`;
+          if (fields.percentage) row['Percentage'] = `${result.percentage}%`;
+          if (fields.submittedAt) row['Submitted At'] = formatDate(result.submittedAt);
+          return row;
+        });
+      } else {
+        // Analysis data
+        const fields = exportOptions.value.fields;
+        
+        // Build headers array for analysis
+        if (fields.questionNumber) headers.push('Question #');
+        if (fields.questionText) headers.push('Question');
+        if (fields.correctAnswer) headers.push('Correct Answer');
+        if (fields.correctCount) headers.push('Correct Responses');
+        if (fields.incorrectCount) headers.push('Incorrect Responses');
+        if (fields.difficulty) headers.push('Difficulty');
+        if (fields.successRate) headers.push('Success Rate');
+        
+        // Build rows for analysis
+        dataToExport = filteredAnalysis.value.map(item => {
+          const row = {};
+          if (fields.questionNumber) row['Question #'] = item.questionNumber;
+          if (fields.questionText) row['Question'] = item.questionText;
+          if (fields.correctAnswer) row['Correct Answer'] = item.correctAnswer;
+          if (fields.correctCount) row['Correct Responses'] = `${item.correctCount}/${item.totalStudents}`;
+          if (fields.incorrectCount) row['Incorrect Responses'] = `${item.incorrectCount}/${item.totalStudents}`;
+          if (fields.difficulty) row['Difficulty'] = getDifficultyLabel(item.percentageCorrect);
+          if (fields.successRate) row['Success Rate'] = `${item.percentageCorrect}%`;
+          return row;
+        });
+      }
+      
+      return { headers, data: dataToExport };
+    };
+
+    // Export to Excel
+    const exportToExcel = () => {
+      try {
+        const { headers, data } = getExportData();
+        
+        if (data.length === 0) {
+          alert('No data to export');
+          return;
+        }
+        
+        // Create worksheet with custom headers
+        const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+        
+        // Create workbook
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, exportOptions.value.section === 'results' ? 'Student Results' : 'Item Analysis');
+        
+        // Generate Excel file
+        const fileName = `Exam_${exportOptions.value.section === 'results' ? 'Results' : 'Analysis'}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, fileName);
+        
+        // Hide export options after export
+        showExportOptions.value = false;
+      } catch (error) {
+        console.error('Export to Excel error:', error);
+        alert('Failed to export data to Excel');
+      }
+    };
+
+    // Export to PDF
+    const exportToPDF = () => {
+      try {
+        const { headers, data } = getExportData();
+        
+        if (data.length === 0) {
+          alert('No data to export');
+          return;
+        }
+        
+        // Create PDF document
+        const doc = new jsPDF();
+        
+        // Add title
+        const title = exportOptions.value.section === 'results' ? 'Exam Results' : 'Item Analysis';
+        const examTitle = route.query.title || 'Exam';
+        
+        doc.setFontSize(16);
+        doc.text(examTitle, 14, 15);
+        
+        doc.setFontSize(12);
+        doc.text(title, 14, 25);
+        
+        // Add date
+        const currentDate = new Date().toLocaleDateString();
+        doc.setFontSize(10);
+        doc.text(`Generated: ${currentDate}`, 14, 35);
+        
+        // Extract values for autoTable
+        const tableData = data.map(item => Object.values(item));
+        
+        // Create table with autoTable
+        autoTable(doc, {
+          head: [headers],
+          body: tableData,
+          startY: 40,
+          theme: 'grid',
+          styles: {
+            fontSize: 8,
+            cellPadding: 2,
+            lineColor: [200, 200, 200]
+          },
+          headStyles: {
+            fillColor: [41, 128, 185],
+            textColor: 255,
+            fontStyle: 'bold'
+          },
+          alternateRowStyles: {
+            fillColor: [240, 240, 240]
+          }
+        });
+        
+        // Generate PDF filename
+        const fileName = `Exam_${exportOptions.value.section === 'results' ? 'Results' : 'Analysis'}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        
+        // Save PDF
+        doc.save(fileName);
+        
+        // Hide export options after export
+        showExportOptions.value = false;
+      } catch (error) {
+        console.error('Export to PDF error:', error);
+        alert('Failed to export data to PDF');
+      }
+    };
+
+    // Print data
+    const printData = () => {
+      try {
+        const { headers, data } = getExportData();
+        
+        if (data.length === 0) {
+          alert('No data to print');
+          return;
+        }
+        
+        // Create a separate print-only div
+        const printFrame = document.createElement('iframe');
+        printFrame.style.position = 'fixed';
+        printFrame.style.right = '0';
+        printFrame.style.bottom = '0';
+        printFrame.style.width = '0';
+        printFrame.style.height = '0';
+        printFrame.style.border = '0';
+        
+        document.body.appendChild(printFrame);
+        
+        const title = exportOptions.value.section === 'results' ? 'Exam Results' : 'Item Analysis';
+        const examTitle = route.query.title || 'Exam';
+        
+        printFrame.contentDocument.write(`
+          <html>
+            <head>
+              <title>${examTitle} - ${title}</title>
+              <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1 { color: #2980b9; font-size: 20px; margin-bottom: 5px; }
+                h2 { color: #333; font-size: 16px; margin-top: 0; }
+                .print-date { color: #555; font-size: 12px; margin-bottom: 20px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                th { background-color: #2980b9; color: white; font-weight: bold; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                tr:nth-child(even) { background-color: #f2f2f2; }
+              </style>
+            </head>
+            <body>
+              <h1>${examTitle}</h1>
+              <h2>${title}</h2>
+              <div class="print-date">Generated: ${new Date().toLocaleDateString()}</div>
+              <table>
+                <thead>
+                  <tr>
+                    ${headers.map(header => `<th>${header}</th>`).join('')}
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.map(row => `
+                    <tr>
+                      ${Object.values(row).map(cell => `<td>${cell}</td>`).join('')}
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `);
+        
+        printFrame.contentDocument.close();
+        
+        // Wait for content to load
+        setTimeout(() => {
+          printFrame.contentWindow.focus();
+          printFrame.contentWindow.print();
+          // Remove the frame after printing
+          setTimeout(() => {
+            document.body.removeChild(printFrame);
+          }, 500);
+        }, 300);
+        
+        // Hide export options after print dialog is shown
+        showExportOptions.value = false;
+      } catch (error) {
+        console.error('Print error:', error);
+        alert('Failed to prepare data for printing');
+      }
+    };
+
     onMounted(() => {
       checkMobile();
       window.addEventListener('resize', checkMobile);
+      document.addEventListener('click', closeExportOptionsOnClickOutside);
       loadResults();
     });
 
     onUnmounted(() => {
       window.removeEventListener('resize', checkMobile);
+      document.removeEventListener('click', closeExportOptionsOnClickOutside);
     });
+
+    // Method to get selected attempt date for a student
+    const getSelectedAttemptDate = (userId) => {
+      // Get the first attempt for this student instead of using selectedAttempts
+      const studentAttempts = allAttempts.value[userId] || [];
+      if (studentAttempts.length > 0) {
+        return studentAttempts[0].startedAt;
+      }
+      return null;
+    };
+
+    // Format date in a shorter way
+    const formatShortDate = (date) => {
+      if (!date) return '';
+      const d = new Date(date);
+      return d.toLocaleDateString(undefined, { 
+        month: 'numeric',
+        day: 'numeric',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    // Add function to check if student has attempt records
+    const studentHasAttemptRecords = (userId) => {
+      const student = results.value.find(r => r.user.id === userId);
+      if (!student) return false;
+      
+      // Check for exam.attempts.records structure
+      if (student.exam && student.exam.attempts) {
+        // Check if any attempt has records
+        for (const attempt of student.exam.attempts) {
+          if (attempt.records && attempt.records.length > 0) {
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    };
+    
+    // Function to show attempt records modal
+    const showAttemptRecordsModal = (userId) => {
+      try {
+        // Directly find the student result
+        const student = processedResults.value.find(r => r.user.id === userId);
+        if (!student) {
+          console.log('Student not found in processed results:', userId);
+          return;
+        }
+        
+        // Get records from exam.attempts
+        let records = [];
+        
+        if (student.exam && student.exam.attempts) {
+          // Extract records from nested structure
+          student.exam.attempts.forEach(attempt => {
+            if (attempt.records && Array.isArray(attempt.records)) {
+              // Add all records with attempt number
+              attempt.records.forEach(record => {
+                records.push({
+                  ...record,
+                  attemptNumber: attempt.attemptNumber
+                });
+              });
+            }
+          });
+        }
+        
+        if (records.length > 0) {
+          attemptRecordsModalData.value = {
+            studentId: userId,
+            student: student.user,
+            records: records
+          };
+          showAttemptModal.value = true;
+          console.log('Showing attempt records modal with records:', records);
+        } else {
+          console.log('No attempt records found for student ID:', userId);
+        }
+      } catch (err) {
+        console.error('Error showing attempt records modal:', err);
+      }
+    };
+    
+    // Function to close attempt records modal
+    const closeAttemptRecordsModal = () => {
+      showAttemptModal.value = false;
+    };
+    
+    // Function to restore an attempt record
+    const restoreRecord = async (recordId) => {
+      try {
+        console.log('Attempting to restore record with ID:', recordId);
+        isRestoringRecord.value = recordId;
+        
+        const result = await restoreAttemptScore(recordId);
+        console.log('Restore API result:', result);
+        
+        if (result) {
+          // Reload the data to get updated information
+          await loadResults();
+          
+          // Show success message
+          alert('Attempt record restored successfully.');
+          
+          // Close the modal
+          closeAttemptRecordsModal();
+        }
+      } catch (err) {
+        console.error('Error restoring attempt record:', err);
+        alert('Failed to restore attempt record: ' + (err.message || 'Unknown error'));
+      } finally {
+        isRestoringRecord.value = null;
+      }
+    };
 
     return {
       results,
@@ -940,6 +1710,7 @@ export default {
       getAverageScore,
       loadResults,
       formatDate,
+      formatTimeSpent,
       itemAnalysis,
       getAverageScoreColor,
       analysisFilters,
@@ -969,7 +1740,27 @@ export default {
       showPagination,
       showAnalysisPagination,
       isMobile,
-      viewStudentAnswers
+      viewStudentAnswers,
+      // Add export-related functionality to returned object
+      showExportOptions,
+      exportOptions,
+      toggleExportOptions,
+      exportToExcel,
+      exportToPDF,
+      printData,
+      // Add new methods for attempt handling
+      getStudentAttempts,
+      getCurrentAttemptNumber,
+      getSelectedAttemptDate,
+      formatShortDate,
+      // Add new attempt record related methods
+      studentHasAttemptRecords,
+      showAttemptRecordsModal,
+      closeAttemptRecordsModal,
+      showAttemptModal,
+      attemptRecordsModalData,
+      restoreRecord,
+      isRestoringRecord
     };
   }
 };
@@ -982,6 +1773,8 @@ export default {
   margin: 0 auto;
   padding: 20px;
   box-sizing: border-box;
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
 .results-header {
@@ -989,26 +1782,77 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  border: 1px solid rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
 }
 
 .header-content h1 {
   margin: 0 0 10px 0;
-  color: #333;
+  color: #159750;
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .test-code {
   color: #666;
+  font-weight: 500;
 }
 
 .back-btn {
-  padding: 8px 16px;
-  background: #f0f0f0;
+  padding: 10px 18px;
+  background: #e8f5e9;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #159750;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
+  transition: all 0.2s;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  position: relative;
+}
+
+.export-container {
+  position: relative;
+  z-index: 100; /* Ensure dropdown displays above other content */
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 8px 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.export-btn:hover {
+  background: #43A047;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.dropdown-icon {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.rotated {
+  transform: rotate(180deg);
 }
 
 .filters {
@@ -1330,6 +2174,9 @@ tr:hover {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+ .exam-results {
+  padding: 0rem;
+ }
   .results-header {
     flex-direction: column;
     gap: 15px;
@@ -2035,6 +2882,76 @@ tr:hover {
   }
 }
 
+/* Attempt selection styling */
+.attempt-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.attempt-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.attempt-dropdown {
+  flex: 1;
+  padding: 8px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.attempt-dropdown:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
+}
+
+.attempt-badge {
+  background: #e8f5e9;
+  color: #159750;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
+}
+
+.attempt-controls-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 80px;
+}
+
+.attempt-controls-table .attempt-dropdown {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  font-size: 0.85rem;
+}
+
+.attempt-date {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.no-attempts {
+  color: #666;
+  font-style: italic;
+  font-size: 0.9rem;
+}
+
 /* On very small screens, use a more compressed layout */
 @media (max-width: 480px) {
   .table-wrapper th,
@@ -2255,5 +3172,916 @@ tr:hover {
   margin-top: 15px;
   display: flex;
   justify-content: flex-end;
+}
+
+/* Export dropdown styles - improved styling */
+.export-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 8px;
+  width: 320px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  z-index: 100;
+  animation: fadeIn 0.2s ease;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.export-options-header {
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.export-options-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+}
+
+.export-data-selection {
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.export-data-selection h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #555;
+  font-weight: 500;
+}
+
+.export-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.export-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.export-checkboxes input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.export-section-selector {
+  margin-top: 20px;
+  background: #f9f9f9;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.export-section-selector h4 {
+  margin: 0 0 10px 0;
+}
+
+.export-radio-options {
+  display: flex;
+  gap: 20px;
+}
+
+.export-radio-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+}
+
+.export-radio-options input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4CAF50;
+}
+
+.export-actions {
+  display: flex;
+  padding: 16px;
+  gap: 10px;
+  background: #f5f5f5;
+}
+
+.export-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.export-action-btn .material-icons {
+  font-size: 18px;
+}
+
+.export-action-btn.excel {
+  background: #1D6F42; /* Excel green */
+}
+
+.export-action-btn.excel:hover {
+  background: #0E5A2F;
+}
+
+.export-action-btn.pdf {
+  background: #E74C3C; /* PDF red */
+}
+
+.export-action-btn.pdf:hover {
+  background: #C0392B;
+}
+
+.export-action-btn.print {
+  background: #7F8C8D; /* Print gray */
+}
+
+.export-action-btn.print:hover {
+  background: #5a6a6b;
+}
+
+/* Mobile responsiveness for export */
+@media (max-width: 768px) {
+  .exam-results {
+    padding: 0rem;
+  }
+  .export-dropdown {
+    width: 280px;
+    right: 0;
+    position: absolute;
+  }
+  
+  .export-checkboxes {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .export-actions {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .export-action-btn {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+  }
+  
+  .export-radio-options {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Attempt information styling */
+.attempt-info {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eee;
+}
+
+.attempt-info h4 {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 0.5rem;
+}
+
+.attempt-item {
+  background: #f8f9fa;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.attempt-number {
+  font-weight: 600;
+  color: #2196f3;
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.attempt-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.attempt-detail {
+  display: flex;
+  flex-direction: column;
+}
+
+.attempt-detail .label {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+.time-spent {
+  color: #666;
+  font-size: 0.85rem;
+  padding-left: 0.25rem;
+}
+
+/* Make the table more responsive */
+@media (max-width: 768px) {
+  .table-wrapper table {
+    min-width: 650px; /* Reduced minimum width */
+  }
+  
+  table th,
+  table td {
+    padding: 8px;
+    font-size: 0.9rem;
+    vertical-align: top;
+  }
+  
+  .attempt-controls-table {
+    min-width: 60px;
+  }
+  
+  .attempt-date {
+    font-size: 0.75rem;
+  }
+}
+
+/* Enhanced Mobile Styles */
+@media (max-width: 768px) {
+  .exam-results {
+    padding: 10px;
+  }
+
+  .results-header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+
+  .header-content h1 {
+    font-size: 1.4rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .back-btn, .export-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    padding: 15px;
+    gap: 10px;
+  }
+
+  .filter-group {
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+  }
+
+  .filter-group label {
+    width: 30%;
+    margin-bottom: 0;
+  }
+
+  .filter-group select {
+    flex-grow: 1;
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  .search-input {
+    padding: 10px 10px 10px 40px;
+    font-size: 0.9rem;
+  }
+
+  /* Table improvements */
+  .table-wrapper {
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 0;
+    width: 100%;
+  }
+
+  .table-wrapper.scrollable::after {
+    font-size: 1.2rem;
+    padding: 10px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    right: 15px;
+  }
+
+  table {
+    min-width: auto;
+    width: 100%;
+  }
+
+  /* Mobile Grid View */
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .result-card {
+    padding: 15px;
+  }
+
+  /* Improved attempt display for mobile */
+  .attempt-selector {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .attempt-controls {
+    flex: 1;
+  }
+
+  /* Show more compact table on mobile */
+  .table-wrapper table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table th,
+  table td {
+    padding: 10px 12px;
+  }
+
+  /* Hide less important columns on very small screens */
+  @media (max-width: 480px) {
+    .score-display-container {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 15px;
+    }
+
+    .view-toggle-btn {
+      padding: 6px 10px;
+      font-size: 0.8rem;
+    }
+
+    .view-toggle-btn .material-icons {
+      font-size: 16px;
+    }
+
+    .view-controls {
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    /* More compact cards */
+    .result-card {
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .result-header {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+    }
+
+    .student-info h3 {
+      font-size: 1.1rem;
+    }
+
+    .score-badge {
+      padding: 6px 10px;
+      font-size: 1rem;
+    }
+
+    .detail-item {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+
+    .view-answers-btn {
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+
+    /* Ultra-compact table for tiny screens */
+    .attempt-controls-table {
+      width: 100%;
+    }
+
+    .attempt-dropdown {
+      max-width: 100px;
+    }
+  }
+}
+
+/* Add this to your existing CSS */
+/* Mobile responsive table columns */
+.mobile-hide {
+  display: table-cell;
+}
+
+@media (max-width: 600px) {
+  .mobile-hide {
+    display: none;
+  }
+  
+  .table-wrapper table {
+    min-width: 500px; /* Further reduced minimum width for very small screens */
+  }
+  
+  /* Highlight the most important columns */
+  table td:nth-child(2), /* Student name */
+  table td:nth-child(3), /* Score */
+  table td:nth-child(5), /* Attempts */
+  table td:nth-child(7), /* Actions */
+  table th:nth-child(2),
+  table th:nth-child(3),
+  table th:nth-child(5),
+  table th:nth-child(7) {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+}
+
+@media (max-width: 600px) {
+  .view-answers-btn {
+    padding: 8px;
+    min-width: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .view-answers-btn .material-icons {
+    margin-right: 0;
+    font-size: 20px;
+  }
+  
+  .view-answers-btn .btn-text {
+    display: none;
+  }
+
+  /* Show just the icon on smallest screens */
+  table td:last-child {
+    padding-right: 5px;
+    padding-left: 5px;
+    min-width: 50px;
+    width: 50px;
+    text-align: center;
+  }
+}
+
+/* Add styles for restore button and modal */
+.restore-record-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 4px;
+  border: 1px solid #2196f3;
+  background: #e3f2fd;
+  color: #1976d2;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 5px;
+  font-size: 0.85rem;
+}
+
+.restore-record-btn:hover {
+  background: #2196f3;
+  color: white;
+}
+
+.restore-text {
+  display: inline-block;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .restore-text {
+    display: none;
+  }
+  
+  .restore-record-btn {
+    width: 30px;
+    padding: 0;
+  }
+}
+
+/* Attempt Records Modal */
+.attempt-records-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.attempt-records-modal-content {
+  background: white;
+  width: 100%;
+  max-width: 600px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.attempt-modal-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f5f5f5;
+  margin: 0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 18px;
+}
+
+.close-modal-btn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.close-modal-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.attempt-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.no-records {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+  font-style: italic;
+}
+
+.records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.record-item {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #2196f3;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.record-item:hover {
+  background: #f1f5f9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.record-number {
+  font-weight: 600;
+  color: #2196f3;
+  font-size: 1rem;
+}
+
+.record-score {
+  background: #e8f5e9;
+  color: #159750;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.record-details {
+  display: flex;
+  gap: 16px;
+}
+
+.record-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.record-detail .material-icons {
+  font-size: 16px;
+  color: #777;
+}
+
+.restore-record-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
+}
+
+.restore-record-action:hover:not(:disabled) {
+  background: #1976d2;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+  transform: translateY(-1px);
+}
+
+.restore-record-action:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile responsiveness for modal */
+@media (max-width: 768px) {
+  .attempt-records-modal-content {
+    max-width: 95%;
+    max-height: 80vh;
+  }
+
+  .record-item {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .record-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .record-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Update the table styling for better mobile responsiveness */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1.5rem;
+  position: relative;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+/* Enhanced mobile table styles */
+@media (max-width: 768px) {
+  .table-wrapper table {
+    width: 100%;
+    font-size: 0.9rem;
+  }
+  
+  .table-wrapper th,
+  .table-wrapper td {
+    padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+  
+  /* Create a horizontal scroll indicator that's more visible */
+  .table-wrapper.scrollable::after {
+    content: '→';
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(33, 150, 243, 0.2);
+    color: #2196f3;
+    padding: 5px 8px;
+    border-radius: 50%;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    animation: bounce 1.5s infinite;
+    z-index: 10;
+  }
+  
+  /* Create a stacked card layout for table cells on extra small screens */
+  @media (max-width: 480px) {
+    /* Add data column header before cell content */
+    .mobile-responsive-labels td::before {
+      content: attr(data-label);
+      font-weight: bold;
+      display: block;
+      margin-bottom: 3px;
+      font-size: 0.7rem;
+      color: #666;
+      text-transform: uppercase;
+    }
+    
+    /* More visible scroll indicator for very small screens */
+    .table-wrapper.scrollable::after {
+      padding: 8px 10px;
+      font-size: 18px;
+    }
+  }
+  
+  /* Improve vertical spacing between table rows */
+  .table-wrapper tr {
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  /* Make sure all action buttons are visible and usable */
+  .view-answers-btn {
+    min-width: auto;
+    white-space: nowrap;
+    padding: 6px 10px;
+  }
+}
+
+/* Ultra-compact mobile design for very small screens */
+@media (max-width: 380px) {
+  .exam-results {
+    padding: 6px;
+  }
+  
+  .results-header {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .filters, .analysis-filters {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  /* Make score badges more compact */
+  .percentage-badge {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    min-width: 45px;
+  }
+  
+  .difficulty-badge {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+  
+  /* More compact progress bar */
+  .progress-bar {
+    height: 16px;
+    min-width: 60px;
+  }
+  
+  .progress::after {
+    font-size: 10px;
+  }
+  
+  /* Optimize table for the smallest screens */
+  .table-wrapper th,
+  .table-wrapper td {
+    padding: 6px 4px;
+    font-size: 0.75rem;
+  }
+  
+  /* Fix padding on action buttons for better touch targets */
+  .view-answers-btn {
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .view-answers-btn .btn-text {
+    display: none;
+  }
+  
+  .view-answers-btn .material-icons {
+    margin: 0;
+    font-size: 18px;
+  }
+}
+
+/* Create optimized data display for results table */
+@media (max-width: 600px) {
+  /* Hide less important columns on mobile */
+  .mobile-hide {
+    display: none;
+  }
+  
+  /* Make sure essential columns stand out */
+  table td:nth-child(2), /* Student name */
+  table td:nth-child(3), /* Score */
+  table td:nth-child(7) { /* Actions */
+    font-weight: 500;
+  }
+  
+  /* Adjust width for better viewing on mobile */
+  .table-wrapper table {
+    min-width: 450px; /* Slightly reduced minimum width */
+  }
+  
+  /* Enhance layout of attempt controls on mobile */
+  .attempt-controls-table {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* Fix for Export dropdown positioning on mobile */
+@media (max-width: 768px) {  
+  .export-dropdown {
+    right: 0;
+    width: 280px;
+    max-width: 90vw;
+  }
+  
+  .export-options-header, 
+  .export-data-selection,
+  .export-actions {
+    padding: 12px;
+  }
+  
+  .export-checkboxes {
+    gap: 8px;
+  }
 }
 </style> 

@@ -4,6 +4,8 @@
     <exam-session 
       v-if="showExamSession" 
       :test-code="testCode"
+      :attempt-id="currentAttemptId"
+      :duration-minutes="exam?.durationMinutes"
       @quit-exam="handleQuitExam"
       @answers-submitted="handleAnswersSubmitted"
     />
@@ -51,7 +53,7 @@
       </div>
       
       <!-- Error Message -->
-      <div v-if="error" class="error-container">
+      <div v-if="error && error !== 'Maximum number of attempts (1) reached'" class="error-container">
         <div class="error-message">{{ error }}</div>
       </div>
       
@@ -70,6 +72,32 @@
             <span class="exam-meta-item" :class="'status-' + exam.status">
               <i class="fas fa-circle"></i> {{ formatStatus(exam.status) }}
             </span>
+            <span v-if="exam.durationMinutes" class="exam-meta-item">
+              <i class="fas fa-clock"></i> {{ formatDuration(exam.durationMinutes) }}
+            </span>
+            <span class="exam-meta-item tooltip-container">
+              <i class="fas fa-redo"></i> Attempts: {{ getAttemptCount() }}/{{ exam.maxAttempts || '∞' }}
+              <div class="tooltip">
+                <span v-if="!eligibilityInfo">Loading attempt information...</span>
+                <span v-else-if="eligibilityInfo.isEligible">You are eligible to take this exam</span>
+                <span v-else>{{ eligibilityInfo.message }}</span>
+                <span v-if="eligibilityInfo && eligibilityInfo.nextAttemptTime">Next attempt: {{ formatDateTime(eligibilityInfo.nextAttemptTime) }}</span>
+                <span v-if="eligibilityInfo && eligibilityInfo.totalAttempts">Total attempts: {{ eligibilityInfo.totalAttempts }}</span>
+                <span v-if="eligibilityInfo && eligibilityInfo.nextAttemptNumber">Next attempt will be #{{ eligibilityInfo.nextAttemptNumber }}</span>
+              </div>
+            </span>
+          </div>
+        </div>
+        
+        <!-- Scheduling Information (if applicable) -->
+        <div v-if="exam.startDateTime || exam.endDateTime" class="schedule-container">
+          <div class="schedule-item" v-if="exam.startDateTime">
+            <i class="fas fa-play"></i> 
+            <span>Available from: <strong>{{ formatDateTime(exam.startDateTime) }}</strong></span>
+          </div>
+          <div class="schedule-item" v-if="exam.endDateTime">
+            <i class="fas fa-stop"></i> 
+            <span>Closes on: <strong>{{ formatDateTime(exam.endDateTime) }}</strong></span>
           </div>
         </div>
         
@@ -77,9 +105,12 @@
           <button 
             @click="startExamSession" 
             class="primary-btn large"
+            :disabled="!canStartExam && !waitingForNextAttempt"
           >
-            <i class="fas" :class="hasExamInProgress ? 'fa-redo' : 'fa-play-circle'"></i>
-            {{ hasExamInProgress ? 'Continue Exam' : 'Start Exam Session' }}
+            <i class="fas" :class="hasExamInProgress ? 'fa-redo' : waitingForNextAttempt ? 'fa-hourglass-half' : 'fa-play-circle'"></i>
+            <span v-if="hasExamInProgress">Continue Exam</span>
+            <span v-else-if="waitingForNextAttempt">Wait {{ formattedCountdown }}</span>
+            <span v-else>Start Exam Session</span>
           </button>
         </div>
         
@@ -116,7 +147,7 @@
 </template>
 
 <script>
-import { fetchExamQuestions, getFullImageUrl } from '@/services/authService';
+import { fetchExamQuestions, getFullImageUrl, checkExamEligibility, createExamAttempt, getUserExamAttempts } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import ExamSession from './ExamSession.vue';
 import Swal from 'sweetalert2';
@@ -140,7 +171,13 @@ export default {
       ],
       hasExamInProgress: false,
       examScore: null,
-      componentKey: 0
+      componentKey: 0,
+      eligibilityInfo: null,
+      currentAttemptId: null,
+      waitingForNextAttempt: false,
+      nextAttemptCountdown: null,
+      countdownInterval: null,
+      scheduleCheckInterval: null
     };
   },
   watch: {
@@ -189,6 +226,86 @@ export default {
     // Check for exam in progress when component is created
     this.checkExamInProgress();
   },
+  computed: {
+    canStartExam() {
+      
+      console.log('canStartExam',
+       this.exam?.status,
+        this.hasExamInProgress, 
+        this.eligibilityInfo,
+         this.waitingForNextAttempt);
+      // Check if we need to force-refresh component key to trigger re-evaluation
+      this.componentKey; // Reference the key to make this computed property reactive to it
+
+      // Can't start if exam status isn't "started" unless we have an in-progress attempt
+      if (this.exam?.status !== "started" && !this.hasExamInProgress) {
+        return false;
+      }
+      
+      // Can't start if not eligible and not waiting for next attempt
+      if (this.eligibilityInfo && !this.eligibilityInfo.isEligible && !this.waitingForNextAttempt) {
+        return false;
+      }
+      
+      // If there's a scheduled start time and it's in the future
+      if (this.exam?.startDateTime) {
+        const startTime = new Date(this.exam.startDateTime);
+        const now = new Date();
+        if (startTime > now) {
+          return false;
+        }
+      }
+      
+      // If there's a scheduled end time and it's in the past
+      if (this.exam?.endDateTime) {
+        const endTime = new Date(this.exam.endDateTime);
+        const now = new Date();
+        if (endTime < now) {
+          return false;
+        }
+      }
+      
+      return true;
+    },
+    
+    // Add a schedule status computed property
+    scheduleStatus() {
+      if (!this.exam) return null;
+      
+      const now = new Date();
+      const startTime = this.exam.startDateTime ? new Date(this.exam.startDateTime) : null;
+      const endTime = this.exam.endDateTime ? new Date(this.exam.endDateTime) : null;
+      
+      if (startTime && now < startTime) {
+        return {
+          status: 'waiting',
+          message: `Exam will be available at ${this.formatDateTime(startTime)}`,
+          timeUntil: startTime - now
+        };
+      } else if (endTime && now > endTime) {
+        return {
+          status: 'ended',
+          message: `Exam ended at ${this.formatDateTime(endTime)}`
+        };
+      } else if (startTime && (!endTime || now <= endTime)) {
+        return {
+          status: 'active',
+          message: endTime ? `Exam is active until ${this.formatDateTime(endTime)}` : 'Exam is active'
+        };
+      }
+      
+      return { status: 'unrestricted', message: 'No scheduling restrictions' };
+    },
+    
+    formattedCountdown() {
+      if (!this.nextAttemptCountdown) return '';
+      
+      // Format seconds into MM:SS
+      const minutes = Math.floor(this.nextAttemptCountdown / 60);
+      const seconds = this.nextAttemptCountdown % 60;
+      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+  },
   methods: {
     initializeSocket() {
       if (!this.socket) {
@@ -204,10 +321,13 @@ export default {
           });
 
           // Add exam status update listener
-          this.socket.on('examStatusUpdate', ({ status }) => {
+          this.socket.on('examStatusUpdate', async ({ status }) => {
             if (this.exam) {
               this.exam.status = status;
-              
+              await this.fetchExamQuestions();
+              await this.checkEligibility();
+              this.exam = { ...this.exam };
+              this.eligibilityInfo = { ...this.eligibilityInfo };
               // Update UI based on status
               if (status === 'started') {
                 Swal.fire({
@@ -255,6 +375,12 @@ export default {
         const response = await fetchExamQuestions(this.testCode);
         this.exam = response.exam;
 
+        // Start schedule checking after getting exam data
+        this.startScheduleCheck();
+
+        // Check eligibility immediately after fetching exam
+        await this.checkEligibility();
+
         // Check if there's an exam in progress
         this.checkExamInProgress();
 
@@ -285,7 +411,7 @@ export default {
       }
     },
     
-    startExamSession() {
+    async startExamSession() {
       if (!this.exam) {
         Swal.fire({
           title: 'Error',
@@ -296,7 +422,84 @@ export default {
         return;
       }
 
-      console.log('Current exam status:', this.exam.status);
+      // If we don't have eligibility info yet, check it
+      if (!this.eligibilityInfo) {
+        this.checkEligibility();
+        return;
+      }
+
+      // If not eligible and not waiting, show message and start countdown if there's a next attempt time
+      if (this.eligibilityInfo && !this.eligibilityInfo.isEligible && !this.hasExamInProgress) {
+        if (this.eligibilityInfo.nextAttemptTime) {
+          this.startWaitingCountdown(this.eligibilityInfo.nextAttemptTime);
+        } else {
+          Swal.fire({
+            title: 'Cannot Start Exam',
+            text: this.eligibilityInfo.message || 'You are not eligible to take this exam.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+        return;
+      }
+      
+      // If we don't have an active attempt already, create a new one
+      if (!this.currentAttemptId && this.eligibilityInfo?.isEligible) {
+        try {
+          // Make sure we have the exam ID from eligibility response
+          if (!this.exam.id && this.eligibilityInfo.exam && this.eligibilityInfo.exam.id) {
+            this.exam.id = this.eligibilityInfo.exam.id;
+          }
+          
+          // Check if we have a valid exam ID before proceeding
+          if (!this.exam.id) {
+            console.error('Missing exam ID, cannot create attempt');
+            Swal.fire({
+              title: 'Error',
+              text: 'Unable to start exam: missing exam ID. Please try joining the exam again.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+          
+          console.log('Creating exam attempt for exam ID:', this.exam.id);
+          
+          Swal.fire({
+            title: 'Creating Exam Session',
+            text: 'Please wait...',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+          
+          createExamAttempt(this.exam.id).then(result => {
+            this.currentAttemptId = result.id;
+            console.log('Created new exam attempt:', result);
+            Swal.close();
+            this.showExamSession = true;
+          }).catch(err => {
+            console.error('Failed to create exam attempt:', err);
+            Swal.fire({
+              title: 'Error',
+              text: 'Failed to start exam: ' + err.message,
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          });
+          return;
+        } catch (err) {
+          console.error('Failed to create exam attempt:', err);
+          Swal.fire({
+            title: 'Error',
+            text: 'Failed to start exam: ' + err.message,
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+      }
 
       if (this.exam.status === "started" || this.hasExamInProgress) {
         this.showExamSession = true;
@@ -503,12 +706,292 @@ export default {
     handleWindowBlur() {
       // Optionally handle window blur
       console.log('Window blurred');
+    },
+    
+    formatDateTime(dateTimeString) {
+      if (!dateTimeString) return '';
+      const date = new Date(dateTimeString);
+      return date.toLocaleString();
+    },
+    
+    formatDuration(minutes) {
+      if (!minutes) return '';
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      
+      if (hours > 0) {
+        const hourText = hours === 1 ? 'hour' : 'hours';
+        const minText = mins === 1 ? 'minute' : 'minutes';
+        return `${hours} ${hourText} ${mins} ${minText}`;
+      } else {
+        return mins === 1 ? `${mins} minute` : `${mins} minutes`;
+      }
+    },
+    
+    async checkEligibility() {
+      if (!this.testCode) return;
+      
+      try {
+        const response = await checkExamEligibility(this.testCode);
+        console.log('Eligibility response:', response);
+        
+        // Map API response to our component's data model
+        this.eligibilityInfo = {
+          isEligible: response.eligible,
+          message: response.message,
+          attemptCount: response.nextAttemptNumber ? response.nextAttemptNumber - 1 : 0,
+          nextAttemptTime: response.nextAttemptAvailableAt || null,
+          attempts: response.attempts || [],
+          exam: response.exam, // Store the entire exam object for reference
+          // Set totalAttempts with fallback values in case it's not in the response
+          totalAttempts: response.totalAttempts !== undefined ? response.totalAttempts : 
+                        (response.attempts ? response.attempts.length : 0),
+          nextAttemptNumber: response.nextAttemptNumber
+        };
+        
+        // If exam is not active but has a valid ID, fetch attempts separately
+        // This ensures we show correct attempt counts for inactive exams
+        if (!response.eligible && response.exam && response.exam.id && 
+            (response.attempts === undefined || response.attempts.length === 0)) {
+          try {
+            console.log('Fetching additional attempt data for inactive exam');
+            const attemptsData = await getUserExamAttempts(response.exam.id);
+            if (attemptsData && attemptsData.length > 0) {
+              console.log('Found additional attempt data:', attemptsData);
+              this.eligibilityInfo.attempts = attemptsData;
+              this.eligibilityInfo.totalAttempts = attemptsData.length;
+            }
+          } catch (err) {
+            console.warn('Failed to fetch additional attempt data:', err);
+            // Continue without additional data
+          }
+        }
+        
+        // If not eligible and we have a next attempt time, start countdown
+        if (!response.eligible && response.nextAttemptAvailableAt && !this.waitingForNextAttempt) {
+          this.startWaitingCountdown(response.nextAttemptAvailableAt);
+        }
+        
+        console.log('Eligibility info:', this.eligibilityInfo);
+        
+        // If there's an active attempt, store its ID
+        if (response.incompleteAttempt) {
+          this.currentAttemptId = response.incompleteAttempt.id;
+          this.hasExamInProgress = true;
+        }
+        
+        // Update exam info with additional details from eligibility check
+        if (response.exam && this.exam) {
+          // Store the exam ID (this is critical for creating attempts)
+          this.exam.id = response.exam.id;
+          console.log('Updated exam with ID:', this.exam.id);
+          
+          // Only update fields that exist in the response but not in our current exam object
+          if (response.exam.maxAttempts && this.exam.maxAttempts === undefined) {
+            this.exam.maxAttempts = response.exam.maxAttempts;
+          }
+          if (response.exam.durationMinutes && this.exam.durationMinutes === undefined) {
+            this.exam.durationMinutes = response.exam.durationMinutes;
+          }
+          if (response.exam.startDateTime && this.exam.startDateTime === undefined) {
+            this.exam.startDateTime = response.exam.startDateTime;
+          }
+          if (response.exam.endDateTime && this.exam.endDateTime === undefined) {
+            this.exam.endDateTime = response.exam.endDateTime;
+          }
+        }
+        
+        return this.eligibilityInfo;
+      } catch (err) {
+        console.error('Failed to check eligibility:', err);
+        this.error = 'Failed to check if you can take this exam: ' + err.message;
+        throw err;
+      }
+    },
+    getAttemptCount() {
+      // First check for totalAttempts in eligibilityInfo, which now includes historical attempts
+      if (this.eligibilityInfo && this.eligibilityInfo.totalAttempts !== undefined) {
+        return this.eligibilityInfo.totalAttempts;
+      }
+      
+      // If we have eligibility info with attempts array
+      if (this.eligibilityInfo && this.eligibilityInfo.attempts && this.eligibilityInfo.attempts.length > 0) {
+        return this.eligibilityInfo.attempts.length;
+      }
+      
+      // If we have eligibility.attemptCount (may be set in our component)
+      if (this.eligibilityInfo && this.eligibilityInfo.attemptCount !== undefined) {
+        return this.eligibilityInfo.attemptCount;
+      }
+      
+      // If we have nextAttemptNumber (1-indexed)
+      if (this.eligibilityInfo && this.eligibilityInfo.nextAttemptNumber) {
+        return this.eligibilityInfo.nextAttemptNumber - 1;
+      }
+      
+      // If we just have eligibility status
+      if (this.eligibilityInfo) {
+        // If not eligible due to max attempts, we can assume they've used all attempts
+        if (this.eligibilityInfo.message && this.eligibilityInfo.message.includes('Maximum number of attempts')) {
+          return this.exam.maxAttempts || 1;
+        }
+      }
+      
+      // Default to 0 or 1 based on exam in progress
+      return this.hasExamInProgress ? 1 : 0;
+    },
+    startWaitingCountdown(nextAttemptTime) {
+      // Clear any existing interval
+      if (this.countdownInterval) {
+        clearInterval(this.countdownInterval);
+      }
+      
+      this.waitingForNextAttempt = true;
+      
+      // Convert nextAttemptTime to Date if it's a string
+      const nextAttempt = typeof nextAttemptTime === 'string' 
+        ? new Date(nextAttemptTime) 
+        : nextAttemptTime;
+      
+      // Calculate seconds until next attempt
+      const now = new Date();
+      const diffInSeconds = Math.max(0, Math.floor((nextAttempt.getTime() - now.getTime()) / 1000));
+      
+      this.nextAttemptCountdown = diffInSeconds;
+      
+      // Show message with initial time
+      Swal.fire({
+        title: 'Waiting Period',
+        text: `You can take the exam again in ${this.formattedCountdown}`,
+        icon: 'info',
+        confirmButtonText: 'OK'
+      });
+      
+      // Set up interval to update countdown
+      this.countdownInterval = setInterval(() => {
+        this.nextAttemptCountdown--;
+        
+        // When countdown reaches zero, refresh eligibility
+        if (this.nextAttemptCountdown <= 0) {
+          clearInterval(this.countdownInterval);
+          this.waitingForNextAttempt = false;
+          this.nextAttemptCountdown = null;
+          
+          // Refresh eligibility
+          this.checkEligibility().then(() => {
+            if (this.eligibilityInfo && this.eligibilityInfo.isEligible) {
+              Swal.fire({
+                title: 'Ready to Start',
+                text: 'You can now take the exam again!',
+                icon: 'success',
+                confirmButtonText: 'OK'
+              });
+            }
+          });
+        }
+      }, 1000);
+    },
+    checkScheduleValidity() {
+      if (!this.exam) return;
+
+      // Get current schedule status
+      const status = this.scheduleStatus;
+      
+      // If status is active, we should update the UI
+      if (status?.status === 'active') {
+        // Clear any existing error about scheduling
+        if (this.error && (this.error.includes('available') || this.error.includes('ended'))) {
+          this.error = null;
+        }
+        
+        // Force component update
+        this.componentKey += 1;
+        
+        // If exam status is 'started', we should be able to begin now
+        if (this.exam.status === 'started') {
+          // Refresh exam data to make sure we have latest info
+          this.fetchExamQuestions();
+          
+          // Show notification that exam is now available
+          const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 5000,
+            timerProgressBar: true
+          });
+          
+          Toast.fire({
+            icon: 'info',
+            title: 'Exam is now available'
+          });
+        }
+      } else if (status?.status === 'ended') {
+        // If exam has ended, update to show that
+        this.error = "This exam has already ended.";
+        this.componentKey += 1;
+      } else if (status?.status === 'waiting' && status.timeUntil < 60000) {
+        // If exam is about to start in less than a minute, check more frequently
+        if (this.scheduleCheckInterval) {
+          clearInterval(this.scheduleCheckInterval);
+          this.scheduleCheckInterval = setInterval(() => {
+            this.checkScheduleValidity();
+          }, 5000); // Check every 5 seconds when we're close
+        }
+      }
+    },
+
+    startScheduleCheck() {
+      // Clear any existing interval
+      if (this.scheduleCheckInterval) {
+        clearInterval(this.scheduleCheckInterval);
+      }
+
+      // Only start the check if we have an exam with scheduling
+      if (this.exam && (this.exam.startDateTime || this.exam.endDateTime)) {
+        const status = this.scheduleStatus;
+        
+        // Use more frequent checks when close to schedule transitions
+        let checkInterval = 15000; // Default to 15 seconds
+        
+        if (status?.status === 'waiting' && status.timeUntil < 60000) {
+          checkInterval = 5000; // Every 5 seconds when very close
+        } else if (status?.status === 'waiting' && status.timeUntil < 300000) {
+          checkInterval = 10000; // Every 10 seconds when within 5 minutes
+        }
+        
+        this.scheduleCheckInterval = setInterval(() => {
+          this.checkScheduleValidity();
+        }, checkInterval);
+        
+        // Also check immediately
+        this.checkScheduleValidity();
+        
+        // Add a one-time check very close to the scheduled time
+        if (status?.status === 'waiting' && status.timeUntil > 0) {
+          setTimeout(() => {
+            this.checkScheduleValidity();
+            // Refresh exam data too
+            this.fetchExamQuestions();
+          }, status.timeUntil + 1000); // 1 second after scheduled start
+        }
+      }
     }
   },
   beforeUnmount() {
     // Remove window event listeners
     window.removeEventListener('focus', this.handleWindowFocus);
     window.removeEventListener('blur', this.handleWindowBlur);
+    
+    // Clear countdown interval
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+    }
+
+    // Clear schedule check interval
+    if (this.scheduleCheckInterval) {
+      clearInterval(this.scheduleCheckInterval);
+    }
     
     // Remove only the listeners, don't disconnect the socket
     if (this.socket) {
@@ -773,6 +1256,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
+  margin-top: 10px;
 }
 
 .exam-meta-item {
@@ -780,20 +1264,43 @@ export default {
   align-items: center;
   gap: 6px;
   font-size: 1rem;
-  color: #fafafa;
+  color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
+  background-color: rgba(255, 255, 255, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  backdrop-filter: blur(5px);
 }
 
 .status-started {
-  color: #4CAF50;
+  color: white;
+  background-color: #4CAF50;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+  animation: pulse-green 2s infinite;
 }
 
 .status-pending {
-  color: #FF9800;
+  color: #333;
+  background-color: #FFC107;
+  box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
 }
 
 .status-stopped {
-  color: #F44336;
+  color: white;
+  background-color: #F44336;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+}
+
+@keyframes pulse-green {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
 }
 
 .action-buttons {
@@ -1004,5 +1511,193 @@ export default {
     width: 40px;
     height: 40px;
   }
+}
+
+.scheduling-info, .eligibility-info {
+  padding: 15px;
+  margin: 10px 0;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.schedule-container {
+  background-color: #f5f9ff;
+  border-radius: 8px;
+  padding: 12px 16px;
+ 
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 5px 0;
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.schedule-item i {
+  color: #2196F3;
+  width: 20px;
+  text-align: center;
+}
+
+.schedule-item strong {
+  font-weight: 600;
+  color: #1976D2;
+}
+
+.eligibility-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
+}
+
+.eligibility-message i {
+  width: 20px;
+  text-align: center;
+  color: #4CAF50;
+}
+
+.eligibility-message.error {
+  color: #d32f2f;
+  font-weight: 600;
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.eligibility-message.error i {
+  color: #f44336;
+}
+
+.eligibility-message.success {
+  color: #4CAF50;
+  background-color: #e8f5e9;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.eligibility-message.success i {
+  color: #4CAF50;
+}
+
+.primary-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.primary-btn:disabled:hover {
+  background-color: #cccccc;
+  transform: none;
+  box-shadow: none;
+}
+
+.error-box {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
+  margin: 15px 0;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.warning-box {
+  background-color: #fff8e1;
+  border-left: 4px solid #ffc107;
+  margin: 15px 0;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.eligibility-message.warning {
+  color: #f57c00;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+}
+
+.eligibility-message.warning i {
+  color: #ffa000;
+}
+
+/* Tooltip styles */
+.tooltip-container {
+  position: relative;
+  cursor: pointer;
+}
+
+.tooltip-container:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tooltip {
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  padding: 10px;
+  background-color: #333;
+  color: white;
+  border-radius: 6px;
+  width: max-content;
+  max-width: 250px;
+  z-index: 100;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: normal;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #333 transparent transparent transparent;
+}
+
+@media (max-width: 768px) {
+  .tooltip {
+    width: 200px;
+    left: auto;
+    right: 0;
+    transform: translateY(10px);
+  }
+  
+  .tooltip::after {
+    left: auto;
+    right: 10px;
+  }
+}
+
+.primary-btn.large.waiting {
+  background-color: #ff9800;
+}
+
+.primary-btn.large.waiting:hover {
+  background-color: #f57c00;
+}
+
+.countdown {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ff9800;
+  margin-top: 5px;
 }
 </style> 

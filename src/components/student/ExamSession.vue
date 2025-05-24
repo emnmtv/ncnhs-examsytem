@@ -11,6 +11,11 @@
           Question {{ currentQuestionIndex + 1 }} of {{ shuffledQuestions.length }}
         </div>
       </div>
+      
+      <!-- Timer Display -->
+      <div v-if="timerEnabled" class="timer-container" :class="{ 'warning': remainingTime <= 300 }">
+        <i class="fas fa-clock"></i> Time Remaining: {{ formatTime(remainingTime) }}
+      </div>
     </div>
     
     <!-- Loading State -->
@@ -170,7 +175,7 @@
 </template>
 
 <script>
-import { fetchExamQuestions, submitExamAnswers, getFullImageUrl } from '@/services/authService';
+import { fetchExamQuestions, submitExamAnswers, getFullImageUrl, completeExamAttempt } from '@/services/authService';
 import socketManager from '@/utils/socketManager';
 import Swal from 'sweetalert2';
 
@@ -179,6 +184,18 @@ export default {
     testCode: {
       type: String,
       required: true
+    },
+    attemptId: {
+      type: Number,
+      default: null
+    },
+    durationMinutes: {
+      type: Number,
+      default: null
+    },
+    attemptNumber: {
+      type: Number,
+      default: 1
     }
   },
   data() {
@@ -195,7 +212,10 @@ export default {
       examSubmitted: false,
       showResults: false,
       isSubmitting: false,
-      fullscreenImage: null
+      fullscreenImage: null,
+      timerEnabled: false,
+      timerInterval: null,
+      remainingTime: 0, // in seconds
     };
   },
   computed: {
@@ -234,6 +254,8 @@ export default {
   beforeUnmount() {
     // Clean up the polling interval
     this.clearPolling();
+    // Clean up the timer interval
+    this.stopTimer();
     if (this.socket) {
       this.socket.off('examStatusUpdate');
       this.socket.off('examStopped');
@@ -247,6 +269,9 @@ export default {
           
           // If we have questions now, we can stop polling
           this.clearPolling();
+          
+          // Initialize timer if duration is specified
+          this.initializeTimer();
         }
       },
       immediate: true
@@ -259,6 +284,18 @@ export default {
           this.clearExamState();
           this.clearPolling();
         }
+      }
+    },
+    remainingTime(newValue) {
+      // Auto-submit when time runs out
+      if (newValue <= 0 && this.timerEnabled) {
+        this.stopTimer();
+        this.handleTimeUp();
+      }
+      
+      // Warning at 5 minutes and 1 minute
+      if (newValue === 300 || newValue === 60) {
+        this.showTimeWarning(newValue);
       }
     }
   },
@@ -402,10 +439,26 @@ export default {
             questionId: parseInt(questionId),
             userAnswer: this.answers[questionId],
           })),
+          attemptId: this.attemptId // Include the attempt ID if available
         };
         
         console.log('Submitting exam answers...');
         const response = await submitExamAnswers(answerData);
+        
+        // Complete the attempt if we have an attempt ID
+        if (this.attemptId) {
+          try {
+            await completeExamAttempt(this.attemptId);
+            console.log('Exam attempt completed successfully');
+          } catch (err) {
+            console.error('Error completing exam attempt:', err);
+            // Continue with submission even if completing the attempt fails
+          }
+        }
+        
+        // Stop the timer if it's running
+        this.stopTimer();
+        this.clearTimerState();
         
         // Store the score result but don't show it yet
         this.scoreResult = response.score;
@@ -476,6 +529,10 @@ export default {
     },
     
     quitExam() {
+      // Stop timer if it's running
+      this.stopTimer();
+      this.clearTimerState();
+      
       // Only leave the socket room if we're quitting before submission
       // If the exam is already submitted, we don't need to quit the socket
       if (this.socket && !this.examSubmitted) {
@@ -700,6 +757,108 @@ export default {
       this.fullscreenImage = null;
       // Restore scrolling
       document.body.style.overflow = '';
+    },
+
+    initializeTimer() {
+      // Only initialize timer if duration is specified and not already submitted
+      if (this.durationMinutes && !this.examSubmitted) {
+        // Check if we have a saved timer state
+        const savedTimerState = this.loadTimerState();
+        
+        if (savedTimerState && savedTimerState.testCode === this.testCode) {
+          // Restore timer from saved state
+          this.remainingTime = savedTimerState.remainingTime;
+        } else {
+          // Set new timer based on duration
+          this.remainingTime = this.durationMinutes * 60;
+        }
+        
+        // Start the timer
+        this.startTimer();
+      }
+    },
+    
+    startTimer() {
+      if (this.remainingTime > 0) {
+        this.timerEnabled = true;
+        this.timerInterval = setInterval(() => {
+          this.remainingTime--;
+          this.saveTimerState();
+        }, 1000);
+      }
+    },
+    
+    stopTimer() {
+      if (this.timerInterval) {
+        clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    },
+    
+    saveTimerState() {
+      const timerState = {
+        testCode: this.testCode,
+        remainingTime: this.remainingTime
+      };
+      localStorage.setItem('examTimerState', JSON.stringify(timerState));
+    },
+    
+    loadTimerState() {
+      const savedState = localStorage.getItem('examTimerState');
+      if (savedState) {
+        try {
+          return JSON.parse(savedState);
+        } catch (e) {
+          console.error('Error parsing saved timer state:', e);
+        }
+      }
+      return null;
+    },
+    
+    clearTimerState() {
+      localStorage.removeItem('examTimerState');
+    },
+    
+    formatTime(seconds) {
+      if (seconds <= 0) return '00:00';
+      
+      const minutes = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      
+      return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    },
+    
+    handleTimeUp() {
+      // Show alert
+      Swal.fire({
+        title: 'Time\'s Up!',
+        text: 'Your exam time has ended. Your answers will be submitted automatically.',
+        icon: 'warning',
+        showConfirmButton: false,
+        timer: 3000
+      });
+      
+      // Submit answers after a brief delay to let user see the message
+      setTimeout(() => {
+        this.submitAnswers();
+      }, 3000);
+    },
+    
+    showTimeWarning(seconds) {
+      const minutes = Math.floor(seconds / 60);
+      
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true
+      });
+      
+      Toast.fire({
+        icon: 'warning',
+        title: `${minutes} minute${minutes > 1 ? 's' : ''} remaining!`
+      });
     },
   }
 };
@@ -1210,5 +1369,30 @@ export default {
 
 .clickable-image:hover {
   transform: scale(1.02);
+}
+
+.timer-container {
+  margin-top: 15px;
+  padding: 10px 15px;
+  background-color: #e8f5e9;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4CAF50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-container.warning {
+  background-color: #fff3e0;
+  color: #ff9800;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 </style> 

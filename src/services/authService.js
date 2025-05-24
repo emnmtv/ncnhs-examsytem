@@ -1,5 +1,5 @@
-export const BASE_URL = 'http://192.168.0.101:3300/auth';
-export const SOCKET_URL = 'http://192.168.0.101:3300';
+export const BASE_URL = 'https://emnmtv.shop/auth';
+export const SOCKET_URL = 'https://emnmtv.shop';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -164,15 +164,9 @@ export const updateProfile = async (profileData) => {
       throw new Error("Password must be at least 8 characters");
     }
 
-    // Ensure lrn is sent as a string
-    if (profileData.lrn !== undefined && profileData.lrn !== null) {
-      profileData.lrn = String(profileData.lrn);
-    }
-
     console.log('AuthService: Updating profile', { 
       ...profileData, 
-      password: profileData.password ? '********' : undefined,
-      lrn: profileData.lrn
+      password: profileData.password ? '********' : undefined 
     });
 
     const response = await fetch(`${BASE_URL}/profile`, {
@@ -199,6 +193,47 @@ export const updateProfile = async (profileData) => {
   }
 };
 
+/**
+ * Update a student's LRN
+ * @param {string} lrn - The new LRN value
+ * @returns {Promise<Object>} - The API response
+ */
+export const updateStudentLRN = async (lrn) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Validate LRN format - must be 12 digits
+    if (!lrn || !/^\d{12}$/.test(lrn)) {
+      throw new Error('Invalid LRN format. LRN must be 12 digits');
+    }
+
+    console.log('AuthService: Updating student LRN');
+
+    const response = await fetch(`${BASE_URL}/student/lrn`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ lrn })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: LRN update failed', errorData);
+      throw new Error(errorData.error || "Failed to update LRN");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: LRN update successful', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: LRN update error:", error);
+    throw error;
+  }
+};
+
 export const deleteProfilePicture = async () => {
   const token = localStorage.getItem("jwtToken");
   if (!token) throw new Error("No token found");
@@ -221,7 +256,7 @@ export const deleteProfilePicture = async () => {
 
 
 // Exam management functions with token-based auth
-export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false) => {
+export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false, durationMinutes, startDateTime, endDateTime, maxAttempts, attemptSpacing) => {
   try {
     console.log('AuthService: Creating exam', testCode);
     
@@ -265,7 +300,12 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
         examTitle,
         questions: validatedQuestions,
         userId,
-        isDraft
+        isDraft,
+        durationMinutes,
+        startDateTime,
+        endDateTime,
+        maxAttempts,
+        attemptSpacing
       }),
     });
 
@@ -624,7 +664,10 @@ export const fetchStudentScores = async (studentId, examId) => {
       throw new Error(errorData.error || "Failed to fetch student scores");
     }
 
-    const { scores } = await response.json();
+    const data = await response.json();
+    console.log('AuthService: Raw API Response for scores:', JSON.stringify(data));
+    
+    const { scores } = data;
     console.log('AuthService: Student scores fetch successful', scores);
     return scores;
   } catch (error) {
@@ -705,6 +748,12 @@ export const updateExam = async (examId, examData) => {
         examTitle: examData.examTitle,
         isDraft: examData.isDraft,
         status: examData.status,
+        // Add the attempt and scheduling parameters
+        durationMinutes: examData.durationMinutes,
+        startDateTime: examData.startDateTime,
+        endDateTime: examData.endDateTime,
+        maxAttempts: examData.maxAttempts,
+        attemptSpacing: examData.attemptSpacing,
         questions: examData.questions.map(q => ({
           questionText: q.questionText,
           questionType: q.questionType,
@@ -764,6 +813,8 @@ export const fetchExamAnalysis = async (examId) => {
     const token = localStorage.getItem("jwtToken");
     if (!token) throw new Error("No token found");
 
+    console.log('AuthService: Fetching exam analysis for exam ID:', examId);
+
     const response = await fetch(`${BASE_URL}/exam-analysis/${examId}`, {
       method: "GET",
       headers: {
@@ -777,7 +828,10 @@ export const fetchExamAnalysis = async (examId) => {
       throw new Error(errorData.error || "Failed to fetch exam analysis");
     }
 
-    const { analysis } = await response.json();
+    const responseData = await response.json();
+    console.log('AuthService: Raw API response for exam analysis:', JSON.stringify(responseData));
+
+    const { analysis } = responseData;
     return analysis;
   } catch (error) {
     console.error("AuthService: Exam analysis fetch error:", error);
@@ -2166,14 +2220,20 @@ export const deleteFile = async (fileId) => {
 /**
  * Get student's exam answers with details
  */
-export const getStudentExamAnswers = async (examId, studentId) => {
+export const getStudentExamAnswers = async (examId, studentId, attemptId = null) => {
   try {
     const token = localStorage.getItem("jwtToken");
     if (!token) throw new Error("No token found");
 
-    console.log('AuthService: Fetching student exam answers', { examId, studentId });
+    console.log('AuthService: Fetching student exam answers', { examId, studentId, attemptId });
 
-    const response = await fetch(`${BASE_URL}/exam/${examId}/student/${studentId}/answers`, {
+    // Build URL with query parameter for attemptId if provided
+    let url = `${BASE_URL}/exam/${examId}/student/${studentId}/answers`;
+    if (attemptId) {
+      url += `?attemptId=${attemptId}`;
+    }
+
+    const response = await fetch(url, {
       headers: {
         "Authorization": `Bearer ${token}`
       }
@@ -2587,6 +2647,187 @@ export const updateProfileEditPermissions = async (permissions) => {
     return data.permissions;
   } catch (error) {
     console.error("Error updating profile edit permissions:", error);
+    throw error;
+  }
+};
+
+// Add these functions for exam attempts
+
+/**
+ * Create a new exam attempt
+ * @param {number} examId - The ID of the exam
+ * @returns {Promise<Object>} - The created attempt
+ */
+export const createExamAttempt = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Creating exam attempt', { examId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/attempt`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create exam attempt");
+    }
+
+    const { attempt } = await response.json();
+    return attempt;
+  } catch (error) {
+    console.error("AuthService: Create exam attempt error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Complete an exam attempt
+ * @param {number} attemptId - The ID of the attempt to complete
+ * @returns {Promise<Object>} - The completed attempt
+ */
+export const completeExamAttempt = async (attemptId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Completing exam attempt', { attemptId });
+
+    const response = await fetch(`${BASE_URL}/exam-attempt/${attemptId}/complete`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to complete exam attempt");
+    }
+
+    const { attempt } = await response.json();
+    return attempt;
+  } catch (error) {
+    console.error("AuthService: Complete exam attempt error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all attempts for a specific exam by the current user
+ * @param {number} examId - The ID of the exam
+ * @returns {Promise<Array>} - The user's attempts for the exam
+ */
+export const getUserExamAttempts = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching user exam attempts', { examId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/attempts`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch exam attempts");
+    }
+
+    const { attempts } = await response.json();
+    return attempts;
+  } catch (error) {
+    console.error("AuthService: Fetch exam attempts error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a user is eligible to take an exam
+ * @param {string} testCode - The test code of the exam
+ * @returns {Promise<Object>} - Eligibility information and any active attempt
+ */
+export const checkExamEligibility = async (testCode) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Checking exam eligibility', { testCode });
+
+    const response = await fetch(`${BASE_URL}/exam/${testCode}/eligibility`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to check exam eligibility");
+    }
+
+    const data = await response.json();
+    
+    // Log the complete eligibility response for debugging
+    console.log('AuthService: Raw eligibility response:', data);
+    
+    // Make sure totalAttempts is available even if not returned from backend
+    if (data.totalAttempts === undefined) {
+      console.log('AuthService: totalAttempts not present in response, calculating locally');
+      // Calculate totalAttempts from attempts array if available
+      if (data.attempts && Array.isArray(data.attempts)) {
+        data.totalAttempts = data.attempts.length;
+      } else {
+        // If no attempts array, check for nextAttemptNumber (which is 1-indexed)
+        data.totalAttempts = data.nextAttemptNumber ? data.nextAttemptNumber - 1 : 0;
+      }
+      console.log('AuthService: Calculated totalAttempts:', data.totalAttempts);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("AuthService: Check exam eligibility error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Restore a previous attempt record as the current score and exam answers
+ * @param {number} recordId - The ID of the attempt record to restore
+ * @returns {Promise<Object>} - Result containing the restored score and answer information
+ */
+export const restoreAttemptScore = async (recordId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Restoring attempt record', { recordId });
+
+    const response = await fetch(`${BASE_URL}/attempt-record/${recordId}/restore`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to restore attempt record");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Attempt record restored successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Attempt restore error:", error);
     throw error;
   }
 };

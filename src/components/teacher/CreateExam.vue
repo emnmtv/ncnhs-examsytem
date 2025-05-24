@@ -77,13 +77,116 @@
         </div>
       </div>
       
+      <!-- Exam Settings Card -->
+      <div class="card exam-settings-card">
+        <div class="card-header">
+          <h2><i class="fas fa-cogs"></i> Exam Settings</h2>
+          <div class="settings-toggles">
+            <button 
+              type="button" 
+              class="settings-toggle"
+              :class="{ active: activeSettingsTab === 'timer' }"
+              @click="toggleSettingsTab('timer')"
+            >
+              <i class="fas fa-clock"></i> Timer
+            </button>
+            <button 
+              type="button" 
+              class="settings-toggle"
+              :class="{ active: activeSettingsTab === 'schedule' }"
+              @click="toggleSettingsTab('schedule')"
+            >
+              <i class="fas fa-calendar-alt"></i> Schedule
+            </button>
+            <button 
+              type="button" 
+              class="settings-toggle"
+              :class="{ active: activeSettingsTab === 'attempts' }"
+              @click="toggleSettingsTab('attempts')"
+            >
+              <i class="fas fa-redo"></i> Attempts
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Timer Settings - Collapsible -->
+          <div class="settings-section" v-show="activeSettingsTab === 'timer'">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <label for="durationMinutes">Time Limit (minutes)</label>
+                <input 
+                  v-model.number="examData.durationMinutes" 
+                  type="number" 
+                  id="durationMinutes" 
+                  min="1"
+                  placeholder="e.g., 60 (leave empty for no limit)"
+                />
+                <small>Set a time limit for completing the exam. Leave empty for unlimited time.</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Schedule Settings - Collapsible -->
+          <div class="settings-section" v-show="activeSettingsTab === 'schedule'">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="startDateTime">Start Date & Time</label>
+                <input 
+                  v-model="examData.startDateTime" 
+                  type="datetime-local" 
+                  id="startDateTime"
+                />
+                <small>When the exam becomes available (leave empty for immediate availability)</small>
+              </div>
+              
+              <div class="form-group">
+                <label for="endDateTime">End Date & Time</label>
+                <input 
+                  v-model="examData.endDateTime" 
+                  type="datetime-local" 
+                  id="endDateTime"
+                />
+                <small>When the exam expires (leave empty for no expiration)</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Attempts Settings - Collapsible -->
+          <div class="settings-section" v-show="activeSettingsTab === 'attempts'">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="maxAttempts">Maximum Attempts</label>
+                <input 
+                  v-model.number="examData.maxAttempts" 
+                  type="number" 
+                  id="maxAttempts" 
+                  min="1"
+                  placeholder="e.g., 3 (leave empty for unlimited)"
+                />
+                <small>Maximum number of times a student can take this exam (leave empty for unlimited)</small>
+              </div>
+              
+              <div class="form-group">
+                <label for="attemptSpacing">Time Between Attempts (minutes)</label>
+                <input 
+                  v-model.number="examData.attemptSpacing" 
+                  type="number" 
+                  id="attemptSpacing" 
+                  min="0"
+                  placeholder="e.g., 60 (leave empty for no waiting period)"
+                />
+                <small>Minimum waiting time between attempts in minutes (leave empty for no waiting period)</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <!-- Questions Section -->
-      <div class="card questions-card">
+      <div class="card exam-questions-card">
         <div class="card-header">
           <h2><i class="fas fa-question-circle"></i> Questions</h2>
-          <span class="question-count badge">{{ questions.length }} questions</span>
         </div>
-        
         <div class="card-body">
           <!-- Empty state when no questions exist -->
           <div v-if="questions.length === 0" class="no-questions">
@@ -638,8 +741,21 @@ export default {
       classCode: '',
       title: '',
       isDraft: false,
-      userId: localStorage.getItem('userId')
+      userId: localStorage.getItem('userId'),
+      durationMinutes: null,
+      startDateTime: '',
+      endDateTime: '',
+      maxAttempts: null,
+      attemptSpacing: null
     });
+    
+    // Add state for active settings tab
+    const activeSettingsTab = ref('timer'); // Default to timer tab
+    
+    // Function to toggle between settings tabs
+    const toggleSettingsTab = (tab) => {
+      activeSettingsTab.value = activeSettingsTab.value === tab ? null : tab;
+    };
     const questions = ref([]);
     const loading = ref(false);
     const error = ref(null);
@@ -848,7 +964,12 @@ export default {
               classCode: exam.classCode,
               title: exam.examTitle,
               isDraft: exam.isDraft,
-              userId: exam.userId
+              userId: exam.userId,
+              durationMinutes: exam.durationMinutes || null,
+              startDateTime: exam.startDateTime ? new Date(exam.startDateTime).toISOString().slice(0, 16) : '',
+              endDateTime: exam.endDateTime ? new Date(exam.endDateTime).toISOString().slice(0, 16) : '',
+              maxAttempts: exam.maxAttempts || null,
+              attemptSpacing: exam.attemptSpacing || null
             };
             questions.value = exam.questions.map(q => ({
               text: q.questionText,
@@ -1013,7 +1134,12 @@ export default {
             examTitle: examData.value.title,
             questions: formattedQuestions,
             isDraft: isDraft,
-            status: isDraft ? 'draft' : 'pending'
+            status: isDraft ? 'draft' : 'pending',
+            durationMinutes: examData.value.durationMinutes,
+            startDateTime: examData.value.startDateTime ? new Date(examData.value.startDateTime) : undefined,
+            endDateTime: examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
+            maxAttempts: examData.value.maxAttempts,
+            attemptSpacing: examData.value.attemptSpacing
           });
         } else {
           await createExam(
@@ -1022,7 +1148,12 @@ export default {
             examData.value.title,
             formattedQuestions,
             localStorage.getItem('userId'),
-            isDraft
+            isDraft,
+            examData.value.durationMinutes,
+            examData.value.startDateTime ? new Date(examData.value.startDateTime) : undefined,
+            examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
+            examData.value.maxAttempts,
+            examData.value.attemptSpacing
           );
         }
 
@@ -1193,7 +1324,12 @@ export default {
         classCode: '',
         title: '',
         isDraft: false,
-        userId: localStorage.getItem('userId')
+        userId: localStorage.getItem('userId'),
+        durationMinutes: null,
+        startDateTime: '',
+        endDateTime: '',
+        maxAttempts: null,
+        attemptSpacing: null
       };
       questions.value = [];
       
@@ -1741,7 +1877,9 @@ export default {
       improveQuestionWithAI,
       generateOptionsWithAI,
       detectOptionsWithAI,
-      
+      activeSettingsTab,
+      toggleSettingsTab,
+        error,
       // Document upload related
       documentFileInput,
       documentFile,
@@ -4372,5 +4510,104 @@ small {
   gap: 20px;
   width: 100%;
   max-width: 100%;
+}
+
+/* Exam Settings Styles */
+.settings-section {
+  margin-bottom: 25px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid #eee;
+}
+
+.settings-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.settings-section h3 {
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  color: #444;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-section h3 i {
+  color: #159750;
+}
+
+/* Settings toggle buttons */
+.settings-toggles {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-toggle {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-toggle:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.settings-toggle.active {
+  background: rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.4);
+}
+
+.settings-toggle i {
+  font-size: 16px;
+}
+
+/* Card header with tabs */
+.exam-settings-card .card-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* Responsive adjustments for settings sections */
+@media (max-width: 768px) {
+  .settings-section {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+  }
+  
+  .settings-section h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+  
+  .settings-toggles {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .settings-toggle {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
 }
 </style>

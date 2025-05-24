@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch, computed, onUnmounted } from 'vue';
-import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl, deleteProfilePicture, getProfileEditPermissions } from '@/services/authService';
+import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl, deleteProfilePicture, getProfileEditPermissions, } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
 
@@ -175,6 +175,14 @@ const handleUpdate = async () => {
       
       // Add password to profile data for update
       profile.value.password = passwordData.value.password;
+    }
+    
+    // Validate LRN if it's being changed and is editable
+    if (editPermissions.value.canEditLRN && profile.value.lrn) {
+      // LRN must be 12 digits
+      if (!/^\d{12}$/.test(profile.value.lrn)) {
+        throw new Error('Invalid LRN format. LRN must be 12 digits');
+      }
     }
     
     // Show loading state

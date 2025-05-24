@@ -26,51 +26,213 @@
     </div>
 
     <div v-else-if="details" class="content">
-      <div class="exam-info">
-        <h3>{{ details.exam.examTitle }}</h3>
-        <p class="test-code">Test Code: {{ details.exam.testCode }}</p>
-      </div>
-
-      <div class="score-section">
-        <div class="current-score">
-          <h4>Current Score</h4>
-          <div class="score-display">
-            <span class="score-value">{{ details.score?.score || 0 }}</span>
-            <span class="score-total">/{{ details.answers.length }}</span>
-            <span class="score-percentage">({{ details.score?.percentage || 0 }}%)</span>
+      <!-- Consolidated Header Card -->
+      <div class="header-card">
+        <div class="header-card-top">
+          <div class="exam-info">
+            <h3>{{ details.exam.examTitle }}</h3>
+            <p class="test-code">Test Code: {{ details.exam.testCode }}</p>
+          </div>
+          
+          <div class="score-display-container">
+            <div class="current-score">
+              <div v-if="isPreviewingAttempt" class="preview-indicator">
+                <span class="material-icons">visibility</span>
+                PREVIEW MODE
+              </div>
+              <div class="score-value-container">
+                <span class="score-value">{{ details.score?.score || 0 }}</span>
+                <span class="score-total">/{{ details.answers.length }}</span>
+                <span class="score-percentage">({{ details.score?.percentage || 0 }}%)</span>
+              </div>
+              
+              <!-- Add attempt badge -->
+              <div v-if="details.score && details.attempts && !isPreviewingAttempt" class="attempt-badge">
+                Latest Attempt (#{{ getLastAttemptNumber() }})
+              </div>
+              <div v-else-if="isPreviewingAttempt && selectedAttemptRecord" class="attempt-preview-badge">
+                Previewing Attempt
+              </div>
+            </div>
+            
+            <div class="manual-score">
+              <div class="score-input">
+                <input 
+                  type="number" 
+                  v-model.number="manualScore"
+                  :min="0"
+                  :max="details.answers.length"
+                  @keyup.enter="updateManualScore"
+                  placeholder="Update score"
+                >
+                <button 
+                  @click="updateManualScore"
+                  :disabled="!isManualScoreValid || isUpdating"
+                >
+                  <span v-if="isUpdating">
+                    <i class="fas fa-spinner fa-spin"></i>
+                  </span>
+                  <span v-else>Update</span>
+                </button>
+              </div>
+              <p v-if="!isManualScoreValid" class="error-text">
+                Score must be between 0 and {{ details.answers.length }}
+              </p>
+            </div>
           </div>
         </div>
-
-        <div class="manual-score">
-          <h4>Update Score Manually</h4>
-          <div class="score-input">
-            <input 
-              type="number" 
-              v-model.number="manualScore"
-              :min="0"
-              :max="details.answers.length"
-              @keyup.enter="updateManualScore"
-            >
-            <button 
-              @click="updateManualScore"
-              :disabled="!isManualScoreValid || isUpdating"
-            >
-              <span v-if="isUpdating">
-                <i class="fas fa-spinner fa-spin"></i>
-              </span>
-              <span v-else>Update Score</span>
-            </button>
+        
+        <div class="header-card-content">
+        
+          <!-- <div class="info-section exam-settings">
+            <h4>Exam Settings</h4>
+            <div class="info-grid">
+              <div v-if="details.exam.durationMinutes" class="setting-item">
+                <span class="material-icons">timer</span>
+                <span>{{ details.exam.durationMinutes }} min duration</span>
+              </div>
+              <div v-if="details.exam.maxAttempts" class="setting-item">
+                <span class="material-icons">repeat</span>
+                <span>{{ details.exam.maxAttempts }} max attempts</span>
+              </div>
+              <div v-if="details.exam.startDateTime" class="setting-item">
+                <span class="material-icons">event</span>
+                <span>From: {{ formatDateTime(details.exam.startDateTime) }}</span>
+              </div>
+              <div v-if="details.exam.endDateTime" class="setting-item">
+                <span class="material-icons">event_busy</span>
+                <span>Until: {{ formatDateTime(details.exam.endDateTime) }}</span>
+              </div>
+            </div>
+          </div> -->
+          
+          <!-- Second row: Latest attempt info -->
+          <div v-if="latestAttempt" class="info-section attempt-info">
+            <h4>Latest Attempt</h4>
+            <div class="latest-attempt-card">
+              <div class="latest-attempt-details">
+                <div class="attempt-detail">
+                  <span class="material-icons">play_circle</span>
+                  <span>Started: {{ formatDateTime(latestAttempt.startedAt) }}</span>
+                </div>
+                
+                <div v-if="latestAttempt.completedAt" class="attempt-detail">
+                  <span class="material-icons">stop_circle</span>
+                  <span>Completed: {{ formatDateTime(latestAttempt.completedAt) }}</span>
+                </div>
+                
+                <div v-if="latestAttempt.timeSpent" class="attempt-detail">
+                  <span class="material-icons">timelapse</span>
+                  <span>Time Spent: {{ formatTimeSpent(latestAttempt.timeSpent) }}</span>
+                </div>
+              </div>
+              
+              <div class="attempt-status" :class="{ 'completed': latestAttempt.isCompleted }">
+                {{ latestAttempt.isCompleted ? 'Completed' : 'In Progress' }}
+              </div>
+            </div>
           </div>
-          <p v-if="!isManualScoreValid" class="error-text">
-            Score must be between 0 and {{ details.answers.length }}
-          </p>
+
+          <!-- Add historical attempts section -->
+          <div v-if="hasAttemptRecords" class="info-section attempt-history">
+            <div class="attempt-history-header" @click="toggleAttemptHistory">
+              <h4>
+                <span class="material-icons">{{ isAttemptHistoryOpen ? 'expand_less' : 'expand_more' }}</span>
+                Attempt History
+              </h4>
+            </div>
+            <div class="attempt-records-list" :class="{ 'collapsed': !isAttemptHistoryOpen }">
+              <div v-for="record in attemptRecords" :key="record.id" class="attempt-record-item">
+                <div class="attempt-record-info">
+                  <div class="attempt-record-header">
+                    <span class="attempt-number">Attempt #{{ record.attemptNumber }}</span>
+                    <span class="attempt-score">{{ record.score }}/{{ record.total }} ({{ record.percentage }}%)</span>
+                  </div>
+                  <div class="attempt-record-details">
+                    <div class="attempt-record-detail">
+                      <span class="material-icons">event</span>
+                      <span>{{ formatDateTime(record.completedAt) }}</span>
+                    </div>
+                    <div class="attempt-record-detail">
+                      <span class="material-icons">timelapse</span>
+                      <span>{{ formatTimeSpent(record.timeSpent) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="attempt-record-actions">
+                  <button 
+                    @click="restoreAttemptRecord(record.id)"
+                    class="restore-attempt-btn"
+                    :disabled="isUpdating"
+                    :title="'Restore attempt #' + record.attemptNumber + ' as current score'"
+                  >
+                    <span v-if="isRestoringRecord === record.id" class="material-icons spinning">sync</span>
+                    <span v-else class="material-icons">restore</span>
+                    Restore
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add this dropdown for attempt records in the header-card section -->
+          <div class="info-section attempt-selector">
+            <h4>Attempt History</h4>
+            <div v-if="hasAttemptRecords" class="attempt-preview-container">
+              <select 
+                v-model="selectedAttemptRecord" 
+                class="attempt-dropdown"
+                @change="previewAttemptRecord"
+              >
+                <option value="">Current Score</option>
+                <option 
+                  v-for="record in attemptRecords" 
+                  :key="record.id" 
+                  :value="record.id"
+                >
+                  Attempt #{{ record.attemptNumber }} - {{ record.score }}/{{ record.total }} ({{ record.percentage }}%)
+                </option>
+              </select>
+              
+              <button 
+                v-if="selectedAttemptRecord"
+                @click="restoreAttemptRecord(selectedAttemptRecord)"
+                class="restore-attempt-btn"
+                :disabled="isUpdating"
+              >
+                <span v-if="isRestoringRecord === selectedAttemptRecord" class="material-icons spinning">sync</span>
+                <span v-else class="material-icons">restore</span>
+                Restore This Attempt
+              </button>
+
+              <button 
+                v-if="isPreviewingAttempt"
+                @click="clearAttemptPreview"
+                class="clear-preview-btn"
+              >
+                <span class="material-icons">close</span>
+                Clear Preview
+              </button>
+            </div>
+            <div v-else class="no-attempt-records">
+              <span class="material-icons">history_toggle_off</span>
+              <span>No attempt history found for this student.</span>
+              <span class="records-debug">Records found: {{ attemptRecords.length }}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="answers-list">
+        <div v-if="!details.answers || details.answers.length === 0" class="no-answers">
+          <i class="fas fa-exclamation-circle"></i>
+          <p>No answers found for this exam</p>
+        </div>
+        
         <div 
+          v-else
           v-for="answer in details.answers" 
-          :key="answer.questionId"
+          :key="answer.id || answer.questionId"
           class="answer-item"
           :data-correct="answer.isCorrect"
         >
@@ -79,25 +241,25 @@
               <span class="question-number">Question {{ answer.questionId }}</span>
               <span 
                 class="question-type"
-                :class="answer.questionType.toLowerCase().replace('_', '-')"
+                :class="(getQuestionType(answer) || '').toLowerCase().replace('_', '-')"
               >
-                {{ formatQuestionType(answer.questionType) }}
+                {{ formatQuestionType(getQuestionType(answer)) }}
               </span>
             </div>
             
-            <p class="question-text">{{ answer.questionText }}</p>
+            <p class="question-text">{{ answer.question?.questionText || answer.questionText }}</p>
             
-            <div v-if="answer.imageUrl" class="question-image">
-              <img :src="answer.imageUrl" :alt="'Image for question ' + answer.questionId">
+            <div v-if="answer.question?.imageUrl || answer.imageUrl" class="question-image">
+              <img :src="getImageUrl(answer.question?.imageUrl || answer.imageUrl)" :alt="'Image for question ' + answer.questionId">
             </div>
 
-            <div v-if="answer.options" class="options">
+            <div v-if="hasOptions(answer)" class="options">
               <div 
-                v-for="(option, index) in answer.options" 
+                v-for="(option, index) in getOptions(answer)" 
                 :key="index"
                 class="option"
                 :class="{
-                  'correct-option': option === answer.correctAnswer,
+                  'correct-option': option === getCorrectAnswer(answer),
                   'selected-option': option === answer.userAnswer
                 }"
               >
@@ -121,7 +283,7 @@
               
               <div class="correct-answer">
                 <span class="answer-label">Correct Answer:</span>
-                <span>{{ answer.correctAnswer }}</span>
+                <span>{{ getCorrectAnswer(answer) }}</span>
               </div>
             </div>
 
@@ -130,7 +292,7 @@
                 <button 
                   class="toggle-btn correct"
                   :class="{ active: answer.isCorrect }"
-                  @click="updateAnswerCorrectness(answer.answerId, true)"
+                  @click="updateAnswerCorrectness(answer.id, true)"
                   :disabled="isUpdating"
                 >
                   <span class="material-icons">check_circle</span>
@@ -139,7 +301,7 @@
                 <button 
                   class="toggle-btn incorrect"
                   :class="{ active: !answer.isCorrect }"
-                  @click="updateAnswerCorrectness(answer.answerId, false)"
+                  @click="updateAnswerCorrectness(answer.id, false)"
                   :disabled="isUpdating"
                 >
                   <span class="material-icons">cancel</span>
@@ -155,9 +317,9 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore } from '../../services/authService';
+import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore, getFullImageUrl, restoreAttemptScore } from '../../services/authService';
 
 export default {
   name: 'StudentAnswerDetails',
@@ -170,25 +332,146 @@ export default {
     const error = ref(null);
     const isUpdating = ref(false);
     const manualScore = ref(0);
+    const latestAttempt = ref(null);
+    const isRestoringRecord = ref(null);
+    const selectedAttemptRecord = ref(null);
+    const isPreviewingAttempt = ref(false);
+    const originalScore = ref(null);
+    const originalAnswers = ref(null);
+    const isAttemptHistoryOpen = ref(true);
 
     const isManualScoreValid = computed(() => {
       if (!details.value) return false;
       const score = manualScore.value;
-      return score >= 0 && score <= details.value.answers.length;
+      return score >= 0 && score <= details.value.answers?.length || 0;
+    });
+
+    const attemptRecords = computed(() => {
+      if (!details.value) return [];
+      
+      console.log('Debug - details value structure:', JSON.stringify(details.value));
+      
+      // Extract records from various possible structures
+      const records = [];
+      
+      // Check for the nested structure in exam.attempts
+      if (details.value.exam && details.value.exam.attempts) {
+        console.log('Found exam.attempts:', details.value.exam.attempts);
+        details.value.exam.attempts.forEach(attempt => {
+          if (attempt.records && Array.isArray(attempt.records)) {
+            console.log(`Found ${attempt.records.length} records in attempt #${attempt.attemptNumber}`);
+            attempt.records.forEach(record => {
+              records.push({
+                ...record,
+                attemptNumber: attempt.attemptNumber,
+                attemptId: attempt.id
+              });
+            });
+          }
+        });
+      }
+      
+      // Check for direct records on the attempts
+      if (details.value.attempts) {
+        console.log('Found attempts:', details.value.attempts);
+        details.value.attempts.forEach(attempt => {
+          if (attempt.records && Array.isArray(attempt.records)) {
+            console.log(`Found ${attempt.records.length} records in attempt #${attempt.attemptNumber}`);
+            attempt.records.forEach(record => {
+              records.push({
+                ...record,
+                attemptNumber: attempt.attemptNumber,
+                attemptId: attempt.id
+              });
+            });
+          }
+        });
+      }
+      
+      // Check for attemptRecords directly on the details
+      if (details.value.attemptRecords && Array.isArray(details.value.attemptRecords)) {
+        console.log(`Found ${details.value.attemptRecords.length} direct attemptRecords`);
+        records.push(...details.value.attemptRecords);
+      }
+      
+      // Check for records directly on the details
+      if (details.value.records && Array.isArray(details.value.records)) {
+        console.log(`Found ${details.value.records.length} direct records`);
+        records.push(...details.value.records);
+      }
+      
+      console.log('Total records found:', records.length);
+      return records;
+    });
+
+    const hasAttemptRecords = computed(() => {
+      return attemptRecords.value.length > 0;
     });
 
     const loadAnswers = async () => {
       try {
         loading.value = true;
         error.value = null;
+        
+        console.log('Fetching exam answers:', {
+          examId: parseInt(route.params.examId),
+          studentId: parseInt(route.params.studentId)
+        });
+        
         const response = await getStudentExamAnswers(
           parseInt(route.params.examId),
           parseInt(route.params.studentId)
         );
-        details.value = response;
-        manualScore.value = response.score?.score || 0;
+        
+        console.log('Student answers full response:', JSON.stringify(response));
+        
+        if (response) {
+          // Ensure answers is always at least an empty array
+          if (!response.answers) response.answers = [];
+          
+          details.value = response;
+          manualScore.value = response.score?.score || 0;
+          
+          // Find the latest attempt with answers (most likely the last attempt)
+          if (response.attempts && response.attempts.length > 0) {
+            // Sort attempts by attemptNumber in descending order
+            const sortedAttempts = [...response.attempts].sort((a, b) => 
+              b.attemptNumber - a.attemptNumber
+            );
+            
+            console.log('Sorted attempts:', sortedAttempts);
+            
+            // Set the latest attempt
+            latestAttempt.value = sortedAttempts[0];
+            
+            // Check for records in each attempt
+            let foundRecords = false;
+            sortedAttempts.forEach(attempt => {
+              if (attempt.records && attempt.records.length > 0) {
+                console.log(`Found ${attempt.records.length} records in attempt #${attempt.attemptNumber}`);
+                foundRecords = true;
+              }
+            });
+            
+            if (!foundRecords) {
+              console.log('No attempt records found in attempts array, will try to fetch directly');
+            }
+          } else {
+            console.log('No attempts found in response');
+          }
+          
+          // Debug any attempt records that might be present
+          if (response.attemptRecords) {
+            console.log(`Found ${response.attemptRecords.length} attempt records directly on response`);
+          }
+          
+          // Check the computed array to make sure it's finding records
+          console.log('Computed attemptRecords length:', attemptRecords.value.length);
+        } else {
+          error.value = "Failed to load answers";
+        }
       } catch (err) {
-        error.value = err.message;
+        error.value = err.message || "Failed to load answers";
         console.error('Error loading answers:', err);
       } finally {
         loading.value = false;
@@ -200,22 +483,25 @@ export default {
     };
 
     const updateAnswerCorrectness = async (answerId, isCorrect) => {
-      if (!answerId) return; // Skip if no answerId (no answer provided)
+      if (!answerId) return;
       
       try {
         isUpdating.value = true;
         const result = await updateStudentExamAnswer(answerId, isCorrect);
         
         // Update the local state
-        const answer = details.value.answers.find(a => a.answerId === answerId);
+        const answer = details.value.answers.find(a => a.id === answerId);
         if (answer) {
           answer.isCorrect = isCorrect;
         }
-        details.value.score = result.score;
-        manualScore.value = result.score.score;
+        
+        if (result && result.score) {
+          details.value.score = result.score;
+          manualScore.value = result.score.score;
+        }
       } catch (err) {
         console.error('Error updating answer:', err);
-        // Show error notification
+        alert('Failed to update answer: ' + (err.message || 'Unknown error'));
       } finally {
         isUpdating.value = false;
       }
@@ -234,13 +520,14 @@ export default {
         details.value.score = result.score;
       } catch (err) {
         console.error('Error updating score:', err);
-        // Show error notification
       } finally {
         isUpdating.value = false;
       }
     };
 
     const formatQuestionType = (type) => {
+      if (!type) return 'Unknown Type';
+      
       return type
         .toLowerCase()
         .split('_')
@@ -248,7 +535,224 @@ export default {
         .join(' ');
     };
 
-    onMounted(loadAnswers);
+    const formatDateTime = (dateTime) => {
+      const date = new Date(dateTime);
+      return date.toLocaleString();
+    };
+
+    const formatTimeSpent = (timeSpent) => {
+      if (!timeSpent) return '--';
+      
+      const hours = Math.floor(timeSpent / 3600);
+      const minutes = Math.floor((timeSpent % 3600) / 60);
+      const seconds = timeSpent % 60;
+      
+      let formattedTime = '';
+      
+      if (hours > 0) {
+        formattedTime += `${hours}h `;
+      }
+      
+      if (minutes > 0 || hours > 0) {
+        formattedTime += `${minutes}m `;
+      }
+      
+      formattedTime += `${seconds}s`;
+      
+      return formattedTime;
+    };
+
+    const getLastAttemptNumber = () => {
+      if (!details.value?.attempts || details.value.attempts.length === 0) return '';
+      
+      const sortedAttempts = [...details.value.attempts].sort((a, b) => 
+        b.attemptNumber - a.attemptNumber
+      );
+      
+      return sortedAttempts[0].attemptNumber;
+    };
+
+    const getQuestionType = (answer) => {
+      // Try to get question type from nested question object first
+      if (answer.question && answer.question.questionType) {
+        return answer.question.questionType;
+      }
+      // Fall back to direct property if available
+      return answer.questionType || '';
+    };
+
+    const getOptions = (answer) => {
+      // Try to get options from nested question object first
+      if (answer.question && answer.question.options) {
+        try {
+          // Options may be stored as JSON string
+          const options = typeof answer.question.options === 'string' 
+            ? JSON.parse(answer.question.options)
+            : answer.question.options;
+          
+          // Handle array or object format
+          return Array.isArray(options) ? options : 
+            (options && typeof options === 'object' ? Object.values(options) : []);
+        } catch (e) {
+          console.error('Error parsing options:', e);
+          return [];
+        }
+      }
+      
+      // Fall back to direct property if available
+      if (answer.options) {
+        try {
+          const options = typeof answer.options === 'string'
+            ? JSON.parse(answer.options)
+            : answer.options;
+          
+          return Array.isArray(options) ? options : 
+            (options && typeof options === 'object' ? Object.values(options) : []);
+        } catch (e) {
+          console.error('Error parsing options:', e);
+          return [];
+        }
+      }
+      
+      return [];
+    };
+
+    const hasOptions = (answer) => {
+      return getOptions(answer).length > 0;
+    };
+
+    const getCorrectAnswer = (answer) => {
+      // Try to get correct answer from nested question object first
+      if (answer.question && answer.question.correctAnswer) {
+        return answer.question.correctAnswer;
+      }
+      // Fall back to direct property if available
+      return answer.correctAnswer || '';
+    };
+
+    const getImageUrl = (url) => {
+      if (!url) return '';
+      return getFullImageUrl(url);
+    };
+
+    const restoreAttemptRecord = async (recordId) => {
+      try {
+        console.log('Attempting to restore attempt record with ID:', recordId);
+        isRestoringRecord.value = recordId;
+        isUpdating.value = true;
+        
+        const result = await restoreAttemptScore(recordId);
+        console.log('Restore API result:', result);
+        
+        if (result) {
+          // Reload the data to get updated information
+          await loadAnswers();
+          
+          // Show success message (you can implement a toast notification here)
+          alert('Attempt record restored successfully.');
+        }
+      } catch (err) {
+        console.error('Error restoring attempt record:', err);
+        alert('Failed to restore attempt record: ' + (err.message || 'Unknown error'));
+      } finally {
+        isRestoringRecord.value = null;
+        isUpdating.value = false;
+      }
+    };
+
+    const previewAttemptRecord = async () => {
+      if (!selectedAttemptRecord.value) {
+        // If no record selected, clear preview and show current score
+        isPreviewingAttempt.value = false;
+        return;
+      }
+      
+      try {
+        isPreviewingAttempt.value = true;
+        
+        // Find the record in the existing records array
+        const recordToPreview = attemptRecords.value.find(r => r.id === parseInt(selectedAttemptRecord.value));
+        if (!recordToPreview) {
+          console.error('Selected record not found:', selectedAttemptRecord.value);
+          return;
+        }
+        
+        console.log('Previewing attempt record:', recordToPreview);
+        
+        // If the record contains answersData, use it to show the answers
+        if (recordToPreview.answersData) {
+          // Display the record's score as a temporary preview
+          const previewScore = {
+            score: recordToPreview.score,
+            total: recordToPreview.total,
+            percentage: recordToPreview.percentage
+          };
+          
+          // Store the original score to be able to restore it when clearing the preview
+          if (!originalScore.value) {
+            originalScore.value = { ...details.value.score };
+          }
+          
+          // Update the displayed score with the preview data
+          details.value.score = previewScore;
+          
+          // If answers data is available, update the answers display too
+          try {
+            const recordAnswers = typeof recordToPreview.answersData === 'string' 
+              ? JSON.parse(recordToPreview.answersData) 
+              : recordToPreview.answersData;
+              
+            if (Array.isArray(recordAnswers)) {
+              // Store original answers for restoring later
+              if (!originalAnswers.value) {
+                originalAnswers.value = [...details.value.answers];
+              }
+              
+              // Replace the current answers with the record's answers for preview
+              details.value.answers = recordAnswers;
+            }
+          } catch (err) {
+            console.error('Error parsing answers data:', err);
+          }
+        }
+      } catch (err) {
+        console.error('Error previewing attempt record:', err);
+      }
+    };
+
+    const clearAttemptPreview = () => {
+      selectedAttemptRecord.value = null;
+      isPreviewingAttempt.value = false;
+      
+      // Restore original score and answers if they were saved
+      if (originalScore.value) {
+        details.value.score = originalScore.value;
+        originalScore.value = null;
+      }
+      
+      if (originalAnswers.value) {
+        details.value.answers = originalAnswers.value;
+        originalAnswers.value = null;
+      }
+    };
+
+    const toggleAttemptHistory = () => {
+      isAttemptHistoryOpen.value = !isAttemptHistoryOpen.value;
+    };
+
+    // Add watcher to help with debugging
+    watch(details, (newVal) => {
+      console.log('Details updated:', {
+        hasDetails: !!newVal,
+        hasAnswers: newVal?.answers?.length > 0,
+        answersCount: newVal?.answers?.length || 0
+      });
+    });
+
+    onMounted(() => {
+      console.log('Component mounted, loading initial answers');
+      loadAnswers();
+    });
 
     return {
       details,
@@ -261,7 +765,28 @@ export default {
       updateAnswerCorrectness,
       updateManualScore,
       formatQuestionType,
-      handleBack
+      handleBack,
+      formatDateTime,
+      formatTimeSpent,
+      latestAttempt,
+      getLastAttemptNumber,
+      getQuestionType,
+      getOptions,
+      hasOptions,
+      getCorrectAnswer,
+      getImageUrl,
+      restoreAttemptRecord,
+      isRestoringRecord,
+      attemptRecords,
+      hasAttemptRecords,
+      selectedAttemptRecord,
+      isPreviewingAttempt,
+      previewAttemptRecord,
+      clearAttemptPreview,
+      originalScore,
+      originalAnswers,
+      isAttemptHistoryOpen,
+      toggleAttemptHistory,
     };
   }
 };
@@ -273,6 +798,8 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
 .header {
@@ -288,18 +815,20 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 10px 18px;
   background: #e8f5e9;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
   color: #159750;
   font-weight: 600;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
 }
 
 .back-button:hover {
   background: #c8e6c9;
   transform: translateX(-5px);
+  box-shadow: 0 4px 8px rgba(21, 151, 80, 0.2);
 }
 
 .back-button .material-icons {
@@ -315,6 +844,7 @@ export default {
   color: #159750;
   font-size: 1.8rem;
   font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .sub-info {
@@ -328,11 +858,7 @@ export default {
 
 .exam-info {
   background: white;
-  padding: 25px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
   margin-bottom: 20px;
-  border-left: 5px solid #159750;
 }
 
 .exam-info h3 {
@@ -351,42 +877,101 @@ export default {
   gap: 8px;
 }
 
-.score-section {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-  margin-bottom: 30px;
-}
-
-.current-score, .manual-score {
+/* Header Card */
+.header-card {
   background: white;
-  padding: 25px;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0,0,0,0.05);
 }
 
-.current-score h4, .manual-score h4 {
-  color: #159750;
+.header-card:hover {
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+.header-card-top {
+  padding: 25px;
+  background: linear-gradient(to right, rgba(21, 151, 80, 0.05), rgba(255, 255, 255, 0));
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.header-card-content {
+  padding: 25px;
+}
+
+.info-section {
+  margin-top: 20px;
+}
+
+.info-section h4 {
   margin: 0 0 15px 0;
-  font-size: 1.2rem;
+  color: #159750;
+  font-size: 1.1rem;
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding-left: 15px;
 }
 
-.score-display {
+.info-section h4::before {
+  content: '';
+  display: block;
+  width: 4px;
+  height: 18px;
+  background: #159750;
+  border-radius: 2px;
+  position: absolute;
+  left: 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+/* Score Display */
+.score-display-container {
   display: flex;
-  align-items: baseline;
-  gap: 5px;
+  flex-direction: row;
+  align-items: center;
+  gap: 30px;
+  justify-content: space-between;
+  width: 100%;
   margin-top: 15px;
 }
 
+.current-score {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+
+.score-value-container {
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  background: #f8f9fa;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
 .score-value {
-  font-size: 3em;
+  font-size: 2.5em;
   font-weight: 700;
   color: #159750;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.1);
 }
 
 .score-total {
-  font-size: 1.8em;
+  font-size: 1.5em;
   color: #666;
 }
 
@@ -397,21 +982,26 @@ export default {
   font-size: 1.2em;
 }
 
+.manual-score {
+  position: relative;
+}
+
 .score-input {
   display: flex;
   gap: 10px;
-  margin-top: 15px;
+  align-items: center;
 }
 
 .score-input input {
-  width: 100px;
+  width: 80px;
   padding: 12px;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  font-size: 1.1em;
+  border-radius: 8px;
+  font-size: 1em;
   transition: all 0.3s ease;
   text-align: center;
   font-weight: 600;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .score-input input:focus {
@@ -421,21 +1011,21 @@ export default {
 }
 
 .score-input button {
-  padding: 12px 24px;
+  padding: 12px 20px;
   background: linear-gradient(135deg, #159750 0%, #0d6b38 100%);
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  flex: 1;
+  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
 }
 
 .score-input button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(21, 151, 80, 0.2);
+  box-shadow: 0 6px 15px rgba(21, 151, 80, 0.3);
 }
 
 .score-input button:disabled {
@@ -447,23 +1037,107 @@ export default {
 
 .error-text {
   color: #f44336;
-  font-size: 0.9em;
+  font-size: 0.8em;
   margin-top: 5px;
+  position: absolute;
+  right: 0;
 }
 
+/* Exam settings styling */
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0,0,0,0.03);
+}
+
+.setting-item:hover {
+  background: #f1f5f9;
+  border-color: rgba(0,0,0,0.08);
+}
+
+.setting-item .material-icons {
+  color: #159750;
+  font-size: 1.3em;
+  opacity: 0.9;
+}
+
+/* Latest attempt info styling */
+.latest-attempt-card {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-left: 4px solid #159750;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.latest-attempt-card:hover {
+  background: #f1f5f9;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.latest-attempt-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.attempt-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attempt-detail .material-icons {
+  color: #159750;
+  font-size: 1.2em;
+}
+
+.attempt-status {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.8em;
+  font-weight: 600;
+  background: #ffebee;
+  color: #dc2626;
+  text-align: center;
+  box-shadow: 0 2px 5px rgba(220, 38, 38, 0.1);
+}
+
+.attempt-status.completed {
+  background: #e8f5e9;
+  color: #159750;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
+}
+
+/* Answers list - update margin to work with new design */
 .answers-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 25px;
 }
 
 .answer-item {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.08);
   overflow: hidden;
   border-left: 5px solid transparent;
   transition: all 0.3s ease;
+}
+
+.answer-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
 }
 
 .answer-item[data-correct="true"] {
@@ -495,98 +1169,130 @@ export default {
 }
 
 .question-type {
-  padding: 6px 12px;
+  padding: 6px 16px;
   border-radius: 20px;
-  font-size: 0.9em;
+  font-size: 0.85em;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .question-type.multiple-choice {
   background: #e8f5e9;
   color: #159750;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
 }
 
 .question-type.true-false {
   background: #e3f2fd;
   color: #1976d2;
+  box-shadow: 0 2px 5px rgba(25, 118, 210, 0.1);
 }
 
 .question-type.short-answer {
   background: #f3e5f5;
   color: #7b1fa2;
+  box-shadow: 0 2px 5px rgba(123, 31, 162, 0.1);
 }
 
 .question-text {
-  margin: 10px 0;
+  margin: 16px 0;
   color: #333;
-  line-height: 1.5;
+  line-height: 1.6;
+  font-size: 1.05rem;
 }
 
 .question-image {
-  margin: 10px 0;
+  margin: 20px 0;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  text-align: center;
 }
 
 .question-image img {
   max-width: 100%;
-  border-radius: 4px;
+  max-height: 400px;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  display: inline-block;
+  transition: all 0.3s ease;
+  object-fit: contain;
+}
+
+.question-image img:hover {
+  transform: scale(1.02);
 }
 
 .options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 16px;
 }
 
 .option {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   transition: all 0.2s;
+  background: #f8f9fa;
+}
+
+.option:hover {
+  background: #f1f5f9;
 }
 
 .option.correct-option {
   border-color: #4caf50;
   background: #e8f5e9;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
 }
 
 .option.selected-option {
   border-color: #2196f3;
   background: #e3f2fd;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
 }
 
 .answer-section {
-  padding: 20px;
+  padding: 25px;
 }
 
 .answer-details {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
 }
 
 .answer-label {
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 5px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
 }
 
 .student-answer {
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 4px;
-  margin: 5px 0;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 8px 0;
   border: 1px solid transparent;
+  font-size: 1rem;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
 }
 
 .student-answer.correct {
   background: #e8f5e9;
   border-color: #4caf50;
   color: #2e7d32;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
 }
 
 .student-answer.incorrect {
   background: #ffebee;
   border-color: #f44336;
   color: #c62828;
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.1);
 }
 
 .student-answer.no-answer {
@@ -595,33 +1301,39 @@ export default {
 }
 
 .correct-answer {
-  margin-top: 10px;
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  background: #f1f5f9;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 3px solid #159750;
 }
 
 .answer-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 20px;
 }
 
 .correctness-toggle {
   display: flex;
-  gap: 10px;
+  gap: 15px;
 }
 
 .toggle-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 10px;
+  padding: 12px 24px;
   border: none;
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
 .toggle-btn.correct {
@@ -631,11 +1343,14 @@ export default {
 
 .toggle-btn.correct:hover {
   background: #c8e6c9;
+  box-shadow: 0 6px 15px rgba(76, 175, 80, 0.2);
+  transform: translateY(-2px);
 }
 
 .toggle-btn.correct.active {
   background: #159750;
   color: white;
+  box-shadow: 0 6px 15px rgba(21, 151, 80, 0.25);
 }
 
 .toggle-btn.incorrect {
@@ -645,34 +1360,48 @@ export default {
 
 .toggle-btn.incorrect:hover {
   background: #ffcdd2;
+  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.2);
+  transform: translateY(-2px);
 }
 
 .toggle-btn.incorrect.active {
   background: #dc2626;
   color: white;
+  box-shadow: 0 6px 15px rgba(220, 38, 38, 0.25);
 }
 
 .toggle-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  transform: none !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05) !important;
 }
 
 .loading {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
   color: #666;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  margin: 40px auto;
 }
 
 .error {
   text-align: center;
-  padding: 40px;
+  padding: 60px;
   color: #dc2626;
+  background: #ffebee;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+  margin: 40px auto;
+  border-left: 5px solid #dc2626;
 }
 
 .retry-btn {
-  margin-top: 15px;
-  padding: 10px 24px;
+  margin-top: 20px;
+  padding: 12px 30px;
   background: #159750;
   color: white;
   border: none;
@@ -680,34 +1409,376 @@ export default {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(21, 151, 80, 0.2);
 }
 
 .retry-btn:hover {
   background: #0d6b38;
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(21, 151, 80, 0.3);
+}
+
+.attempt-badge {
+  background: #e8f5e9;
+  color: #159750;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-top: 10px;
+  font-weight: 600;
+  display: inline-block;
+  box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
+}
+
+/* Add new styles for attempt history */
+.attempt-history {
+  margin-top: 20px;
+}
+
+.attempt-history-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.attempt-history-header h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.attempt-history-header:hover h4 {
+  color: #0d6b38;
+}
+
+.attempt-records-list {
+  max-height: 1000px;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.attempt-records-list.collapsed {
+  max-height: 0;
+}
+
+.attempt-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.attempt-record-item {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-left: 4px solid #2196f3;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+
+.attempt-record-item:hover {
+  background: #f1f5f9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.attempt-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.attempt-number {
+  font-weight: 600;
+  color: #2196f3;
+  font-size: 0.95rem;
+}
+
+.attempt-score {
+  background: #e8f5e9;
+  color: #159750;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.attempt-record-details {
+  display: flex;
+  gap: 16px;
+}
+
+.attempt-record-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.attempt-record-detail .material-icons {
+  font-size: 16px;
+  color: #777;
+}
+
+.attempt-record-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.restore-attempt-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
+}
+
+.restore-attempt-btn:hover:not(:disabled) {
+  background: #1976d2;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+  transform: translateY(-1px);
+}
+
+.restore-attempt-btn:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add styles for attempt selection dropdown and preview buttons */
+.attempt-selector {
+  margin-bottom: 20px;
+}
+
+.attempt-preview-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.attempt-dropdown {
+  flex-grow: 1;
+  max-width: 400px;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: white;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.attempt-dropdown:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.clear-preview-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(244, 67, 54, 0.2);
+}
+
+.clear-preview-btn:hover {
+  background: #d32f2f;
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Add preview indicator in the score display container */
+.preview-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ff9800;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+  animation: pulse 1.5s infinite alternate ease-in-out;
+}
+
+.preview-indicator .material-icons {
+  font-size: 18px;
+}
+
+.attempt-preview-badge {
+  background: #ff9800;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  margin-top: 10px;
+  font-weight: 600;
+  display: inline-block;
+  box-shadow: 0 2px 5px rgba(255, 152, 0, 0.3);
+}
+
+@keyframes pulse {
+  0% { opacity: 0.8; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.05); }
 }
 
 @media (max-width: 768px) {
   .student-answer-details {
-    padding: 10px;
+    padding: 0rem;
+    background: #f5f7fa;
   }
 
   .header {
+    padding: 15px;
+    margin-bottom: 15px;
     flex-direction: column;
     gap: 15px;
-    align-items: flex-start;
   }
-
+  
+  .back-button {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .back-button .material-icons {
+    font-size: 18px;
+  }
+  
   .student-info {
-    text-align: left;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .student-info h2 {
+    font-size: 1.4rem;
+  }
+  
+  .sub-info {
+    font-size: 0.8rem;
+    gap: 5px;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 
-  .score-section {
+  .header-card {
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+  }
+
+  .header-card-top {
+    padding: 20px;
+  }
+
+  .header-card-content {
+    padding: 20px;
+  }
+  
+  .score-display-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .score-value {
+    font-size: 2.2em;
+  }
+  
+  .score-total {
+    font-size: 1.3em;
+  }
+  
+  .score-percentage {
+    font-size: 1.1em;
+    margin-left: 8px;
+  }
+
+  .manual-score {
+    width: 100%;
+  }
+  
+  .score-input {
+    width: 100%;
+  }
+  
+  .score-input input {
+    flex-grow: 1;
+    width: auto;
+  }
+
+  .error-text {
+    position: static;
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .info-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .info-section {
+    margin-top: 20px;
+  }
+  
+  .info-section h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .setting-item {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  
+  .answer-item {
+    margin-bottom: 0;
+    border-radius: 12px;
   }
 
+  .answers-list {
+    gap: 20px;
+  }
+
+  .question-section,
   .answer-section {
-    padding: 15px;
+    padding: 20px;
   }
 
   .correctness-toggle {
@@ -717,6 +1788,71 @@ export default {
   .toggle-btn {
     flex: 1;
     justify-content: center;
+    padding: 10px;
+    font-size: 0.9rem;
   }
+  
+  .toggle-btn .material-icons {
+    font-size: 1.1rem;
+  }
+  
+  .loading, .error {
+    padding: 40px 20px;
+    margin: 20px auto;
+  }
+  
+  .question-text {
+    font-size: 1rem;
+  }
+
+  .attempt-record-item {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .attempt-record-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .attempt-record-details {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .attempt-preview-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .attempt-dropdown {
+    max-width: none;
+  }
+}
+
+/* Style for no attempt records message */
+.no-attempt-records {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  color: #666;
+  font-style: italic;
+}
+
+.no-attempt-records .material-icons {
+  color: #999;
+}
+
+.records-debug {
+  margin-left: auto;
+  background: #e0e0e0;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 </style>

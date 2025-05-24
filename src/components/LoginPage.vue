@@ -104,7 +104,7 @@ const goToSurvey = () => {
             <img src="@/assets/ncnhs-icon.png" alt="NCNHS Logo" class="ncnhs-logo" />
           </div>
           
-          <h2 class="system-name">Examination Portal</h2>
+          <h2 class="system-name">Assessment Portal</h2>
           <p class="tagline">Empowering Education Through Technology</p>
         </div>
       </div>
@@ -442,7 +442,15 @@ label {
 
 .password-input {
   position: relative;
+  width: 100%;
 }
+
+.password-input input {
+  width: 100%;
+  padding-right: 2.5rem; /* Space for the icon */
+  box-sizing: border-box;
+}
+
 
 .toggle-password {
   position: absolute;
