@@ -2831,3 +2831,77 @@ export const restoreAttemptScore = async (recordId) => {
     throw error;
   }
 };
+
+/**
+ * Download a student's submission files as a zip
+ * @param {number} submissionId - The ID of the submission
+ * @returns {Promise<Blob>} - A blob containing the zip file
+ */
+export const downloadSubmissionFiles = async (submissionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Downloading submission files', { submissionId });
+
+    const response = await fetch(`${BASE_URL}/submissions/${submissionId}/download`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      // Handle specific error if JSON response
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to download submission files");
+      }
+      throw new Error(`Failed to download submission files: ${response.status} ${response.statusText}`);
+    }
+
+    // Return the response blob directly
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error("AuthService: Download submission files error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Download all submissions for a task as a zip
+ * @param {number} taskId - The ID of the task
+ * @returns {Promise<Blob>} - A blob containing the zip file
+ */
+export const downloadAllTaskSubmissions = async (taskId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Downloading all task submissions', { taskId });
+
+    const response = await fetch(`${BASE_URL}/tasks/${taskId}/download-all`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      // Handle specific error if JSON response
+      if (response.headers.get('content-type')?.includes('application/json')) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to download task submissions");
+      }
+      throw new Error(`Failed to download task submissions: ${response.status} ${response.statusText}`);
+    }
+
+    // Return the response blob directly
+    const blob = await response.blob();
+    return blob;
+  } catch (error) {
+    console.error("AuthService: Download task submissions error:", error);
+    throw error;
+  }
+};

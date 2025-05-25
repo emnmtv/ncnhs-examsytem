@@ -96,6 +96,10 @@
             </div>
           </div>
           <div class="visibility-actions">
+            <button @click="downloadAllSubmissions" class="action-btn download-btn">
+              <span class="material-icons">download</span>
+              Download All
+            </button>
             <button @click="showAddStudentsModal = true" class="action-btn add-btn">
               <span class="material-icons">person_add</span>
               Add Students
@@ -190,15 +194,15 @@
                              class="file-icon">
                         <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                         <div class="file-actions">
-                          <span 
+                          <button 
                             @click="openFilePreview(student.submission.files[0])"
-                             class="action-link view">
+                             class="file-btn view-file-btn">
                             <span class="material-icons">visibility</span>
                             View
-                          </span>
+                          </button>
                           <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                              download
-                             class="action-link download">
+                             class="file-btn download-file-btn">
                             <span class="material-icons">download</span>
                           </a>
                         </div>
@@ -295,15 +299,15 @@
                                  class="file-icon">
                             <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                             <div class="file-actions">
-                              <span 
+                              <button 
                                 @click="openFilePreview(student.submission.files[0])"
-                                 class="action-link view">
+                                 class="file-btn view-file-btn">
                                 <span class="material-icons">visibility</span>
                                 View
-                              </span>
+                              </button>
                               <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                                  download
-                                 class="action-link download">
+                                 class="file-btn download-file-btn">
                                 <span class="material-icons">download</span>
                               </a>
                             </div>
@@ -403,15 +407,15 @@
                              class="file-icon">
                         <span class="file-name">{{ student.submission.files[0].fileName }}</span>
                         <div class="file-actions">
-                          <span 
+                          <button 
                             @click="openFilePreview(student.submission.files[0])"
-                             class="action-link view">
+                             class="file-btn view-file-btn">
                             <span class="material-icons">visibility</span>
                             View
-                          </span>
+                          </button>
                           <a :href="getFullFileUrl(student.submission.files[0].fileUrl)" 
                              download
-                             class="action-link download">
+                             class="file-btn download-file-btn">
                             <span class="material-icons">download</span>
                           </a>
                         </div>
@@ -540,8 +544,8 @@
     </div>
 
     <!-- Add this modal for viewing multiple files -->
-    <div v-if="showFilesModal" class="files-modal">
-      <div class="modal-content">
+    <div v-if="showFilesModal" class="files-modal" @click="closeFilesModal">
+      <div class="modal-content" @click.stop>
         <div class="modal-header">
           <h3>Student Submission</h3>
           <button class="close-btn" @click="closeFilesModal">
@@ -574,26 +578,32 @@
           
           <div class="files-header">
             <h4>Submitted Files ({{ selectedSubmission?.files?.length || 0 }})</h4>
+            <button 
+              @click="downloadStudentSubmission()"
+              class="download-all-btn"
+              v-if="selectedSubmission?.files?.length > 0">
+              <span class="material-icons">download</span>
+              Download All Files
+            </button>
           </div>
           
           <div class="files-grid">
             <div v-for="file in selectedSubmission.files" 
                  :key="file.id" 
-                 class="file-item">
+                 class="file-card">
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
               <span class="file-name">{{ file.fileName }}</span>
               <div class="file-actions">
-                <span 
+                <button 
                   @click="openFilePreview(file)"
-                   class="action-link view">
+                  class="file-btn view-file-btn">
                   <span class="material-icons">visibility</span>
                   View
-                </span>
+                </button>
                 <a :href="getFullFileUrl(file.fileUrl)" 
                    download
-                   class="action-link download">
+                   class="file-btn download-file-btn">
                   <span class="material-icons">download</span>
-                  Download
                 </a>
               </div>
             </div>
@@ -639,8 +649,8 @@
       </div>
     </div>
 
-    <!-- Add this new file preview modal -->
-    <div v-if="showFilePreview" class="file-preview-modal" @click="closeFilePreview">
+    <!-- File preview modal -->
+    <div v-if="showFilePreview && !isPdf(previewFile.fileName) && !isDocx(previewFile.fileName)" class="file-preview-modal" @click="closeFilePreview">
       <div class="preview-content" @click.stop>
         <div class="preview-header">
           <h3>{{ previewFile.fileName }}</h3>
@@ -649,9 +659,27 @@
           </button>
         </div>
         <div class="preview-body">
+          <!-- Loading state -->
+          <div v-if="previewFile.loading" class="preview-loading">
+            <div class="spinner"></div>
+            <p>Loading file preview...</p>
+          </div>
+          
+          <!-- Error state -->
+          <div v-else-if="previewFile.error" class="preview-error">
+            <span class="material-icons">error_outline</span>
+            <p>Failed to load file preview</p>
+            <a :href="getFullFileUrl(previewFile.fileUrl)" 
+               download
+               class="download-file-btn">
+              <span class="material-icons">download</span>
+              Download File
+            </a>
+          </div>
+          
           <!-- Image preview -->
-          <img v-if="isImage(previewFile.fileName)" 
-               :src="getFullFileUrl(previewFile.fileUrl)" 
+          <img v-else-if="isImage(previewFile.fileName)" 
+               :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)" 
                alt="File preview"
                class="preview-image">
           
@@ -659,15 +687,10 @@
           <video v-else-if="isVideo(previewFile.fileName)" 
                  controls
                  class="preview-video">
-            <source :src="getFullFileUrl(previewFile.fileUrl)" :type="getVideoType(previewFile.fileName)">
+            <source :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)" 
+                    :type="getVideoType(previewFile.fileName)">
             Your browser does not support video playback.
           </video>
-          
-          <!-- PDF preview -->
-          <iframe v-else-if="isPdf(previewFile.fileName)"
-                  :src="getFullFileUrl(previewFile.fileUrl)"
-                  class="preview-pdf"
-                  frameborder="0"></iframe>
           
           <!-- Other file types - show download prompt -->
           <div v-else class="preview-fallback">
@@ -685,6 +708,61 @@
         </div>
       </div>
     </div>
+    
+    <!-- Full screen PDF and DOCX viewer -->
+    <div v-if="showFilePreview && (isPdf(previewFile.fileName) || isDocx(previewFile.fileName))" class="fullscreen-preview">
+      <div class="fullscreen-header">
+        <div class="header-left">
+          <button class="back-btn" @click="closeFilePreview">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <h3>{{ previewFile.fileName }}</h3>
+        </div>
+        <div class="header-actions">
+          <a :href="getFullFileUrl(previewFile.fileUrl)" 
+             download
+             class="download-action">
+            <span class="material-icons">download</span>
+            Download
+          </a>
+          <button class="close-fullscreen-btn" @click="closeFilePreview">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="fullscreen-body">
+        <!-- Loading state -->
+        <div v-if="previewFile.loading" class="preview-loading">
+          <div class="spinner"></div>
+          <p>Loading file preview...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div v-else-if="previewFile.error" class="preview-error">
+          <span class="material-icons">error_outline</span>
+          <p>Failed to load file preview</p>
+          <a :href="getFullFileUrl(previewFile.fileUrl)" 
+             download
+             class="download-file-btn">
+            <span class="material-icons">download</span>
+            Download File
+          </a>
+        </div>
+        
+        <!-- PDF preview -->
+        <iframe v-else-if="isPdf(previewFile.fileName)"
+                :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)"
+                class="fullscreen-iframe"
+                frameborder="0"></iframe>
+        
+        <!-- DOCX preview using Google Docs Viewer -->
+        <iframe v-else-if="isDocx(previewFile.fileName)"
+                :src="`https://docs.google.com/viewer?url=${encodeURIComponent(getFullFileUrl(previewFile.fileUrl))}&embedded=true`"
+                class="fullscreen-iframe"
+                frameborder="0"></iframe>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -700,7 +778,9 @@ import {
   getTaskSubmissions,
   scoreSubmission,
   getBaseApiUrl,
-  getSectionsBySubject
+  getSectionsBySubject,
+  downloadAllTaskSubmissions,
+  downloadSubmissionFiles
 } from '@/services/authService';
 import { formatDistanceToNow } from 'date-fns';
 // Import file icons
@@ -1198,12 +1278,58 @@ const submitScoreFromModal = () => {
 };
 
 // Add these new methods for file preview
-const openFilePreview = (file) => {
-  previewFile.value = file;
-  showFilePreview.value = true;
+const openFilePreview = async (file) => {
+  try {
+    // Create a copy of the file object to avoid mutating the original
+    previewFile.value = { ...file };
+    showFilePreview.value = true;
+    
+    // For PDFs, images and videos - fetch as blob and create object URL
+    if (isPdf(file.fileName) || isImage(file.fileName) || isVideo(file.fileName)) {
+      // Show loading state
+      previewFile.value.loading = true;
+      
+      try {
+        const response = await fetch(getFullFileUrl(file.fileUrl));
+        const blob = await response.blob();
+        previewFile.value.blobUrl = URL.createObjectURL(blob);
+      } catch (err) {
+        console.error(`Error fetching file ${file.fileName}:`, err);
+        previewFile.value.error = true;
+      } finally {
+        previewFile.value.loading = false;
+      }
+    }
+    
+    // For DOCX files, we'll use Google Docs Viewer
+    // No need to fetch blob, just make sure the file is accessible via URL
+    if (isDocx(file.fileName)) {
+      previewFile.value.loading = true;
+      
+      // Just verify the file exists
+      try {
+        const checkResponse = await fetch(getFullFileUrl(file.fileUrl), { method: 'HEAD' });
+        if (!checkResponse.ok) {
+          throw new Error(`File not accessible: ${checkResponse.status}`);
+        }
+      } catch (err) {
+        console.error(`Error checking DOCX file ${file.fileName}:`, err);
+        previewFile.value.error = true;
+      } finally {
+        previewFile.value.loading = false;
+      }
+    }
+  } catch(err) {
+    console.error("Error preparing file preview:", err);
+    previewFile.value.error = true;
+  }
 };
 
 const closeFilePreview = () => {
+  // Clean up the blob URL to prevent memory leaks
+  if (previewFile.value && previewFile.value.blobUrl) {
+    URL.revokeObjectURL(previewFile.value.blobUrl);
+  }
   showFilePreview.value = false;
 };
 
@@ -1223,6 +1349,11 @@ const isPdf = (fileName) => {
   return ext === 'pdf';
 };
 
+const isDocx = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['doc', 'docx'].includes(ext);
+};
+
 const getVideoType = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase();
   switch (ext) {
@@ -1236,6 +1367,63 @@ const getVideoType = (fileName) => {
 onMounted(() => {
   loadTaskData();
 });
+
+// Add this new function
+const downloadAllSubmissions = async () => {
+  try {
+    // Check if there are any students with submissions
+    const studentsWithSubmissions = visibleStudents.value.filter(student => 
+      student.submission && student.submission.files && student.submission.files.length > 0
+    );
+    
+    if (studentsWithSubmissions.length === 0) {
+      alert('No submissions available to download.');
+      return;
+    }
+    
+    // Show loading indicator
+    loading.value = true;
+    
+    // Use the backend endpoint to download all submissions for this task
+    const blob = await downloadAllTaskSubmissions(taskId);
+    
+    // Use FileSaver to save the zip file
+    const FileSaver = (await import('file-saver')).default;
+    const taskName = task.value.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    FileSaver.saveAs(blob, `${taskName}_all_submissions.zip`);
+    
+  } catch (err) {
+    console.error('Error downloading all submissions:', err);
+    alert('Failed to download submissions. Please try again.');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Add function to download student submission files
+const downloadStudentSubmission = async () => {
+  if (!selectedSubmission.value || !selectedSubmission.value.id) return;
+  
+  try {
+    // Show loading indicator
+    loading.value = true;
+    
+    // Use the backend endpoint to download submission files
+    const blob = await downloadSubmissionFiles(selectedSubmission.value.id);
+    
+    // Use FileSaver to save the zip file
+    const FileSaver = (await import('file-saver')).default;
+    const studentName = `${selectedSubmission.value.student.lastName}_${selectedSubmission.value.student.firstName}`;
+    const fileName = `${studentName}_submission.zip`.toLowerCase().replace(/[^a-z0-9_.]/g, '_');
+    FileSaver.saveAs(blob, fileName);
+    
+  } catch (err) {
+    console.error('Error downloading submission files:', err);
+    alert('Failed to download submission files. Please try again.');
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -2802,12 +2990,35 @@ td input[type="checkbox"] {
 
 .files-header {
   margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .files-header h4 {
   margin: 0;
   font-size: 16px;
   color: #202124;
+}
+
+.download-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-all-btn:hover {
+  background-color: #bbdefb;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .scoring-section {
@@ -3133,5 +3344,427 @@ td input[type="checkbox"] {
 .download-file-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 12px rgba(21, 151, 80, 0.3);
+}
+
+/* Preview loading and error states */
+.preview-loading, .preview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  gap: 20px;
+  min-height: 300px;
+}
+
+.preview-error {
+  color: #d32f2f;
+}
+
+.preview-error .material-icons {
+  font-size: 48px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(21, 151, 80, 0.2);
+  border-radius: 50%;
+  border-top-color: #159750;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Full screen viewer styles */
+.fullscreen-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fullscreen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-left h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back-btn, .close-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover, .close-fullscreen-btn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.05);
+}
+
+.download-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 15px;
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-action:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+.fullscreen-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.fullscreen-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Add these new styles to the end of the existing styles */
+.download-btn {
+  background: #e3f2fd;
+  color: #1565c0;
+  margin-right: 10px;
+}
+
+.download-btn:hover {
+  background: #bbdefb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(21, 101, 192, 0.3);
+}
+
+.file-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.file-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.file-card .file-icon {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+}
+
+.file-card .file-name {
+  font-size: 0.9rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-card .file-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-btn, .download-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.view-btn {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.view-btn:hover {
+  background-color: #c8e6c9;
+}
+
+.download-action-btn {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.download-action-btn:hover {
+  background-color: #bbdefb;
+}
+
+.file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-file-btn {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  margin-right: 5px;
+}
+
+.download-file-btn {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+/* Improve student card styling */
+.student-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.student-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.card-header {
+  position: relative;
+}
+
+.card-body {
+  padding: 15px;
+}
+
+.student-info {
+  margin-bottom: 15px;
+}
+
+.student-info p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+}
+
+/* Make modals more responsive */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  
+  .file-card {
+    padding: 10px;
+  }
+  
+  .view-btn, .download-action-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .files-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .modal-body {
+    padding: 10px;
+  }
+  
+  .student-info-panel {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .student-meta {
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+}
+
+/* Additional styles for View Files button */
+.view-files-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s;
+  width: 100%;
+  max-width: 200px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.view-files-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  border: 1px solid #eee;
+}
+
+.file-item:hover {
+  background: #f1f3f4;
+  border-color: #ddd;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+}
+
+.file-actions {
+  display: flex;
+  margin-left: auto;
+  gap: 5px;
+}
+
+/* Improved file button styles */
+.file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.view-file-btn {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.view-file-btn:hover {
+  background-color: #c8e6c9;
+}
+
+.download-file-btn {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.download-file-btn:hover {
+  background-color: #bbdefb;
+}
+
+/* Update action-link to match file-btn */
+.action-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background-color: transparent;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.action-link.view {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.action-link.view:hover {
+  background-color: #c8e6c9;
+}
+
+.action-link.download {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.action-link.download:hover {
+  background-color: #bbdefb;
 }
 </style>

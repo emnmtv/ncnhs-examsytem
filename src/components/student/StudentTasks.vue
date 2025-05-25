@@ -41,13 +41,17 @@
             <div class="task-content">
               <div class="task-title">{{ task.title }}</div>
               <div class="task-meta">
-                <div class="meta-item">
-                  Due: {{ formatDate(task.dueDate) }}
-                  <span class="exact-date">({{ formatExactDate(task.dueDate) }})</span>
+                <div class="meta-row">
+                  <div class="meta-label">Due Date:</div>
+                  <div class="meta-value">{{ formatDate(task.dueDate) }}</div>
                 </div>
-                <div class="meta-item" v-if="task.submission">
-                  Submitted: {{ formatDate(task.submission.submittedAt) }}
-                  <span class="exact-date">({{ formatExactDate(task.submission.submittedAt) }})</span>
+                <div class="meta-row" v-if="task.submission">
+                  <div class="meta-label">Date Submitted:</div>
+                  <div class="meta-value">{{ formatDate(task.submission.submittedAt) }}</div>
+                </div>
+                <!-- Add placeholder when no submission -->
+                <div class="meta-row placeholder" v-if="!task.submission">
+                  <div class="meta-value">&nbsp;</div>
                 </div>
                 <!-- Only show on-time status if there's a submission -->
                 <div v-if="task.submission" class="status-badge" :class="getTimeStatus(task)">
@@ -56,9 +60,11 @@
               </div>
             </div>
 
-            <div class="task-score">
-              {{ task.submission?.score || 'Score Pending' }}
-              <span v-if="task.submission?.score">/ {{ task.totalScore }}</span>
+            <div class="task-info">
+              <div class="task-score">
+                {{ task.submission?.score || 'Score Pending' }}
+                <span v-if="task.submission?.score">/ {{ task.totalScore }}</span>
+              </div>
             </div>
 
             <div class="task-actions">
@@ -79,7 +85,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { getStudentTasks } from '@/services/authService';
-import { formatDistanceToNow } from 'date-fns';
 
 const tasks = ref([]);
 const loading = ref(true);
@@ -113,10 +118,6 @@ const loadTasks = async () => {
 };
 
 const formatDate = (date) => {
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
-};
-
-const formatExactDate = (date) => {
   if (!date) return '';
   const d = new Date(date);
   return d.toLocaleString('en-US', {
@@ -294,11 +295,12 @@ const getTimeStatusText = (task) => {
 
 .task-item {
   display: flex;
-  align-items: center;
-  padding: 15px;  /* Reduced from 20px */
+  align-items: flex-start;
+  padding: 15px;
   border-bottom: 1px solid #eee;
   transition: all 0.3s;
-  gap: 12px;  /* Added consistent gap */
+  position: relative;
+  min-height: 80px; /* Add minimum height to task items */
 }
 
 .task-item:hover {
@@ -310,13 +312,13 @@ const getTimeStatusText = (task) => {
 }
 
 .task-status {
-  margin-right: 12px;  /* Reduced from 20px */
+  margin-right: 12px;
 }
 
 .task-status .material-icons-round {
-  font-size: 28px;
+  font-size: 24px;
   border-radius: 50%;
-  padding: 8px;
+  padding: 4px;
   transition: all 0.3s;
 }
 
@@ -337,28 +339,35 @@ const getTimeStatusText = (task) => {
 
 .task-content {
   flex: 1;
+  margin-right: 100px; /* Space for the score and actions */
 }
 
 .task-title {
   font-size: 1.1rem;
   font-weight: 500;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   color: #202124;
 }
 
 .task-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  flex-direction: column;
+  gap: 3px;
   font-size: 0.9rem;
   color: #5f6368;
-  margin-top: 4px;
 }
 
-.meta-item {
+.meta-row {
   display: flex;
   align-items: center;
-  gap: 4px;
+}
+
+.meta-label {
+  font-weight: 500;
+  margin-right: 5px;
+}
+
+.meta-value {
   color: #666;
 }
 
@@ -367,6 +376,8 @@ const getTimeStatusText = (task) => {
   padding: 2px 8px;
   border-radius: 4px;
   font-size: 0.85rem;
+  align-self: flex-start;
+  margin-top: 3px;
 }
 
 .status-badge.on-time {
@@ -379,15 +390,17 @@ const getTimeStatusText = (task) => {
   color: #d32f2f;
 }
 
-.due-date, .date-submitted {
-  padding: 0;
-  background: none;
-  border-radius: 0;
+.task-info {
+  position: absolute;
+  right: 15px;
+  top: 15px; /* Position at the top instead of middle */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .task-score {
-  margin: 0 12px;  /* Reduced from 20px */
-  padding: 6px 12px;  /* Reduced from 8px 16px */
+  padding: 6px 12px;
   font-weight: 500;
   color: #202124;
   background: #e3f2fd;
@@ -399,14 +412,15 @@ const getTimeStatusText = (task) => {
 .activity-btn {
   background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   color: white;
-  padding: 8px 20px;
-  border-radius: 8px;
+  padding: 6px 16px;
+  border-radius: 6px;
   text-decoration: none;
   font-weight: 500;
   transition: all 0.3s;
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  font-size: 0.9rem;
 }
 
 .activity-btn:hover {
@@ -446,38 +460,19 @@ const getTimeStatusText = (task) => {
   }
 
   .tasks-list {
-    padding: 5px;  /* Further reduced padding */
+    padding: 5px;
   }
 
   .task-item {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    padding: 10px;  /* Reduced padding */
-    gap: 8px;
+    padding: 10px;
   }
   
-  .task-status {
-    margin-right: 6px;
-  }
-
   .task-content {
-    flex: 1;
-    min-width: 0; 
+    margin-right: 85px; /* Adjusted for mobile */
   }
   
   .task-meta {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 2px;
-    font-size: 0.8rem;
-    
-  }
-  
-  .meta-item {
+    gap: 2px;
     font-size: 0.8rem;
   }
   
@@ -486,67 +481,148 @@ const getTimeStatusText = (task) => {
     padding: 1px 6px;
   }
   
-  .due-date, .date-submitted {
-    font-size: 0.8rem;
-    padding: 2px 6px;  /* Reduced padding */
-  }
-  
   .task-score {
-    white-space: nowrap;
-    margin: 0 6px;
-    padding: 2px 8px;
-    font-size: 0.9rem;
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    min-width: 70px;
   }
   
   .activity-btn {
-    white-space: nowrap;
     padding: 4px 10px;
-    min-width: 80px;  /* Added minimum width */
-    justify-content: center;
     font-size: 0.9rem;
+    margin-top: 5px;
+  }
+
+  .task-info {
+    right: 10px;
+    top: 10px;
   }
 
   .header-background {
-  position: absolute;
-  top: 30%;
-  right: 0.3rem;
-
-  font-size: 4rem;
-  font-weight: 900;
-
+    position: absolute;
+    top: 30%;
+    right: 0.3rem;
+    font-size: 4rem;
+    font-weight: 900;
   }
 
-  .exact-date {
-    display: none; /* Hide exact dates on mobile */
+  .task-status {
+    margin-right: 6px;
   }
 
   /* Adjust subject header padding */
   .subject-header {
-    padding: 12px 15px;  /* Reduced from 20px */
+    padding: 12px 15px;
   }
 
   /* Adjust subject section margin */
   .subject-section {
-    margin-bottom: 15px;  /* Reduced from 30px */
+    margin-bottom: 15px;
+  }
+  
+  .task-actions {
+    right: 10px;
+    bottom: 10px;
   }
 }
 
-@media (max-width: 480px) {
+/* Add styles for very small screens like iPhone SE */
+@media (max-width: 375px) {
+  .task-item {
+    padding: 8px 6px;
+    position: relative;
+  }
+  
+  .task-content {
+    margin-right: 70px; /* Even smaller margin for iPhone SE */
+  }
+  
+  .task-title {
+    font-size: 0.95rem;
+  }
+  
   .task-meta {
+    gap: 0px;
     font-size: 0.75rem;
   }
-
-  .task-score {
-    font-size: 0.8rem;
+  
+  .meta-row {
+    margin-bottom: 2px;
   }
-
-  .task-item {
-    padding: 8px;  /* Even smaller padding for very small screens */
+  
+  .task-score {
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    min-width: 60px;
+  }
+  
+  .activity-btn {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    border-radius: 4px;
   }
   
   .task-status .material-icons-round {
-    font-size: 24px;  /* Slightly smaller icons */
-    padding: 6px;
+    font-size: 20px;
+    padding: 3px;
+  }
+  
+  .task-info {
+    right: 6px;
+    top: 6px;
+  }
+  
+  .task-actions {
+    right: 6px;
+    bottom: 6px;
+  }
+  
+  .status-badge {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+}
+
+/* Add medium-small screen styles (between iPhone SE and regular mobile) */
+@media (min-width: 376px) and (max-width: 480px) {
+  .task-item {
+    padding: 8px;
+    position: relative;
+  }
+  
+  .task-content {
+    margin-right: 75px;
+  }
+  
+  .task-meta {
+    font-size: 0.78rem;
+  }
+  
+  .task-score {
+    padding: 2px 8px;
+    font-size: 0.78rem;
+    min-width: 65px;
+  }
+  
+  .activity-btn {
+    padding: 3px 10px;
+    font-size: 0.85rem;
+    border-radius: 5px;
+  }
+  
+  .task-status .material-icons-round {
+    font-size: 22px;
+    padding: 4px;
+  }
+  
+  .task-info {
+    right: 8px;
+    top: 8px;
+  }
+  
+  .task-actions {
+    right: 8px;
+    bottom: 8px;
   }
 }
 
@@ -555,5 +631,16 @@ const getTimeStatusText = (task) => {
   font-size: 0.75rem;
   opacity: 0.8;
   margin-left: 0.25rem;
+}
+
+.task-actions {
+  position: absolute;
+  right: 15px;
+  bottom: 15px;
+}
+
+.meta-row.placeholder {
+  height: 24px; /* Increase placeholder height */
+  margin-bottom: 5px;
 }
 </style>

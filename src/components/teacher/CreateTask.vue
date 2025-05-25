@@ -414,7 +414,7 @@ const handleSubmit = async () => {
     formData.append('description', taskData.value.description || '');
     formData.append('dueDate', taskData.value.dueDate);
     formData.append('totalScore', taskData.value.totalScore);
-    formData.append('studentLRNs', JSON.stringify(selectedStudents.value.map(lrn => parseInt(lrn))));
+    formData.append('studentLRNs', JSON.stringify(selectedStudents.value.map(lrn => lrn.toString())));
     
     // Append multiple files
     selectedFiles.value.forEach(file => {

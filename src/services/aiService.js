@@ -1,27 +1,73 @@
 import axios from 'axios';
 
-const OPENROUTER_API_KEY = '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';
-const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+export const OPENROUTER_API_KEY = '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';
+export const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Define available models in order of preference
 const AVAILABLE_MODELS = [
   "meta-llama/llama-3-8b-instruct", // Free tier model
-  "openai/gpt-3.5-turbo",          // Fallback if available
-  "anthropic/claude-instant-1.2",  // Another option
-  "google/gemini-pro"              // Another fallback
+  "deepseek/deepseek-coder-lite",   // Deepseek Coder Lite model
+  "deepseek/deepseek-lite",         // Deepseek Lite model
+  "mistralai/mistral-7b-instruct",  // Mistral 7B model
+  "cohere/command-r-lite",          // Cohere Command-R Lite
+  "perplexity/pplx-7b-online",      // Perplexity 7B with online search
+  "nousresearch/nous-hermes-2-vision", // Nous Hermes with vision
+  "openai/gpt-3.5-turbo",           // Fallback if available
+  "anthropic/claude-instant-1.2",   // Another option
+  "google/gemini-pro"               // Another fallback
 ];
+
+// Function to get the current preferred model or use the default
+const getCurrentModel = () => {
+  const savedModel = localStorage.getItem('preferred_ai_model');
+  return savedModel || AVAILABLE_MODELS[0];
+};
+
+// Function to set preferred model
+export const setPreferredModel = (modelId) => {
+  if (AVAILABLE_MODELS.includes(modelId)) {
+    localStorage.setItem('preferred_ai_model', modelId);
+    return true;
+  }
+  return false;
+};
+
+// Function to get all available models
+export const getAvailableModels = () => {
+  return AVAILABLE_MODELS.map(model => {
+    const [provider, name] = model.split('/');
+    return {
+      id: model,
+      provider,
+      name
+    };
+  });
+};
 
 /**
  * Makes a request to the OpenRouter API with the selected model
  * @param {string} prompt - The prompt to send to the API
  * @param {string} systemPrompt - Optional system prompt to guide the model
+ * @param {string} modelId - Optional model ID to use (defaults to preferred model)
  * @returns {Promise<Object>} - The API response data
  */
-const callOpenRouterAPI = async (prompt, systemPrompt = "") => {
-  // Try models in order until one works
+const callOpenRouterAPI = async (prompt, systemPrompt = "", modelId = null) => {
+  // Get the preferred model or use the provided one
+  const preferredModel = modelId || getCurrentModel();
+  
+  // Create a list of models to try, starting with the preferred model
+  const modelsToTry = [preferredModel];
+  
+  // Add all other models as fallbacks but skip the preferred one
+  AVAILABLE_MODELS.forEach(model => {
+    if (model !== preferredModel) {
+      modelsToTry.push(model);
+    }
+  });
+  
   let lastError = null;
   
-  for (const modelId of AVAILABLE_MODELS) {
+  for (const modelId of modelsToTry) {
     try {
       console.log(`Attempting to use model: ${modelId}`);
       console.log('Sending request to OpenRouter API with prompt:', prompt.substring(0, 100) + '...');
@@ -104,10 +150,21 @@ const callOpenRouterAPI = async (prompt, systemPrompt = "") => {
  * @param {number} count - Number of questions to generate (default: 3)
  * @param {string} difficulty - Difficulty level (easy, medium, hard)
  * @param {string} questionType - Type of questions to generate (multiple_choice, true_false, enumeration)
+ * @param {string} customSystemPrompt - Optional custom system prompt to override the default
+ * @param {string} modelId - Optional model ID to use
  * @returns {Promise<Array>} - Array of generated questions
  */
-export const generateExamQuestions = async (subject, topic, count = 3, difficulty = 'medium', questionType = 'multiple_choice') => {
-  const systemPrompt = `You are an expert educator in ${subject}. You create accurate, clear, and engaging exam questions.`;
+export const generateExamQuestions = async (
+  subject, 
+  topic, 
+  count = 3, 
+  difficulty = 'medium', 
+  questionType = 'multiple_choice',
+  customSystemPrompt = null,
+  modelId = null
+) => {
+  const systemPrompt = customSystemPrompt || 
+    `You are an expert educator in ${subject}. You create accurate, clear, and engaging exam questions.`;
   
   const prompt = `Generate ${count} ${difficulty} ${questionType} questions about "${topic}" in ${subject}.
   
@@ -121,20 +178,42 @@ export const generateExamQuestions = async (subject, topic, count = 3, difficult
   Format your response as a JSON array like this:
   [
     {
-      "questionText": "Question text here",
+      "text": "Question text here",
+      "type": "${questionType === 'multiple_choice' ? 'multipleChoice' : 
+                questionType === 'true_false' ? 'true_false' : 'enumeration'}",
       ${questionType === 'multiple_choice' ? 
       '"options": ["First option text", "Second option text", "Third option text", "Fourth option text"],' : ''}
       "correctAnswer": "Exact text of the correct answer"
     }
   ]
   
-  DO NOT include A, B, C, D labels in the options or in the correct answer.`;
+  VERY IMPORTANT: Return ONLY the JSON array with no additional text. Do not include backticks, code blocks, or any other formatting.`;
   
   try {
-    const response = await callOpenRouterAPI(prompt, systemPrompt);
+    const response = await callOpenRouterAPI(prompt, systemPrompt, modelId);
     console.log('Raw AI response:', response);
     
-    // Parse the JSON response
+    // First check if the response is already a valid JSON array
+    try {
+      const trimmedResponse = response.trim();
+      if (trimmedResponse.startsWith('[') && trimmedResponse.endsWith(']')) {
+        const directParse = JSON.parse(trimmedResponse);
+        if (Array.isArray(directParse) && directParse.length > 0) {
+          console.log('Successfully parsed direct JSON response:', directParse.length, 'questions');
+          
+          // Process the questions to ensure correct answer matches an option
+          if (questionType === 'multiple_choice') {
+            return directParse.map(question => cleanupMultipleChoiceQuestion(question));
+          }
+          
+          return directParse;
+        }
+      }
+    } catch (directParseError) {
+      console.log('Direct JSON parsing failed, trying JSON extraction:', directParseError);
+    }
+    
+    // If direct parsing fails, try to extract JSON from the response
     const jsonMatch = response.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const jsonStr = jsonMatch[0];
@@ -144,33 +223,7 @@ export const generateExamQuestions = async (subject, topic, count = 3, difficult
         
         // Process the questions to ensure correct answer matches an option
         if (questions && Array.isArray(questions) && questionType === 'multiple_choice') {
-          return questions.map(question => {
-            // If the correct answer has a letter prefix (like "a. Option"), clean it
-            if (question.correctAnswer && typeof question.correctAnswer === 'string') {
-              // Remove letter prefixes like "a.", "b.", etc.
-              const cleanAnswer = question.correctAnswer.replace(/^[a-d]\.\s*/i, '');
-              
-              // Find the matching option from the options array
-              const matchingOption = question.options.find(option => 
-                option.toLowerCase().trim() === cleanAnswer.toLowerCase().trim()
-              );
-              
-              if (matchingOption) {
-                question.correctAnswer = matchingOption;
-              } else {
-                // If no exact match, try to find the closest match
-                const bestMatch = question.options.reduce((best, current) => {
-                  const currentSimilarity = stringSimilarity(cleanAnswer, current);
-                  const bestSimilarity = stringSimilarity(cleanAnswer, best);
-                  return currentSimilarity > bestSimilarity ? current : best;
-                }, question.options[0]);
-                
-                question.correctAnswer = bestMatch;
-              }
-            }
-            
-            return question;
-          });
+          return questions.map(question => cleanupMultipleChoiceQuestion(question));
         }
         
         return questions;
@@ -189,6 +242,42 @@ export const generateExamQuestions = async (subject, topic, count = 3, difficult
     throw error;
   }
 };
+
+// Helper function to clean up multiple choice questions
+function cleanupMultipleChoiceQuestion(question) {
+  // If the correct answer has a letter prefix (like "a. Option"), clean it
+  if (question.correctAnswer && typeof question.correctAnswer === 'string') {
+    // Remove letter prefixes like "a.", "b.", etc.
+    const cleanAnswer = question.correctAnswer.replace(/^[a-d]\.\s*/i, '');
+    
+    // Find the matching option from the options array
+    if (Array.isArray(question.options)) {
+      const matchingOption = question.options.find(option => 
+        option.toLowerCase().trim() === cleanAnswer.toLowerCase().trim()
+      );
+      
+      if (matchingOption) {
+        question.correctAnswer = matchingOption;
+      } else {
+        // If no exact match, try to find the closest match
+        const bestMatch = question.options.reduce((best, current) => {
+          const currentSimilarity = stringSimilarity(cleanAnswer, current);
+          const bestSimilarity = stringSimilarity(cleanAnswer, best);
+          return currentSimilarity > bestSimilarity ? current : best;
+        }, question.options[0]);
+        
+        question.correctAnswer = bestMatch;
+      }
+    }
+  }
+  
+  // Clean up text fields with extraneous spaces
+  if (question.text) {
+    question.text = question.text.replace(/\s+/g, ' ').trim();
+  }
+  
+  return question;
+}
 
 // Helper function to calculate string similarity (for finding best matches)
 function stringSimilarity(str1, str2) {
@@ -334,9 +423,10 @@ export const generateMultipleChoiceOptions = async (questionText, correctAnswer,
  * Detects question type and automatically generates options
  * @param {string} questionText - The question text to analyze
  * @param {number} optionCount - Number of options to generate (default: 4)
+ * @param {string} modelId - Optional model ID to use
  * @returns {Promise<Object>} - Object with options array and suggested correct answer
  */
-export const detectAndGenerateOptions = async (questionText, optionCount = 4) => {
+export const detectAndGenerateOptions = async (questionText, optionCount = 4, modelId = null) => {
   const systemPrompt = "You are an educational expert who analyzes questions and creates appropriate answer options.";
   
   const prompt = `Analyze this question and generate ${optionCount} plausible multiple choice options including the correct answer:
@@ -354,7 +444,7 @@ export const detectAndGenerateOptions = async (questionText, optionCount = 4) =>
   Place the correct answer randomly within the options array. Make sure all options are in the same format and style.`;
   
   try {
-    const response = await callOpenRouterAPI(prompt, systemPrompt);
+    const response = await callOpenRouterAPI(prompt, systemPrompt, modelId);
     console.log('Raw detect & generate response:', response);
     
     // Parse the JSON response
@@ -399,9 +489,10 @@ export const detectAndGenerateOptions = async (questionText, optionCount = 4) =>
  * Detects question type and generates options based on question text
  * @param {string} questionText - The question text to analyze
  * @param {string} questionType - Optional predefined question type ('multipleChoice', 'true_false', 'enumeration')
+ * @param {string} modelId - Optional model ID to use
  * @returns {Promise<Object>} - Question type and appropriate answer data
  */
-export const detectQuestionTypeAndAnswer = async (questionText, questionType = null) => {
+export const detectQuestionTypeAndAnswer = async (questionText, questionType = null, modelId = null) => {
   const systemPrompt = "You are an educational expert who analyzes exam questions and provides the most appropriate answers.";
   
   let prompt;
@@ -409,7 +500,7 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
   // If question type is already specified
   if (questionType) {
     if (questionType === 'multipleChoice') {
-      return detectAndGenerateOptions(questionText);
+      return detectAndGenerateOptions(questionText, 4, modelId);
     } else if (questionType === 'true_false') {
       prompt = `Analyze this true/false question and determine if the statement is true or false:
       
@@ -445,7 +536,7 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
   }
   
   try {
-    const response = await callOpenRouterAPI(prompt, systemPrompt);
+    const response = await callOpenRouterAPI(prompt, systemPrompt, modelId);
     console.log('Raw response for question analysis:', response);
     
     // If question type was specified, process accordingly
@@ -520,12 +611,12 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
         };
       } else {
         // Default to multiple choice
-        return await detectAndGenerateOptions(questionText);
+        return await detectAndGenerateOptions(questionText, 4, modelId);
       }
     }
     
     // If all else fails, default to multiple choice
-    return await detectAndGenerateOptions(questionText);
+    return await detectAndGenerateOptions(questionText, 4, modelId);
     
   } catch (error) {
     console.error('Error detecting question type:', error);
@@ -536,6 +627,19 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
 // Fallback function to handle cases where the model can't generate proper JSON
 const fallbackToTextParsing = (text, isOptions = false) => {
   console.log('Attempting fallback text parsing for:', text);
+  
+  // First, check if text is already valid JSON
+  try {
+    if (text.trim().startsWith('[') && text.trim().endsWith(']')) {
+      const parsed = JSON.parse(text.trim());
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        console.log('Successfully parsed valid JSON in fallback function:', parsed.length, 'items');
+        return parsed;
+      }
+    }
+  } catch (jsonError) {
+    console.log('JSON parsing failed in fallback function, continuing with text parsing');
+  }
   
   if (isOptions) {
     // Extract options from text format
@@ -1151,5 +1255,7 @@ export default {
   detectAndGenerateOptions,
   detectQuestionTypeAndAnswer,
   parseAndGenerateUsers,
-  parseAndGenerateGradeSections
-}; 
+  parseAndGenerateGradeSections,
+  getAvailableModels,
+  setPreferredModel
+}

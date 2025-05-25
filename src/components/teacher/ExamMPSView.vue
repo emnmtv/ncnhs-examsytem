@@ -26,6 +26,9 @@
       <button class="action-btn pdf-btn" @click="downloadPDF">
         <i class="fas fa-file-pdf"></i> Download PDF
       </button>
+      <button class="action-btn ai-btn" @click="toggleAIAnalysis" :disabled="loading || !mpsData">
+        <i class="fas fa-brain"></i> AI Analysis
+      </button>
     </div>
 
     <!-- Loading State -->
@@ -51,8 +54,196 @@
       <p class="empty-subtext">There are no scores recorded for this exam yet.</p>
     </div>
 
+    <!-- AI Analysis Panel -->
+    <div v-if="showAIAnalysis && mpsData" class="ai-analysis-panel">
+      <div class="card-header">
+        <h2>
+          <span class="material-icons">psychology</span>
+          AI Analysis & Insights
+        </h2>
+        <button class="close-btn" @click="showAIAnalysis = false">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+
+      <div class="ai-content">
+        <div class="ai-tabs">
+          <button 
+            v-for="tab in aiTabs" 
+            :key="tab.id" 
+            :class="['ai-tab', { active: currentAITab === tab.id }]"
+            @click="switchAITab(tab.id)"
+          >
+            <span class="material-icons">{{ tab.icon }}</span>
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div class="ai-panel-content">
+          <!-- AI Loading State -->
+          <div v-if="aiLoading" class="ai-loading">
+            <div class="ai-loading-animation">
+              <span class="material-icons rotating">psychology</span>
+            </div>
+            <p>Analyzing exam data with AI...</p>
+            <p class="ai-loading-subtitle">This may take a few moments</p>
+          </div>
+
+          <!-- AI Error State -->
+          <div v-else-if="aiError" class="ai-error">
+            <span class="material-icons">error_outline</span>
+            <p>{{ aiError }}</p>
+            <button @click="generateAnalysis(currentAITab)" class="retry-btn">
+              <span class="material-icons">refresh</span>
+              Retry Analysis
+            </button>
+          </div>
+
+          <!-- AI Analysis Result: Full Analysis -->
+          <div v-else-if="currentAITab === 'full' && aiResults.full" class="ai-result">
+            <div class="ai-summary-card">
+              <h3><span class="material-icons">summarize</span> Summary</h3>
+              <p>{{ aiResults.full.summary || 'No summary available' }}</p>
+            </div>
+            
+            <div class="ai-insights" v-if="aiResults.full.insights && aiResults.full.insights.length > 0">
+              <h3><span class="material-icons">lightbulb</span> Key Insights</h3>
+              <div class="insights-list">
+                <div v-for="(insight, idx) in aiResults.full.insights" :key="'insight-'+idx" class="insight-item">
+                  <div class="insight-title">{{ insight.title }}</div>
+                  <div class="insight-desc">{{ insight.description }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-section-analysis" v-if="aiResults.full.sectionAnalysis">
+              <h3><span class="material-icons">compare</span> Section Analysis</h3>
+              <div class="section-comparison">
+                <div class="top-section" v-if="aiResults.full.sectionAnalysis.topSection">
+                  <div class="section-header">
+                    <span class="material-icons">trending_up</span>
+                    Top Performing: <strong>{{ aiResults.full.sectionAnalysis.topSection }}</strong>
+                  </div>
+                </div>
+                <div class="bottom-section" v-if="aiResults.full.sectionAnalysis.bottomSection">
+                  <div class="section-header">
+                    <span class="material-icons">trending_down</span>
+                    Needs Improvement: <strong>{{ aiResults.full.sectionAnalysis.bottomSection }}</strong>
+                  </div>
+                </div>
+                <div class="section-analysis-text" v-if="aiResults.full.sectionAnalysis.analysis">
+                  {{ aiResults.full.sectionAnalysis.analysis }}
+                </div>
+                <div class="section-analysis-text" v-else>
+                  No detailed section analysis available.
+                </div>
+              </div>
+            </div>
+            <div class="ai-section-analysis" v-else>
+              <h3><span class="material-icons">compare</span> Section Analysis</h3>
+              <div class="section-comparison">
+                <p class="no-data-message">No section analysis data available.</p>
+              </div>
+            </div>
+
+            <div class="ai-recommendations" v-if="aiResults.full.recommendations && aiResults.full.recommendations.length > 0">
+              <h3><span class="material-icons">psychology_alt</span> Recommendations</h3>
+              <div class="recommendations-list">
+                <div v-for="(rec, idx) in aiResults.full.recommendations" :key="'rec-'+idx" class="rec-item">
+                  <div class="rec-title">{{ rec.title }}</div>
+                  <div class="rec-desc">{{ rec.description }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="ai-future" v-if="aiResults.full.futureSuggestions">
+              <h3><span class="material-icons">update</span> Future Suggestions</h3>
+              <p>{{ aiResults.full.futureSuggestions }}</p>
+            </div>
+          </div>
+
+          <!-- AI Analysis Result: Insights Only -->
+          <div v-else-if="currentAITab === 'insights' && aiResults.insights" class="ai-result">
+            <div class="ai-insights">
+              <h3><span class="material-icons">lightbulb</span> Key Insights</h3>
+              <div class="insights-list" v-if="Array.isArray(aiResults.insights) && aiResults.insights.length > 0">
+                <div v-for="(insight, idx) in aiResults.insights" :key="'insight-'+idx" class="insight-item">
+                  <div class="insight-title">{{ insight.title }}</div>
+                  <div class="insight-desc">{{ insight.description }}</div>
+                </div>
+              </div>
+              <p class="no-data-message" v-else>No insights data available.</p>
+            </div>
+          </div>
+
+          <!-- AI Analysis Result: Recommendations Only -->
+          <div v-else-if="currentAITab === 'recommendations' && aiResults.recommendations" class="ai-result">
+            <div class="ai-recommendations">
+              <h3><span class="material-icons">psychology_alt</span> Teaching Recommendations</h3>
+              <div class="recommendations-list" v-if="Array.isArray(aiResults.recommendations) && aiResults.recommendations.length > 0">
+                <div v-for="(rec, idx) in aiResults.recommendations" :key="'rec-'+idx" class="rec-item">
+                  <div class="rec-title">{{ rec.title }}</div>
+                  <div class="rec-desc">{{ rec.description }}</div>
+                </div>
+              </div>
+              <p class="no-data-message" v-else>No recommendation data available.</p>
+            </div>
+          </div>
+
+          <!-- AI Analysis Result: Improvements -->
+          <div v-else-if="currentAITab === 'improvements' && aiResults.improvements" class="ai-result">
+            <div class="ai-improvements">
+              <h3><span class="material-icons">trending_up</span> Improvement Strategies</h3>
+              <div v-if="aiResults.improvements.message" class="message-card">
+                <p>{{ aiResults.improvements.message }}</p>
+              </div>
+              <div class="improvements-list" v-else-if="Array.isArray(aiResults.improvements) && aiResults.improvements.length > 0">
+                <div v-for="(imp, idx) in aiResults.improvements" :key="'imp-'+idx" class="improvement-item">
+                  <div class="improvement-strategy">{{ imp.strategy }}</div>
+                  <div class="improvement-implementation">
+                    <strong>Implementation:</strong> {{ imp.implementation }}
+                  </div>
+                  <div class="improvement-outcome">
+                    <strong>Expected Outcome:</strong> {{ imp.expectedOutcome }}
+                  </div>
+                </div>
+              </div>
+              <p class="no-data-message" v-else>No improvement strategies available.</p>
+            </div>
+          </div>
+
+          <!-- AI Analysis Result: Next Steps -->
+          <div v-else-if="currentAITab === 'nextSteps' && aiResults.nextSteps" class="ai-result">
+            <div class="ai-next-steps">
+              <h3><span class="material-icons">checklist</span> Recommended Next Steps</h3>
+              <div class="next-steps-list" v-if="Array.isArray(aiResults.nextSteps) && aiResults.nextSteps.length > 0">
+                <div v-for="(step, idx) in aiResults.nextSteps" :key="'step-'+idx" class="next-step-item">
+                  <div class="step-number">{{ idx + 1 }}</div>
+                  <div class="step-content">
+                    <div class="step-title">{{ step.title }}</div>
+                    <div class="step-action"><strong>Action:</strong> {{ step.action }}</div>
+                    <div class="step-rationale"><strong>Rationale:</strong> {{ step.rationale }}</div>
+                  </div>
+                </div>
+              </div>
+              <p class="no-data-message" v-else>No next steps data available.</p>
+            </div>
+          </div>
+
+          <!-- No AI data yet state -->
+          <div v-else class="ai-empty">
+            <span class="material-icons">psychology</span>
+            <p>Click "Generate Analysis" to get AI-powered insights for this exam</p>
+            <button @click="generateAnalysis(currentAITab)" class="generate-btn">
+              Generate Analysis
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- MPS Data Display -->
-    <div v-else class="mps-data">
+    <div v-else-if="mpsData" class="mps-data">
       <!-- Exam Summary Card -->
       <div class="exam-info-card">
         <div class="exam-title">{{ mpsData.exam.title }}</div>
@@ -410,8 +601,8 @@
               <th>Section</th>
               <th>MPS</th>
               <th>Students</th>
-              <th>Highest</th>
-              <th>Lowest</th>
+              <th>Highest Score</th>
+              <th>Lowest Score</th>
               <th>Excellent</th>
               <th>Good</th>
               <th>Satisfactory</th>
@@ -457,6 +648,7 @@ import { getExamMPS } from '@/services/authService';
 import Chart from 'chart.js/auto';
 import NcnhsLogo from '@/assets/ncnhs-icon.png';
 import html2pdf from 'html2pdf.js';
+import aiAnalysisService from '@/services/aiAnalysisService';
 
 const route = useRoute();
 const loading = ref(true);
@@ -465,6 +657,28 @@ const mpsData = ref(null);
 const mpsChart = ref(null);
 let chartInstance = null;
 const viewMode = ref('chart');
+
+// AI Analysis related refs
+const showAIAnalysis = ref(false);
+const aiLoading = ref(false);
+const aiError = ref(null);
+const aiResults = ref({
+  full: null,
+  insights: null,
+  recommendations: null,
+  improvements: null,
+  nextSteps: null
+});
+const currentAITab = ref('full');
+
+// AI tabs configuration
+const aiTabs = [
+  { id: 'full', label: 'Full Analysis', icon: 'psychology' },
+  { id: 'insights', label: 'Key Insights', icon: 'lightbulb' },
+  { id: 'recommendations', label: 'Recommendations', icon: 'psychology_alt' },
+  { id: 'improvements', label: 'Improvement Strategies', icon: 'trending_up' },
+  { id: 'nextSteps', label: 'Next Steps', icon: 'checklist' }
+];
 
 // Get exam ID from route params
 const examId = ref(route.params.examId);
@@ -1226,6 +1440,149 @@ const downloadPDF = () => {
       }
     }, 100);
   });
+};
+
+// Toggle AI Analysis panel
+const toggleAIAnalysis = () => {
+  showAIAnalysis.value = !showAIAnalysis.value;
+  
+  // If showing panel and no data for current tab, generate it
+  if (showAIAnalysis.value && !aiResults.value[currentAITab.value]) {
+    generateAnalysis(currentAITab.value);
+  }
+};
+
+// Switch between AI analysis tabs
+const switchAITab = (tabId) => {
+  currentAITab.value = tabId;
+  
+  // If no data for this tab yet, generate it
+  if (!aiResults.value[tabId]) {
+    generateAnalysis(tabId);
+  }
+};
+
+// Generate AI analysis based on the selected tab
+const generateAnalysis = async (type) => {
+  aiLoading.value = true;
+  aiError.value = null;
+  
+  try {
+    let result;
+    
+    switch (type) {
+      case 'insights':
+        result = await aiAnalysisService.generateAIAnalysis(mpsData.value, 'insights');
+        if (result.success) {
+          // Check if we got the expected array format or need to handle a different format
+          const insights = result.data;
+          aiResults.value.insights = Array.isArray(insights) ? insights : 
+                                    (insights.rawText ? [{ title: "Raw Analysis", description: insights.rawText }] : []);
+        } else {
+          throw new Error(result.error || 'Failed to generate insights');
+        }
+        break;
+        
+      case 'recommendations':
+        result = await aiAnalysisService.generateAIAnalysis(mpsData.value, 'recommendations');
+        if (result.success) {
+          // Check if we got the expected array format or need to handle a different format
+          const recommendations = result.data;
+          aiResults.value.recommendations = Array.isArray(recommendations) ? recommendations : 
+                                          (recommendations.rawText ? [{ title: "Recommendations", description: recommendations.rawText }] : []);
+        } else {
+          throw new Error(result.error || 'Failed to generate recommendations');
+        }
+        break;
+        
+      case 'improvements':
+        result = await aiAnalysisService.generateImprovement(mpsData.value);
+        if (result.success) {
+          // Handle different response formats
+          if (Array.isArray(result.data)) {
+            aiResults.value.improvements = result.data;
+          } else if (result.data.rawText) {
+            aiResults.value.improvements = [{ 
+              strategy: "AI Analysis", 
+              implementation: result.data.rawText, 
+              expectedOutcome: "Improved student performance" 
+            }];
+          } else if (result.data.message) {
+            aiResults.value.improvements = { message: result.data.message };
+          } else if (result.data.improvements) {
+            aiResults.value.improvements = result.data.improvements;
+          } else {
+            aiResults.value.improvements = [];
+          }
+        } else {
+          throw new Error(result.error || 'Failed to generate improvements');
+        }
+        break;
+        
+      case 'nextSteps':
+        result = await aiAnalysisService.generateNextSteps(mpsData.value);
+        if (result.success) {
+          // Check if we got the expected array format or need to handle a different format
+          const nextSteps = result.data;
+          aiResults.value.nextSteps = Array.isArray(nextSteps) ? nextSteps : 
+                                    (nextSteps.rawText ? [{ title: "Next Steps", action: nextSteps.rawText, rationale: "" }] : []);
+        } else {
+          throw new Error(result.error || 'Failed to generate next steps');
+        }
+        break;
+        
+      case 'full':
+      default:
+        result = await aiAnalysisService.generateAIAnalysis(mpsData.value, 'full');
+        if (result.success) {
+          // Process the full analysis response
+          const fullData = result.data;
+          
+          // Create a structured object with default values
+          const processedData = {
+            summary: fullData.summary || fullData.rawText || "No summary available",
+            insights: [],
+            sectionAnalysis: {
+              topSection: null,
+              bottomSection: null,
+              analysis: null
+            },
+            recommendations: [],
+            futureSuggestions: null
+          };
+          
+          // Process insights if available
+          if (fullData.insights && Array.isArray(fullData.insights)) {
+            processedData.insights = fullData.insights;
+          }
+          
+          // Process section analysis
+          if (fullData.sectionAnalysis) {
+            processedData.sectionAnalysis = fullData.sectionAnalysis;
+          }
+          
+          // Process recommendations
+          if (fullData.recommendations && Array.isArray(fullData.recommendations)) {
+            processedData.recommendations = fullData.recommendations;
+          }
+          
+          // Process future suggestions
+          if (fullData.futureSuggestions) {
+            processedData.futureSuggestions = fullData.futureSuggestions;
+          }
+          
+          aiResults.value.full = processedData;
+        } else {
+          throw new Error(result.error || 'Failed to generate analysis');
+        }
+        break;
+    }
+  } catch (err) {
+    console.error('AI analysis error:', err);
+    aiError.value = err.message || 'Failed to generate AI analysis';
+  } finally {
+    aiLoading.value = false;
+  }
 };
 </script>
 
@@ -2160,5 +2517,512 @@ th {
   width: 297mm; /* A4 landscape width */
   padding: 20px;
   background-color: white;
+}
+
+/* AI Analysis Button */
+.ai-btn {
+  background-color: #e8f0fe;
+  color: #1a73e8;
+}
+
+.ai-btn:hover {
+  background-color: #d2e3fc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* AI Analysis Panel */
+.ai-analysis-panel {
+  background: white;
+  border-radius: 16px;
+  margin: 24px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.ai-analysis-panel .card-header {
+  padding: 16px 24px;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-analysis-panel .card-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0;
+}
+
+.ai-analysis-panel .card-header .material-icons {
+  color: #1a73e8;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.ai-content {
+  padding: 0;
+}
+
+.ai-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 2px;
+  padding: 0 24px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ai-tab {
+  padding: 12px 16px;
+  border: none;
+  background: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.ai-tab:hover {
+  color: #1a73e8;
+  background-color: rgba(26, 115, 232, 0.05);
+}
+
+.ai-tab.active {
+  color: #1a73e8;
+  border-bottom: 2px solid #1a73e8;
+}
+
+.ai-panel-content {
+  padding: 24px;
+  min-height: 400px;
+}
+
+/* AI Loading State */
+.ai-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  height: 300px;
+}
+
+.ai-loading-animation {
+  margin-bottom: 20px;
+}
+
+.ai-loading .material-icons {
+  font-size: 3rem;
+  color: #1a73e8;
+}
+
+@keyframes brain-pulse {
+  0% { transform: scale(0.95); opacity: 0.7; }
+  50% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.7; }
+}
+
+.ai-loading .rotating {
+  animation: rotate 2s linear infinite, brain-pulse 1.5s ease-in-out infinite;
+}
+
+.ai-loading p {
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0;
+}
+
+.ai-loading-subtitle {
+  font-size: 0.9rem !important;
+  color: #666 !important;
+  margin-top: 8px !important;
+}
+
+/* AI Error State */
+.ai-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  height: 300px;
+}
+
+.ai-error .material-icons {
+  font-size: 3rem;
+  color: #f44336;
+  margin-bottom: 20px;
+}
+
+.ai-error p {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0 0 20px 0;
+  max-width: 400px;
+}
+
+/* AI Empty State */
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  height: 300px;
+}
+
+.ai-empty .material-icons {
+  font-size: 3rem;
+  color: #9e9e9e;
+  margin-bottom: 20px;
+}
+
+.ai-empty p {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0 0 20px 0;
+  max-width: 400px;
+}
+
+.generate-btn {
+  padding: 10px 24px;
+  background-color: #1a73e8;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.generate-btn:hover {
+  background-color: #0d62c9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.3);
+}
+
+/* AI Result Styles */
+.ai-result {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ai-result h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ai-result h3 .material-icons {
+  color: #1a73e8;
+  font-size: 1.2rem;
+}
+
+/* Summary Card */
+.ai-summary-card {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+}
+
+.ai-summary-card p {
+  margin: 0;
+  line-height: 1.6;
+  font-size: 1rem;
+  color: #333;
+}
+
+/* Insights */
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.insight-item {
+  background-color: #f0f7ff;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid #1a73e8;
+}
+
+.insight-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #1a73e8;
+  margin-bottom: 8px;
+}
+
+.insight-desc {
+  color: #444;
+  line-height: 1.5;
+}
+
+/* Section Analysis */
+.section-comparison {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.top-section, .bottom-section {
+  margin-bottom: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+}
+
+.top-section .section-header {
+  color: #2E7D32;
+}
+
+.top-section .section-header .material-icons {
+  color: #2E7D32;
+}
+
+.bottom-section .section-header {
+  color: #C62828;
+}
+
+.bottom-section .section-header .material-icons {
+  color: #C62828;
+}
+
+.section-analysis-text {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+  line-height: 1.5;
+  color: #444;
+}
+
+/* Recommendations */
+.recommendations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rec-item {
+  background-color: #f1f8e9;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid #558b2f;
+}
+
+.rec-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #558b2f;
+  margin-bottom: 8px;
+}
+
+.rec-desc {
+  color: #444;
+  line-height: 1.5;
+}
+
+/* Message displays */
+.no-data-message {
+  color: #666;
+  font-style: italic;
+  background-color: #f5f5f5;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  margin: 0;
+}
+
+.message-card {
+  background-color: #fff8e1;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.message-card p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* Future Suggestions */
+.ai-future {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.ai-future p {
+  margin: 0;
+  line-height: 1.6;
+  color: #333;
+}
+
+/* Improvement Strategies */
+.improvements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.improvement-item {
+  background-color: #fff8e1;
+  border-radius: 12px;
+  padding: 16px;
+  border-left: 4px solid #ffa000;
+}
+
+.improvement-strategy {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #f57c00;
+  margin-bottom: 12px;
+}
+
+.improvement-implementation, .improvement-outcome {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  color: #444;
+}
+
+/* Next Steps */
+.next-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.next-step-item {
+  display: flex;
+  gap: 16px;
+  background-color: #e8f5e9;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  background-color: #2e7d32;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #2e7d32;
+  margin-bottom: 8px;
+}
+
+.step-action, .step-rationale {
+  margin-bottom: 8px;
+  line-height: 1.5;
+  color: #444;
+}
+
+/* Responsive styles for AI panel */
+@media (max-width: 768px) {
+  .ai-tabs {
+    padding: 0;
+    gap: 0;
+  }
+  
+  .ai-tab {
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .ai-tab .material-icons {
+    font-size: 16px;
+  }
+  
+  .ai-panel-content {
+    padding: 16px;
+  }
+  
+  .insight-item, .rec-item, .improvement-item, .next-step-item {
+    padding: 12px;
+  }
+}
+
+/* Print styles for AI analysis */
+@media print {
+  .ai-analysis-panel {
+    break-before: page;
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+  
+  .ai-tabs, .close-btn, .generate-btn {
+    display: none;
+  }
+  
+  .ai-panel-content {
+    padding: 0;
+  }
+  
+  .ai-result {
+    gap: 16px;
+    padding: 16px;
+  }
+  
+  .insight-item, .rec-item, .improvement-item, .next-step-item {
+    break-inside: avoid;
+  }
 }
 </style> 

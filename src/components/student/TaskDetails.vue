@@ -56,12 +56,12 @@
             <div v-for="file in task.files" :key="file.id" class="file-item">
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
               <span class="file-name">{{ file.fileName }}</span>
-              <a :href="getFullFileUrl(file.fileUrl)" 
-                 target="_blank" 
-                 class="view-btn">
+              <button
+                @click="openFilePreview(file)"
+                class="view-btn">
                 <span class="material-icons">visibility</span>
                 View
-              </a>
+              </button>
               <a :href="getFullFileUrl(file.fileUrl)" 
                  download
                  class="download-btn">
@@ -86,12 +86,12 @@
             <div v-for="file in task.submission.files" :key="file.id" class="file-item">
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
               <span class="file-name">{{ file.fileName }}</span>
-              <a :href="getFullFileUrl(file.fileUrl)" 
-                 target="_blank" 
-                 class="view-btn">
+              <button
+                @click="openFilePreview(file)"
+                class="view-btn">
                 <span class="material-icons">visibility</span>
                 View
-              </a>
+              </button>
               <!-- Only show X button in edit mode -->
               <button 
                 v-if="editMode"
@@ -223,6 +223,121 @@
         </div>
       </div>
     </div>
+
+    <!-- File Preview Modal (For images and videos) -->
+    <div v-if="showFilePreview && !isPdf(previewFile.fileName) && !isDocx(previewFile.fileName)" class="file-preview-modal" @click="closeFilePreview">
+      <div class="preview-content" @click.stop>
+        <div class="preview-header">
+          <h3>{{ previewFile.fileName }}</h3>
+          <button class="close-btn" @click="closeFilePreview">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="preview-body">
+          <!-- Loading state -->
+          <div v-if="previewFile.loading" class="preview-loading">
+            <div class="spinner"></div>
+            <p>Loading file preview...</p>
+          </div>
+          
+          <!-- Error state -->
+          <div v-else-if="previewFile.error" class="preview-error">
+            <span class="material-icons">error_outline</span>
+            <p>Failed to load file preview</p>
+            <a :href="getFullFileUrl(previewFile.fileUrl)" 
+               download
+               class="download-file-btn">
+              <span class="material-icons">download</span>
+              Download File
+            </a>
+          </div>
+          
+          <!-- Image preview -->
+          <img v-else-if="isImage(previewFile.fileName)" 
+               :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)" 
+               alt="File preview"
+               class="preview-image">
+          
+          <!-- Video preview -->
+          <video v-else-if="isVideo(previewFile.fileName)" 
+                 controls
+                 class="preview-video">
+            <source :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)" 
+                    :type="getVideoType(previewFile.fileName)">
+            Your browser does not support video playback.
+          </video>
+          
+          <!-- Other file types - show download prompt -->
+          <div v-else class="preview-fallback">
+            <div class="fallback-icon">
+              <img :src="getFileIcon(previewFile.fileName)" alt="File icon" class="large-file-icon">
+            </div>
+            <p>This file type cannot be previewed directly.</p>
+            <a :href="getFullFileUrl(previewFile.fileUrl)" 
+               download
+               class="download-file-btn">
+              <span class="material-icons">download</span>
+              Download File
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Full screen PDF and DOCX viewer -->
+    <div v-if="showFilePreview && (isPdf(previewFile.fileName) || isDocx(previewFile.fileName))" class="fullscreen-preview">
+      <div class="fullscreen-header">
+        <div class="header-left">
+          <button class="back-btn" @click="closeFilePreview">
+            <span class="material-icons">arrow_back</span>
+          </button>
+          <h3>{{ previewFile.fileName }}</h3>
+        </div>
+        <div class="header-actions">
+          <a :href="getFullFileUrl(previewFile.fileUrl)" 
+             download
+             class="download-action">
+            <span class="material-icons">download</span>
+            Download
+          </a>
+          <button class="close-fullscreen-btn" @click="closeFilePreview">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="fullscreen-body">
+        <!-- Loading state -->
+        <div v-if="previewFile.loading" class="preview-loading">
+          <div class="spinner"></div>
+          <p>Loading file preview...</p>
+        </div>
+        
+        <!-- Error state -->
+        <div v-else-if="previewFile.error" class="preview-error">
+          <span class="material-icons">error_outline</span>
+          <p>Failed to load file preview</p>
+          <a :href="getFullFileUrl(previewFile.fileUrl)" 
+             download
+             class="download-file-btn">
+            <span class="material-icons">download</span>
+            Download File
+          </a>
+        </div>
+        
+        <!-- PDF preview -->
+        <iframe v-else-if="isPdf(previewFile.fileName)"
+                :src="previewFile.blobUrl || getFullFileUrl(previewFile.fileUrl)"
+                class="fullscreen-iframe"
+                frameborder="0"></iframe>
+        
+        <!-- DOCX preview using Google Docs Viewer -->
+        <iframe v-else-if="isDocx(previewFile.fileName)"
+                :src="`https://docs.google.com/viewer?url=${encodeURIComponent(getFullFileUrl(previewFile.fileUrl))}&embedded=true`"
+                class="fullscreen-iframe"
+                frameborder="0"></iframe>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -255,6 +370,10 @@ const error = ref(null);
 const selectedFiles = ref([]);
 const submitting = ref(false);
 const editMode = ref(false);
+
+// Add these new refs for file preview
+const showFilePreview = ref(false);
+const previewFile = ref({});
 
 onMounted(() => {
   loadTaskDetails();
@@ -366,6 +485,37 @@ const getFileType = (fileName) => {
       return 'Archive';
     default:
       return 'File';
+  }
+};
+
+// Add file type detection helpers
+const isImage = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].includes(ext);
+};
+
+const isVideo = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['mp4', 'webm', 'ogg', 'mov', 'avi'].includes(ext);
+};
+
+const isPdf = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ext === 'pdf';
+};
+
+const isDocx = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  return ['doc', 'docx'].includes(ext);
+};
+
+const getVideoType = (fileName) => {
+  const ext = fileName.split('.').pop().toLowerCase();
+  switch (ext) {
+    case 'mp4': return 'video/mp4';
+    case 'webm': return 'video/webm';
+    case 'ogg': return 'video/ogg';
+    default: return 'video/mp4';
   }
 };
 
@@ -510,6 +660,62 @@ const formatRelativeDate = (date) => {
 // Add clear all files function
 const clearAllFiles = () => {
   selectedFiles.value = [];
+};
+
+// Add these new methods for file preview
+const openFilePreview = async (file) => {
+  try {
+    // Create a copy of the file object to avoid mutating the original
+    previewFile.value = { ...file };
+    showFilePreview.value = true;
+    
+    // For PDFs, images and videos - fetch as blob and create object URL
+    if (isPdf(file.fileName) || isImage(file.fileName) || isVideo(file.fileName)) {
+      // Show loading state
+      previewFile.value.loading = true;
+      
+      try {
+        const response = await fetch(getFullFileUrl(file.fileUrl));
+        const blob = await response.blob();
+        previewFile.value.blobUrl = URL.createObjectURL(blob);
+      } catch (err) {
+        console.error(`Error fetching file ${file.fileName}:`, err);
+        previewFile.value.error = true;
+      } finally {
+        previewFile.value.loading = false;
+      }
+    }
+    
+    // For DOCX files, we'll use Google Docs Viewer
+    // No need to fetch blob, just make sure the file is accessible via URL
+    if (isDocx(file.fileName)) {
+      previewFile.value.loading = true;
+      
+      // Just verify the file exists
+      try {
+        const checkResponse = await fetch(getFullFileUrl(file.fileUrl), { method: 'HEAD' });
+        if (!checkResponse.ok) {
+          throw new Error(`File not accessible: ${checkResponse.status}`);
+        }
+      } catch (err) {
+        console.error(`Error checking DOCX file ${file.fileName}:`, err);
+        previewFile.value.error = true;
+      } finally {
+        previewFile.value.loading = false;
+      }
+    }
+  } catch(err) {
+    console.error("Error preparing file preview:", err);
+    previewFile.value.error = true;
+  }
+};
+
+const closeFilePreview = () => {
+  // Clean up the blob URL to prevent memory leaks
+  if (previewFile.value && previewFile.value.blobUrl) {
+    URL.revokeObjectURL(previewFile.value.blobUrl);
+  }
+  showFilePreview.value = false;
 };
 
 // Use SweetAlert only for the removeFile function
@@ -1079,5 +1285,296 @@ const removeFile = async (fileId) => {
 
 .remove-file:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* File Preview Modal Styles */
+.file-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+
+.preview-content {
+  background-color: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 1000px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layers to header */
+.preview-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.preview-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.preview-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+  background: #f9f9f9;
+  min-height: 300px;
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  transition: all 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.1);
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 70vh;
+  object-fit: contain;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: white;
+  border: 1px solid #eee;
+}
+
+.preview-video {
+  width: 100%;
+  max-width: 800px;
+  max-height: 70vh;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: black;
+}
+
+.preview-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: white;
+  padding: 50px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid #eee;
+}
+
+.large-file-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 10px;
+}
+
+.download-file-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
+}
+
+.download-file-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(21, 151, 80, 0.3);
+}
+
+/* Full screen viewer styles */
+.fullscreen-preview {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fullscreen-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 1;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-left h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  max-width: 60vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.back-btn, .close-fullscreen-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-btn:hover, .close-fullscreen-btn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.05);
+}
+
+.download-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 15px;
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-action:hover {
+  background: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+.fullscreen-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.fullscreen-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Preview loading and error states */
+.preview-loading, .preview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  gap: 20px;
+  min-height: 300px;
+}
+
+.preview-error {
+  color: #d32f2f;
+}
+
+.preview-error .material-icons {
+  font-size: 48px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(21, 151, 80, 0.2);
+  border-radius: 50%;
+  border-top-color: #159750;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 </style>

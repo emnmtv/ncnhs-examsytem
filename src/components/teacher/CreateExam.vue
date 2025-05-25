@@ -246,7 +246,7 @@
                   ></textarea>
                     <button 
                       type="button"
-                      v-if="question.text.trim().length > 10"
+                      v-if="question.text && question.text.trim && question.text.trim().length > 10"
                       class="detect-options-btn"
                       @click="detectOptionsWithAI(question, index)"
                       title="AI will analyze your question and suggest the most appropriate answer"
@@ -613,7 +613,7 @@
       <div class="side-panel-header">
         <h2>
           <span class="material-icons">upload_file</span>
-          Extract Questions from Document
+          Extract Questions from Document/Text
         </h2>
         <button class="close-btn" @click="closeDocumentUploadModal">
           <span class="material-icons">close</span>
@@ -621,44 +621,104 @@
       </div>
 
       <div class="side-panel-content">
-        <div class="upload-instructions">
-          <p>Upload a PDF or DOCX file containing exam questions. The AI will automatically extract and format the questions for your exam.</p>
-          <p class="smaller">Supported formats: PDF, DOCX (max 10MB)</p>
+        <!-- AI Model Selection -->
+        <div class="model-selection">
+          <label for="ai-model">AI Model:</label>
+          <select id="ai-model" v-model="selectedAiModel" @change="updatePreferredModel">
+            <option v-for="model in availableAiModels" :key="model.id" :value="model.id">
+              {{ model.provider }} / {{ model.name }}
+            </option>
+          </select>
+          <small>Select the AI model to use for question extraction</small>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="document-tabs">
+          <button 
+            class="tab-button" 
+            :class="{ active: documentTab === 'file' }"
+            @click="documentTab = 'file'"
+          >
+            <span class="material-icons">upload_file</span>
+            Document Upload
+          </button>
+          <button 
+            class="tab-button" 
+            :class="{ active: documentTab === 'text' }"
+            @click="documentTab = 'text'"
+          >
+            <span class="material-icons">text_fields</span>
+            Text Input
+          </button>
         </div>
 
-        <div class="document-upload-area" @click="triggerFileUpload" @dragover.prevent @drop.prevent="handleFileDrop">
-          <input 
-            type="file" 
-            ref="documentFileInput" 
-            @change="handleDocumentUpload"
-            accept=".pdf,.docx"
-            class="file-input"
-            style="display: none;"
-          />
-          
-          <div v-if="!documentFile" class="upload-placeholder">
-            <span class="material-icons large-icon">upload_file</span>
-            <p>Drag and drop your file here or click to browse</p>
-            <p class="smaller">PDF or DOCX format</p>
+        <!-- File Upload Tab -->
+        <div v-if="documentTab === 'file'">
+          <div class="upload-instructions">
+            <p>Upload a PDF or DOCX file containing exam questions. The AI will automatically extract and format the questions for your exam.</p>
+            <p class="smaller">Supported formats: PDF, DOCX (max 10MB)</p>
           </div>
-          
-          <div v-else class="file-info">
-            <span class="material-icons file-icon">
-              {{ documentFile.name.endsWith('.pdf') ? 'picture_as_pdf' : 'description' }}
-            </span>
-            <div class="file-details">
-              <p class="file-name">{{ documentFile.name }}</p>
-              <p class="file-size">{{ formatFileSize(documentFile.size) }}</p>
+
+          <div class="document-upload-area" @click="triggerFileUpload" @dragover.prevent @drop.prevent="handleFileDrop">
+            <input 
+              type="file" 
+              ref="documentFileInput" 
+              @change="handleDocumentUpload"
+              accept=".pdf,.docx"
+              class="file-input"
+              style="display: none;"
+            />
+            
+            <div v-if="!documentFile" class="upload-placeholder">
+              <span class="material-icons large-icon">upload_file</span>
+              <p>Drag and drop your file here or click to browse</p>
+              <p class="smaller">PDF or DOCX format</p>
             </div>
-            <button type="button" class="remove-file-btn" @click.stop="removeDocumentFile">
-              <span class="material-icons">close</span>
+            
+            <div v-else class="file-info">
+              <span class="material-icons file-icon">
+                {{ documentFile.name.endsWith('.pdf') ? 'picture_as_pdf' : 'description' }}
+              </span>
+              <div class="file-details">
+                <p class="file-name">{{ documentFile.name }}</p>
+                <p class="file-size">{{ formatFileSize(documentFile.size) }}</p>
+              </div>
+              <button type="button" class="remove-file-btn" @click.stop="removeDocumentFile">
+                <span class="material-icons">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Input Tab -->
+        <div v-if="documentTab === 'text'">
+          <div class="upload-instructions">
+            <p>Paste or type your exam questions directly. The AI will automatically analyze and format the questions for your exam.</p>
+            <p class="smaller">Paste multiple questions with their answers for best results</p>
+          </div>
+
+          <div class="text-input-area">
+            <textarea 
+              v-model="documentText" 
+              placeholder="Paste or type your exam questions and answers here..."
+              rows="10"
+              class="document-text-input"
+            ></textarea>
+            <button 
+              type="button" 
+              class="analyze-text-btn" 
+              @click="processTextInput"
+              :disabled="!documentText || documentText.length < 10 || documentProcessing"
+            >
+              <span class="material-icons">psychology</span>
+              Analyze Text
             </button>
           </div>
         </div>
 
         <div v-if="documentProcessing" class="processing-status">
           <div class="spinner"></div>
-          <p>Processing document... This may take a minute.</p>
+          <p>Processing {{ documentTab === 'file' ? 'document' : 'text' }}... This may take a minute.</p>
         </div>
 
         <div v-if="documentResult" class="document-result">
@@ -726,7 +786,7 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems } from '../../services/authService';
 import aiService from '../../services/aiService';
-import fileProcessingService from '../../services/fileProcessingService';
+import fileProcessingService from '../../services/textProcessingService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -774,6 +834,87 @@ export default {
     const documentProcessing = ref(false);
     const documentResult = ref(null);
     const showDocumentUploadModal = ref(false);
+    // Text input functionality
+    const documentTab = ref('file'); // Default to file upload tab
+    const documentText = ref('');
+    
+    // AI Model selection
+    const availableAiModels = ref([]);
+    const selectedAiModel = ref('');
+    
+    // Load available AI models
+    onMounted(async () => {
+      // Load available AI models
+      try {
+        availableAiModels.value = aiService.getAvailableModels();
+        
+        // Set the selected model to the current preferred model or first available
+        if (availableAiModels.value.length > 0) {
+          const savedModel = localStorage.getItem('preferred_ai_model');
+          selectedAiModel.value = savedModel || availableAiModels.value[0].id;
+        }
+      } catch (error) {
+        console.error('Error loading AI models:', error);
+      }
+      
+      const examId = route.query.examId;
+      if (examId) {
+        isEditing.value = true;
+        try {
+          const exams = await fetchTeacherExams();
+          const exam = exams.find(e => e.id === parseInt(examId));
+          if (exam) {
+            examData.value = {
+              testCode: exam.testCode,
+              classCode: exam.classCode,
+              title: exam.examTitle,
+              isDraft: exam.isDraft,
+              userId: exam.userId,
+              durationMinutes: exam.durationMinutes || null,
+              startDateTime: exam.startDateTime ? new Date(exam.startDateTime).toISOString().slice(0, 16) : '',
+              endDateTime: exam.endDateTime ? new Date(exam.endDateTime).toISOString().slice(0, 16) : '',
+              maxAttempts: exam.maxAttempts || null,
+              attemptSpacing: exam.attemptSpacing || null
+            };
+            questions.value = exam.questions.map(q => ({
+              text: q.questionText,
+              type: q.questionType,
+              options: Array.isArray(q.options) ? q.options : [],
+              correctAnswer: q.correctAnswer,
+              imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null // Fix image URL format
+            }));
+          }
+        } catch (error) {
+          console.error('Error loading exam:', error);
+          Swal.fire('Error', 'Failed to load exam data', 'error');
+        }
+      } else {
+        // Try to load saved progress if not editing
+        const hasSavedProgress = loadProgressFromLocalStorage();
+        if (hasSavedProgress) {
+          Swal.fire({
+            title: 'Saved Progress Found',
+            text: 'Would you like to continue where you left off?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, continue',
+            cancelButtonText: 'No, start fresh'
+          }).then((result) => {
+            if (!result.isConfirmed) {
+              resetForm();
+            }
+          });
+        }
+      }
+      loadBankQuestions();
+    });
+
+    // Update preferred AI model
+    const updatePreferredModel = () => {
+      if (aiService.setPreferredModel && selectedAiModel.value) {
+        aiService.setPreferredModel(selectedAiModel.value);
+      }
+    };
 
     const triggerFileUpload = () => {
       documentFileInput.value.click();
@@ -834,13 +975,41 @@ export default {
         documentProcessing.value = true;
         documentResult.value = null;
 
-        // Use the mock processing service for now until backend is ready
-        const result = await fileProcessingService.processDocumentFile(documentFile.value);
+        // Use the processing service to extract questions from the file
+        // Pass the selected AI model to the processing service
+        const result = await fileProcessingService.processDocumentFile(
+          documentFile.value,
+          selectedAiModel.value
+        );
         
         documentResult.value = result;
       } catch (error) {
         console.error('Error processing document:', error);
         Swal.fire('Processing Error', 'Failed to process the document. Please try again.', 'error');
+      } finally {
+        documentProcessing.value = false;
+      }
+    };
+
+    // New function to process text input
+    const processTextInput = async () => {
+      if (!documentText.value || documentText.value.length < 10) return;
+
+      try {
+        documentProcessing.value = true;
+        documentResult.value = null;
+
+        // Use the processing service to extract questions from the text
+        // Pass the selected AI model to the processing service
+        const result = await fileProcessingService.processTextInput(
+          documentText.value,
+          selectedAiModel.value
+        );
+        
+        documentResult.value = result;
+      } catch (error) {
+        console.error('Error processing text:', error);
+        Swal.fire('Processing Error', 'Failed to analyze the text. Please try again.', 'error');
       } finally {
         documentProcessing.value = false;
       }
@@ -949,60 +1118,6 @@ export default {
     const clearLocalStorageProgress = () => {
       localStorage.removeItem(STORAGE_KEY);
     };
-
-    // Load exam data if editing
-    onMounted(async () => {
-      const examId = route.query.examId;
-      if (examId) {
-        isEditing.value = true;
-        try {
-          const exams = await fetchTeacherExams();
-          const exam = exams.find(e => e.id === parseInt(examId));
-          if (exam) {
-            examData.value = {
-              testCode: exam.testCode,
-              classCode: exam.classCode,
-              title: exam.examTitle,
-              isDraft: exam.isDraft,
-              userId: exam.userId,
-              durationMinutes: exam.durationMinutes || null,
-              startDateTime: exam.startDateTime ? new Date(exam.startDateTime).toISOString().slice(0, 16) : '',
-              endDateTime: exam.endDateTime ? new Date(exam.endDateTime).toISOString().slice(0, 16) : '',
-              maxAttempts: exam.maxAttempts || null,
-              attemptSpacing: exam.attemptSpacing || null
-            };
-            questions.value = exam.questions.map(q => ({
-              text: q.questionText,
-              type: q.questionType,
-              options: Array.isArray(q.options) ? q.options : [],
-              correctAnswer: q.correctAnswer,
-              imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null // Fix image URL format
-            }));
-          }
-        } catch (error) {
-          console.error('Error loading exam:', error);
-          Swal.fire('Error', 'Failed to load exam data', 'error');
-        }
-      } else {
-        // Try to load saved progress if not editing
-        const hasSavedProgress = loadProgressFromLocalStorage();
-        if (hasSavedProgress) {
-          Swal.fire({
-            title: 'Saved Progress Found',
-            text: 'Would you like to continue where you left off?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Yes, continue',
-            cancelButtonText: 'No, start fresh'
-          }).then((result) => {
-            if (!result.isConfirmed) {
-              resetForm();
-            }
-          });
-        }
-      }
-      loadBankQuestions();
-    });
 
     // Handle image upload
     const handleImageUpload = async (event, question) => {
@@ -1596,13 +1711,32 @@ export default {
         // Add generated questions to the exam
         aiQuestions.forEach(q => {
           const newQuestion = {
-            text: q.questionText,
+            text: q.questionText || q.text || "Generated question",
             type: formValues.type === 'multiple_choice' ? 'multipleChoice' : 
                   formValues.type === 'true_false' ? 'true_false' : 'enumeration',
-            options: q.options || [],
-            correctAnswer: q.correctAnswer,
+            options: Array.isArray(q.options) ? q.options.filter(opt => opt) : [],
+            correctAnswer: q.correctAnswer || "",
             imageUrl: null
           };
+          
+          // Make sure all fields are defined to prevent trim() errors
+          if (!newQuestion.text) newQuestion.text = "Generated question";
+          if (!newQuestion.correctAnswer) newQuestion.correctAnswer = "";
+          if (!Array.isArray(newQuestion.options)) newQuestion.options = [];
+          
+          // For multiple choice questions, ensure we have options
+          if (newQuestion.type === 'multipleChoice' && newQuestion.options.length < 2) {
+            newQuestion.options = ['Option A', 'Option B', 'Option C', 'Option D'];
+            if (!newQuestion.correctAnswer) {
+              newQuestion.correctAnswer = 'Option A';
+            }
+          }
+          
+          // For true/false, ensure correctAnswer is valid
+          if (newQuestion.type === 'true_false') {
+            newQuestion.correctAnswer = newQuestion.correctAnswer.toString().toLowerCase() === 'true' ? 'true' : 'false';
+          }
+          
           questions.value.push(newQuestion);
         });
 
@@ -1879,7 +2013,7 @@ export default {
       detectOptionsWithAI,
       activeSettingsTab,
       toggleSettingsTab,
-        error,
+      error,
       // Document upload related
       documentFileInput,
       documentFile,
@@ -1893,7 +2027,13 @@ export default {
       processDocumentFile,
       formatFileSize,
       importDocumentQuestions,
-      closeDocumentUploadModal
+      closeDocumentUploadModal,
+      documentTab,
+      documentText,
+      processTextInput,
+      availableAiModels,
+      selectedAiModel,
+      updatePreferredModel
     };
   }
 };
@@ -4609,5 +4749,241 @@ small {
     flex-direction: column;
     gap: 15px;
   }
+}
+
+/* Add iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+  input, 
+  textarea, 
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Add this to your existing styles */
+.uppercase-input {
+  text-transform: uppercase;
+}
+
+.uppercase-input::placeholder {
+  text-transform: none;
+}
+
+/* Document tabs styling */
+.document-tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px;
+  background: #f5f5f5;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.tab-button.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.tab-button:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.tab-button .material-icons {
+  font-size: 20px;
+}
+
+/* Text input area styling */
+.text-input-area {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.document-text-input {
+  width: 100%;
+  min-height: 200px;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  resize: vertical;
+  transition: all 0.3s;
+}
+
+.document-text-input:focus {
+  border-color: #4CAF50;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.analyze-text-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  align-self: flex-end;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+}
+
+.analyze-text-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.analyze-text-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Extracted result styling enhancements */
+.result-questions {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.result-question-item {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.result-question-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.result-question-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.question-options p.correct-answer {
+  font-weight: 600;
+  color: #4CAF50;
+}
+
+/* Processing status spinner */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border-left-color: #4CAF50;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 15px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.processing-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+/* Model selection styling */
+.model-selection {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #e3f2fd;
+  border-radius: 8px;
+  border: 2px solid #90caf9;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.1);
+  position: relative;
+}
+
+.model-selection::before {
+  content: 'AI MODEL';
+  position: absolute;
+  top: -10px;
+  left: 15px;
+  background-color: #2196f3;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.model-selection label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #0d47a1;
+}
+
+.model-selection select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #90caf9;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.model-selection select:hover {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.model-selection select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
+}
+
+.model-selection small {
+  display: block;
+  margin-top: 8px;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* Update document tabs to appear after model selection */
+.document-tabs {
+  margin-top: 5px;
 }
 </style>
