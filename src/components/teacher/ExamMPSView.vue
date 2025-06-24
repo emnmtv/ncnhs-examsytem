@@ -362,7 +362,15 @@
         </button>
       </div>
 
-      <!-- Add this after the View Controls buttons and before the chart container -->
+      <!-- Move chart container above settings -->
+      <div v-if="viewMode === 'chart'" class="chart-container">
+        <h2>Section Performance</h2>
+        <div class="chart-wrapper">
+          <canvas ref="mpsChart" width="400" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Move the settings card below the chart -->
       <div v-if="viewMode === 'chart'" class="settings-card">
         <div class="card-header">
           <h2>
@@ -437,6 +445,13 @@
                     <span>Rounded Bars</span>
                   </label>
                 </div>
+                
+                <div class="toggle-option">
+                  <label>
+                    <input type="checkbox" v-model="useUniqueColors">
+                    <span>Unique Section Colors</span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
@@ -451,14 +466,6 @@
               <div class="option-help">When enabled, raw scores (e.g., 18/20) will be emphasized in charts</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Chart View -->
-      <div v-if="viewMode === 'chart'" class="chart-container">
-        <h2>Section Performance</h2>
-        <div class="chart-wrapper">
-          <canvas ref="mpsChart" width="400" height="200"></canvas>
         </div>
       </div>
 
@@ -728,7 +735,41 @@ const colorThemeOptions = [
 ];
 
 // Get colors based on selected theme
-const getChartColors = (scores, theme) => {
+const getChartColors = (scores, sections, theme) => {
+  // Define a set of distinctive colors for sections
+  const sectionColors = [
+    { bg: 'rgba(255, 99, 132, 0.7)', border: 'rgb(255, 99, 132)' }, // Red
+    { bg: 'rgba(54, 162, 235, 0.7)', border: 'rgb(54, 162, 235)' }, // Blue
+    { bg: 'rgba(255, 206, 86, 0.7)', border: 'rgb(255, 206, 86)' }, // Yellow
+    { bg: 'rgba(75, 192, 192, 0.7)', border: 'rgb(75, 192, 192)' }, // Teal
+    { bg: 'rgba(153, 102, 255, 0.7)', border: 'rgb(153, 102, 255)' }, // Purple
+    { bg: 'rgba(255, 159, 64, 0.7)', border: 'rgb(255, 159, 64)' }, // Orange
+    { bg: 'rgba(76, 175, 80, 0.7)', border: 'rgb(76, 175, 80)' }, // Green
+    { bg: 'rgba(233, 30, 99, 0.7)', border: 'rgb(233, 30, 99)' }, // Pink
+    { bg: 'rgba(0, 188, 212, 0.7)', border: 'rgb(0, 188, 212)' }, // Cyan
+    { bg: 'rgba(121, 85, 72, 0.7)', border: 'rgb(121, 85, 72)' }, // Brown
+    { bg: 'rgba(3, 169, 244, 0.7)', border: 'rgb(3, 169, 244)' }, // Light Blue
+    { bg: 'rgba(205, 220, 57, 0.7)', border: 'rgb(205, 220, 57)' }, // Lime
+  ];
+  
+  // If unique section colors are enabled, use the section colors
+  if (useUniqueColors.value) {
+    const backgroundColors = [];
+    const borderColors = [];
+    
+    for (let i = 0; i < sections.length; i++) {
+      const colorIndex = i % sectionColors.length;
+      backgroundColors.push(sectionColors[colorIndex].bg);
+      borderColors.push(sectionColors[colorIndex].border);
+    }
+    
+    return {
+      background: backgroundColors,
+      border: borderColors
+    };
+  }
+  
+  // Otherwise use theme-based colors
   if (theme === 'pastel') {
     return {
       background: scores.map(() => 'rgba(171, 217, 233, 0.7)'),
@@ -840,7 +881,7 @@ const renderChart = () => {
     
     // Prepare data for chart
     const sections = mpsData.value.sectionMPS.map(s => s.section);
-    const scores = mpsData.value.sectionMPS.map(s => s.mps);
+    const scores = mpsData.value.sectionMPS.map(s => Number(s.mps.toFixed(2)));
     const studentCounts = mpsData.value.sectionMPS.map(s => s.studentCount);
     
     // Calculate raw score percentages for display
@@ -856,8 +897,8 @@ const renderChart = () => {
       };
     });
     
-    // Get colors based on theme
-    const colors = getChartColors(scores, colorTheme.value);
+    // Get colors based on theme, passing sections for unique colors
+    const colors = getChartColors(scores, sections, colorTheme.value);
     
     // Create datasets based on chart type
     let datasets = [];
@@ -952,16 +993,16 @@ const renderChart = () => {
               if (datasetLabel === 'Mean Percentage Score') {
                 if (showRawScores.value && index >= 0 && index < rawScoreData.length) {
                   const rawData = rawScoreData[index];
-                  return `${datasetLabel}: ${rawData.avgRawScore}/${rawData.total} (${value.toFixed(1)}%)`;
+                  return `${datasetLabel}: ${rawData.avgRawScore}/${rawData.total} (${value.toFixed(2)}%)`;
                 }
-                return `${datasetLabel}: ${typeof value === 'number' ? value.toFixed(1) : value}%`;
+                return `${datasetLabel}: ${typeof value === 'number' ? value.toFixed(2) : value}%`;
               } else if (datasetLabel === 'Number of Students') {
                 return `${datasetLabel}: ${value}`;
               }
               
               return `${datasetLabel}: ${value}`;
             },
-            // Add footer to display raw scores
+            // Update footer to show 2 decimal places
             footer: function(tooltipItems) {
               const idx = tooltipItems[0].dataIndex;
               if (idx >= 0 && idx < mpsData.value.sectionMPS.length) {
@@ -970,12 +1011,25 @@ const renderChart = () => {
                 const rawLow = section.lowestScoreRaw || 0;
                 const total = section.totalPossible || 0;
                 return [
-                  `High Score: ${rawHigh}/${total} (${section.highestPercentage?.toFixed(1) || 0}%)`,
-                  `Low Score: ${rawLow}/${total} (${section.lowestPercentage?.toFixed(1) || 0}%)`
+                  `High Score: ${rawHigh}/${total} (${section.highestPercentage?.toFixed(2) || 0}%)`,
+                  `Low Score: ${rawLow}/${total} (${section.lowestPercentage?.toFixed(2) || 0}%)`
                 ];
               }
               return [];
             }
+          }
+        },
+        datalabels: {
+          display: true,
+          color: '#333',
+          align: 'center',
+          anchor: 'center',
+          formatter: (value) => {
+            return typeof value === 'number' ? value.toFixed(2) : value;
+          },
+          font: {
+            weight: 'bold',
+            size: 12
           }
         }
       }
@@ -1423,7 +1477,7 @@ const downloadPDF = () => {
           .then(() => {
             // Cleanup - remove the cloned element
             document.body.removeChild(element);
-            // Reset view mode
+            // Reset view modet:
             viewMode.value = originalView;
           })
           .catch(error => {
@@ -1584,6 +1638,9 @@ const generateAnalysis = async (type) => {
     aiLoading.value = false;
   }
 };
+
+// Add the useUniqueColors ref
+const useUniqueColors = ref(true); // Enabled by default
 </script>
 
 <style scoped>

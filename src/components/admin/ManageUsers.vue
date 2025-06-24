@@ -113,6 +113,15 @@
       </button>
       </div>
       
+      <!-- Add pagination toggle -->
+      <div class="pagination-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" :checked="pagination.enabled" @change="togglePagination">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Pagination</span>
+      </div>
+      
       <div class="export-controls">
         <button @click="toggleExportOptions" class="export-main-btn">
           <span class="material-icons">download</span>
@@ -349,6 +358,69 @@
             </tr>
           </tbody>
         </table>
+      </div>
+      
+      <!-- Pagination controls -->
+      <div v-if="pagination.enabled && (filteredUsersBeforePagination.length > pagination.itemsPerPage)" class="pagination-controls">
+        <div class="pagination-info">
+          <span>{{ displayRange }}</span>
+        </div>
+        
+        <div class="pagination-buttons">
+          <button 
+            @click="changePage(1)" 
+            class="pagination-btn first" 
+            :disabled="pagination.currentPage === 1"
+          >
+            <span class="material-icons">first_page</span>
+          </button>
+          
+          <button 
+            @click="changePage(pagination.currentPage - 1)" 
+            class="pagination-btn prev" 
+            :disabled="pagination.currentPage === 1"
+          >
+            <span class="material-icons">chevron_left</span>
+          </button>
+          
+          <div class="pagination-pages">
+            <button 
+              v-for="page in totalPages" 
+              :key="page" 
+              @click="changePage(page)" 
+              class="page-btn" 
+              :class="{ active: pagination.currentPage === page }"
+              v-show="Math.abs(page - pagination.currentPage) < 3 || page === 1 || page === totalPages"
+            >
+              {{ page }}
+            </button>
+            <span v-if="pagination.currentPage > 4 && totalPages > 6">...</span>
+            <span v-if="pagination.currentPage < totalPages - 3 && totalPages > 6">...</span>
+          </div>
+          
+          <button 
+            @click="changePage(pagination.currentPage + 1)" 
+            class="pagination-btn next" 
+            :disabled="pagination.currentPage === totalPages"
+          >
+            <span class="material-icons">chevron_right</span>
+          </button>
+          
+          <button 
+            @click="changePage(totalPages)" 
+            class="pagination-btn last" 
+            :disabled="pagination.currentPage === totalPages"
+          >
+            <span class="material-icons">last_page</span>
+          </button>
+        </div>
+        
+        <div class="items-per-page">
+          <label>Items per page:</label>
+          <select :value="pagination.itemsPerPage" @change="changeItemsPerPage(parseInt($event.target.value))">
+            <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }}</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -885,6 +957,13 @@ const filters = ref({
   domain: ''
 });
 
+// Pagination state
+const pagination = ref({
+  currentPage: 1,
+  itemsPerPage: 20,
+  enabled: true
+});
+
 // Modal states
 const showModal = ref(false);
 const modalType = ref('');
@@ -1141,7 +1220,36 @@ const handleSubmit = async () => {
   }
 };
 
-const filteredUsers = computed(() => {
+// Add these computed properties for pagination
+const totalPages = computed(() => {
+  if (!pagination.value.enabled) return 1;
+  
+  const totalItems = filteredUsersBeforePagination.value.length;
+  return Math.ceil(totalItems / pagination.value.itemsPerPage) || 1;
+});
+
+const paginatedUsers = computed(() => {
+  if (!pagination.value.enabled) {
+    return filteredUsersBeforePagination.value;
+  }
+  
+  const startIndex = (pagination.value.currentPage - 1) * pagination.value.itemsPerPage;
+  const endIndex = startIndex + pagination.value.itemsPerPage;
+  return filteredUsersBeforePagination.value.slice(startIndex, endIndex);
+});
+
+// Current range display (e.g., "1-10 of 100")
+const displayRange = computed(() => {
+  const total = filteredUsersBeforePagination.value.length;
+  if (total === 0) return "0-0 of 0";
+  
+  const start = (pagination.value.currentPage - 1) * pagination.value.itemsPerPage + 1;
+  const end = Math.min(start + pagination.value.itemsPerPage - 1, total);
+  return `${start}-${end} of ${total}`;
+});
+
+// Modify the filteredUsers computed property
+const filteredUsersBeforePagination = computed(() => {
   let users = [];
   
   switch (activeTab.value) {
@@ -1184,6 +1292,32 @@ const filteredUsers = computed(() => {
 
     return searchMatch && filterMatch;
   });
+});
+
+// Replace the existing filteredUsers computed property
+const filteredUsers = computed(() => {
+  return paginatedUsers.value;
+});
+
+// Function to handle pagination changes
+const changePage = (page) => {
+  if (page < 1 || page > totalPages.value) return;
+  pagination.value.currentPage = page;
+};
+
+const changeItemsPerPage = (items) => {
+  pagination.value.itemsPerPage = items;
+  pagination.value.currentPage = 1; // Reset to first page when changing items per page
+};
+
+const togglePagination = () => {
+  pagination.value.enabled = !pagination.value.enabled;
+  pagination.value.currentPage = 1; // Reset to first page when toggling pagination
+};
+
+// Watch for changes in active tab, search query, and filters to reset pagination
+watch([activeTab, searchQuery, filters], () => {
+  pagination.value.currentPage = 1;
 });
 
 // Load grade sections
@@ -3926,6 +4060,192 @@ onBeforeUnmount(() => {
     width: 100%;
     position: absolute;
     z-index: 20;
+  }
+}
+
+/* Add these pagination styles */
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #333;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.pagination-btn:disabled {
+  color: #bdbdbd;
+  cursor: not-allowed;
+}
+
+.pagination-btn .material-icons {
+  font-size: 20px;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.page-btn.active {
+  background: #2196F3;
+  color: white;
+}
+
+.page-btn:hover:not(.active) {
+  background: #e0e0e0;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.items-per-page label {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.items-per-page select {
+  padding: 0.4rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  color: #333;
+  font-size: 0.85rem;
+  background: white;
+  cursor: pointer;
+}
+
+.pagination-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggle-label {
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 22px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #2196F3;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* Responsive styles for pagination */
+@media (max-width: 768px) {
+  .pagination-controls {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .pagination-info {
+    order: 1;
+  }
+  
+  .pagination-buttons {
+    order: 0;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .items-per-page {
+    order: 2;
+  }
+
+  .pagination-toggle {
+    margin-bottom: 0.75rem;
+  }
+  
+  .view-controls {
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }
 </style>
