@@ -569,10 +569,24 @@ const processQRCode = async (qrData) => {
       console.log('Attendance marked, response:', attendance);
     } catch (markError) {
       console.error('Error marking attendance:', markError);
-      showAlertMessage('Failed to mark attendance', 'error');
+      
+      // Handle enrollment errors specifically
+      if (markError.message && markError.message.includes('not enrolled')) {
+        // Display a more specific error message for enrollment issues
+        showAlertMessage('Student not enrolled in this class', 'error', 5000);
+        return; // Exit early, don't create a record
+      } else {
+        // Generic error
+        showAlertMessage(`Failed to mark attendance: ${markError.message}`, 'error', 5000);
+        // Don't return here, allow fallback record creation
+      }
+      
       // Create a fallback record if the API call fails
       attendance = null;
     }
+    
+    // If the error was related to enrollment, we already returned above
+    // So if we get here, either the operation succeeded or there was a non-enrollment error
     
     // Create a student object with data from QR or API response
     const studentInfo = {
@@ -585,29 +599,33 @@ const processQRCode = async (qrData) => {
            studentData.lrn || 'N/A'
     };
     
-    // Add to attendance records with safety checks
-    const newRecord = {
-      // Use attendance properties if available
-      ...(attendance || {}),
-      // Always set these properties
-      timestamp: new Date(),
-      studentId: studentData.studentId,
-      status: (attendance && attendance.status) || 'present',
-      // Ensure student object exists with complete data
-      student: studentInfo
-    };
-    
-    // Add the record to the list
-    attendanceRecords.value.unshift(newRecord);
-    console.log('Added new attendance record:', newRecord);
-    
-    // Show success message with student name
-    const studentName = `${studentInfo.lastName}, ${studentInfo.firstName}`;
-    showAlertMessage(`Attendance marked for ${studentName}`, 'success');
+    // Only add to attendance records if we have a successful attendance marking
+    // or if the error wasn't related to enrollment
+    if (attendance) {
+      // Add to attendance records with safety checks
+      const newRecord = {
+        // Use attendance properties if available
+        ...(attendance || {}),
+        // Always set these properties
+        timestamp: new Date(),
+        studentId: studentData.studentId,
+        status: (attendance && attendance.status) || 'present',
+        // Ensure student object exists with complete data
+        student: studentInfo
+      };
+      
+      // Add the record to the list
+      attendanceRecords.value.unshift(newRecord);
+      console.log('Added new attendance record:', newRecord);
+      
+      // Show success message with student name
+      const studentName = `${studentInfo.lastName}, ${studentInfo.firstName}`;
+      showAlertMessage(`Attendance marked for ${studentName}`, 'success');
+    }
     
   } catch (err) {
     console.error('Error processing QR code:', err);
-    showAlertMessage('Error processing QR code', 'error');
+    showAlertMessage(`Error: ${err.message || 'Failed to process QR code'}`, 'error');
   } finally {
     // Resume scanning after a short delay
     setTimeout(() => {

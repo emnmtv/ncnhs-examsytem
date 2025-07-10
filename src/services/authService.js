@@ -1,5 +1,5 @@
-export const BASE_URL = 'http://localhost:3400/auth';
-export const SOCKET_URL = 'http://localhost:3400';
+export const BASE_URL = 'https://emnmtv.shop/auth';
+export const SOCKET_URL = 'https://emnmtv.shop/';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -3462,12 +3462,16 @@ export const getAttendanceSessions = async (subjectId) => {
  * @param {string} [remarks] - Optional remarks about the attendance
  * @returns {Promise<Object>} - The created attendance record
  */
-export const markAttendance = async (sessionId, studentId, status, remarks) => {
+export const markAttendance = async (sessionId, studentId, status = 'present', remarks) => {
   try {
     const token = localStorage.getItem("jwtToken");
     if (!token) throw new Error("No token found");
 
-    console.log('AuthService: Marking attendance', { sessionId, studentId, status });
+    // Validate parameters
+    if (!sessionId) throw new Error("Session ID is required");
+    if (!studentId) throw new Error("Student ID is required");
+
+    console.log('AuthService: Marking attendance', { sessionId, studentId, status, remarks });
 
     const response = await fetch(`${BASE_URL}/attendance/mark`, {
       method: "POST",
@@ -3475,17 +3479,31 @@ export const markAttendance = async (sessionId, studentId, status, remarks) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ sessionId, studentId, status, remarks })
+      body: JSON.stringify({
+        sessionId,
+        studentId,
+        status,
+        remarks
+      })
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Failed to mark attendance");
+      // Check for specific error types
+      if (data.errorType === 'enrollment_error') {
+        console.error('AuthService: Enrollment error marking attendance', data);
+        throw new Error(data.message || 'This student is not enrolled in this class');
+      } else {
+        console.error('AuthService: Failed to mark attendance', data);
+        throw new Error(data.message || 'Failed to mark attendance');
+      }
     }
 
-    return await response.json();
+    console.log('AuthService: Attendance marked successfully', data);
+    return data.attendance;
   } catch (error) {
-    console.error("Error marking attendance:", error);
+    console.error("AuthService: Mark attendance error:", error);
     throw error;
   }
 };

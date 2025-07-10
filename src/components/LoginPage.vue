@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { loginUser } from "../services/authService";
 import Swal from 'sweetalert2';
@@ -13,12 +13,82 @@ const error = ref('');
 const loading = ref(false);
 const showPassword = ref(false);
 const pageLoaded = ref(false);
+const showPrivacyPolicy = ref(false); // Add ref for privacy policy modal
+
+// PWA installation refs
+const deferredPrompt = ref(null);
+const showInstallPrompt = ref(false);
+
+// Listen for the beforeinstallprompt event
+const handleBeforeInstallPrompt = (e) => {
+  // Prevent Chrome 67 and earlier from automatically showing the prompt
+  e.preventDefault();
+  // Stash the event so it can be triggered later
+  deferredPrompt.value = e;
+  // Show the install button
+  showInstallPrompt.value = true;
+};
+
+// Install the PWA
+const installPWA = async () => {
+  if (!deferredPrompt.value) {
+    return;
+  }
+
+  // Show the installation prompt
+  deferredPrompt.value.prompt();
+  
+  // Wait for the user to respond to the prompt
+  const choiceResult = await deferredPrompt.value.userChoice;
+  
+  if (choiceResult.outcome === 'accepted') {
+    console.log('User accepted the PWA installation');
+    showInstallPrompt.value = false;
+  } else {
+    console.log('User dismissed the PWA installation');
+  }
+  
+  // Clear the saved prompt since it can't be used again
+  deferredPrompt.value = null;
+};
+
+// Dismiss the installation prompt
+const dismissInstallPrompt = () => {
+  showInstallPrompt.value = false;
+  // Store a flag in localStorage to not show the prompt again for some time
+  localStorage.setItem('pwaPromptDismissed', Date.now().toString());
+};
+
+// Toggle privacy policy modal
+const togglePrivacyPolicy = () => {
+  showPrivacyPolicy.value = !showPrivacyPolicy.value;
+};
 
 onMounted(() => {
   // Trigger animation after component is mounted
   setTimeout(() => {
     pageLoaded.value = true;
   }, 100);
+
+  // Check if we should show the install prompt (not shown in the last 3 days)
+  const lastDismissed = localStorage.getItem('pwaPromptDismissed');
+  const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+  const shouldShowPrompt = !lastDismissed || (Date.now() - parseInt(lastDismissed)) > threeDaysInMs;
+  
+  // Check if the app is already installed
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                       window.navigator.standalone || 
+                       document.referrer.includes('android-app://');
+  
+  if (shouldShowPrompt && !isStandalone) {
+    // Add event listener for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }
+});
+
+onUnmounted(() => {
+  // Clean up the event listener
+  window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 });
 
 const handleLogin = async () => {
@@ -172,6 +242,11 @@ const goToSurvey = () => {
 
         <div class="login-footer">
           <p>Need help? Contact your system administrator</p>
+          <div class="footer-links">
+            <a href="#" @click.prevent="togglePrivacyPolicy" class="policy-link">Privacy Policy</a>
+            <span class="divider-dot">•</span>
+            <a href="#" @click.prevent="goToSurvey" class="policy-link">Take Survey</a>
+          </div>
         </div>
       </div>
     </div>
@@ -181,6 +256,82 @@ const goToSurvey = () => {
       <span class="material-icons">poll</span>
       <span class="button-text">Answer Survey</span>
     </button>
+    
+    <!-- PWA Installation Notification -->
+    <div v-if="showInstallPrompt" class="pwa-install-prompt" :class="{ 'show-prompt': showInstallPrompt }">
+      <div class="prompt-content">
+        <div class="prompt-icon">
+          <span class="material-icons">get_app</span>
+        </div>
+        <div class="prompt-text">
+          <h3>Install NCNHS Assessment Portal</h3>
+          <p>Install this app on your device for quick and convenient access</p>
+        </div>
+        <div class="prompt-actions">
+          <button class="install-button" @click="installPWA">
+            <span class="material-icons">add_to_home_screen</span>
+            Install
+          </button>
+          <button class="dismiss-button" @click="dismissInstallPrompt">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Privacy Policy Modal -->
+    <div v-if="showPrivacyPolicy" class="privacy-policy-modal">
+      <div class="modal-overlay" @click="togglePrivacyPolicy"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Privacy Policy</h3>
+          <button class="close-button" @click="togglePrivacyPolicy">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h4>NCNHS Assessment Portal Privacy Policy</h4>
+          <p class="last-updated">Last Updated: {{ new Date().toLocaleDateString() }}</p>
+          
+          <section class="policy-section">
+            <h5>1. Information We Collect</h5>
+            <p>The NCNHS Assessment Portal collects the following information:</p>
+            <ul>
+              <li>Student and teacher personal information (name, LRN, email)</li>
+              <li>Examination responses and grades</li>
+              <li>Attendance records</li>
+              <li>System usage data</li>
+            </ul>
+          </section>
+          
+          <section class="policy-section">
+            <h5>2. How We Use Your Information</h5>
+            <p>Your information is used for:</p>
+            <ul>
+              <li>Authentication and account management</li>
+              <li>Providing educational services</li>
+              <li>Recording academic performance</li>
+              <li>System improvement and optimization</li>
+            </ul>
+          </section>
+          
+          <section class="policy-section">
+            <h5>3. Data Security</h5>
+            <p>We implement appropriate security measures to protect your personal information from unauthorized access, alteration, or disclosure. The system uses encrypted connections and secure credential storage practices.</p>
+          </section>
+          
+          <section class="policy-section">
+            <h5>4. Data Retention</h5>
+            <p>Your information is retained in accordance with Department of Education guidelines and local regulations for educational records.</p>
+          </section>
+          
+          <section class="policy-section">
+            <h5>5. Contact Information</h5>
+            <p>For questions about this privacy policy or your data, please contact the school administration.</p>
+          </section>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -248,6 +399,109 @@ const goToSurvey = () => {
 
 .button-text {
   font-weight: 500;
+}
+
+/* PWA Installation Prompt Styles */
+.pwa-install-prompt {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  width: 320px;
+  max-width: 90vw;
+  padding: 0;
+  z-index: 2000;
+  overflow: hidden;
+  transform: translateY(-100px);
+  opacity: 0;
+  transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.pwa-install-prompt.show-prompt {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.prompt-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+}
+
+.prompt-icon {
+  background: #159750;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.prompt-icon .material-icons {
+  color: white;
+  font-size: 28px;
+}
+
+.prompt-text h3 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  color: #333;
+}
+
+.prompt-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.prompt-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.install-button {
+  background: #159750;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.3s ease;
+}
+
+.install-button:hover {
+  background: #0c7a3d;
+}
+
+.dismiss-button {
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: background 0.3s ease;
+}
+
+.dismiss-button:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .login-content {
@@ -510,6 +764,62 @@ label {
   color: #7f8c8d;
 }
 
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 1rem;
+  align-items: center;
+}
+
+.policy-link {
+  color: #19a759;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.policy-link:hover {
+  text-decoration: underline;
+  color: #0e6e3a;
+}
+
+.divider-dot {
+  color: #bbb;
+  font-size: 1.2rem;
+  line-height: 0.5;
+}
+
+/* PWA Install Button within the form */
+.install-app-button {
+  padding: 1rem;
+  margin-top: 1rem;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  width: 100%;
+}
+
+.install-app-button:hover {
+  background: #1976d2;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.install-app-button:active {
+  transform: translateY(-1px);
+}
+
 /* Loading Spinner */
 .spinner {
   width: 24px;
@@ -522,6 +832,112 @@ label {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Privacy Policy Modal */
+.privacy-policy-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  position: relative;
+  background: white;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  animation: modalIn 0.3s ease-out;
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.4rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #f0f0f0;
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.policy-section {
+  margin-bottom: 20px;
+}
+
+.policy-section h5 {
+  font-size: 1.1rem;
+  color: #19a759;
+  margin: 15px 0 10px;
+}
+
+.policy-section p, .policy-section li {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #555;
+}
+
+.policy-section ul {
+  padding-left: 20px;
+}
+
+.last-updated {
+  font-style: italic;
+  color: #888;
+  font-size: 0.8rem;
+  margin-bottom: 20px;
 }
 
 /* Responsive styles */
@@ -617,6 +1033,12 @@ label {
     align-items: center;
     justify-content: center;
   }
+
+  /* Adjust modal for mobile */
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
 }
 
 @media (max-width: 576px) {
@@ -680,6 +1102,41 @@ label {
   
   .survey-button .material-icons {
     font-size: 16px;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .divider-dot {
+    display: none;
+  }
+  
+  /* Make the modal take full screen on very small devices */
+  .modal-content {
+    width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  
+  .modal-body {
+    padding: 15px;
+  }
+  
+  .policy-section h5 {
+    font-size: 1rem;
+  }
+  
+  .policy-section p, .policy-section li {
+    font-size: 0.9rem;
+  }
+  
+  /* Adjust install button for mobile */
+  .install-app-button {
+    padding: 0.8rem;
+    font-size: 0.9rem;
   }
 }
 </style>

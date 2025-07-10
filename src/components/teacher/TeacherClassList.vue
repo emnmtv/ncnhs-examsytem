@@ -110,28 +110,15 @@
           </div>
           
           <div class="form-group">
-            <label>Schedule Settings:</label>
-            <div class="radio-group">
-              <div class="radio-option">
-                <input type="radio" id="useSubjectSchedule" v-model="attendanceSession.useSubjectSchedule" :value="true">
-                <label for="useSubjectSchedule">Use subject's schedule</label>
-              </div>
-              <div class="radio-option">
-                <input type="radio" id="useManualSchedule" v-model="attendanceSession.useSubjectSchedule" :value="false">
-                <label for="useManualSchedule">Set manual time</label>
-              </div>
-            </div>
-          </div>
-          
-          <div class="form-group" v-if="!attendanceSession.useSubjectSchedule">
-            <label for="scheduleStartTime">Start Time:</label>
+            <label for="scheduleStartTime">Start Time (optional):</label>
             <input type="time" id="scheduleStartTime" v-model="attendanceSession.scheduleStartTime" class="form-input">
+            <small class="form-help">Leave empty for no time restriction</small>
           </div>
           
           <div class="form-group">
             <label for="lateThresholdMinutes">Late Threshold (minutes):</label>
             <input type="number" id="lateThresholdMinutes" v-model="attendanceSession.lateThresholdMinutes" min="0" max="60" class="form-input">
-            <small class="form-help">Students will be marked late if they arrive after this many minutes</small>
+            <small class="form-help">Students will be marked late if they arrive after this many minutes. Set to 0 for no late marking.</small>
           </div>
         </div>
         <div class="modal-footer">
@@ -351,9 +338,8 @@ const attendanceSession = ref({
   subjectId: '',
   title: '',
   date: getTodayDateString(), // Use the helper function to get today's date
-  useSubjectSchedule: true, // Default to using subject schedule
-  scheduleStartTime: '', // Will be populated if useSubjectSchedule is false
-  lateThresholdMinutes: 15 // Default to 15 minutes
+  scheduleStartTime: '', // Will be populated if provided
+  lateThresholdMinutes: 0 // Default to 0 minutes (no late threshold for no time restriction)
 });
 
 // Recent sessions modal state
@@ -416,9 +402,8 @@ const toggleAttendance = async (studentId, subjectId) => {
         subjectId,
         'Daily Attendance',
         new Date().toISOString().split('T')[0],
-        true, // Use subject schedule
         null, // No manual start time
-        15    // Default 15 minutes late threshold
+        0    // No late threshold
       );
       
       // Extract session ID from the response
@@ -493,12 +478,6 @@ const createAttendanceSession = async () => {
     return; // Validate required field
   }
 
-  // Validate that scheduleStartTime is provided when not using subject schedule
-  if (!attendanceSession.value.useSubjectSchedule && !attendanceSession.value.scheduleStartTime) {
-    error.value = "Please set a start time when using manual schedule";
-    return;
-  }
-
   try {
     attendanceSessionLoading.value = true;
     
@@ -515,7 +494,6 @@ const createAttendanceSession = async () => {
       attendanceSession.value.subjectId,
       attendanceSession.value.title,
       dateToUse,
-      attendanceSession.value.useSubjectSchedule,
       attendanceSession.value.scheduleStartTime || null,
       attendanceSession.value.lateThresholdMinutes
     );
@@ -1719,6 +1697,30 @@ onMounted(() => {
   .scanner-btn .material-icons {
     font-size: 0.9rem;
   }
+
+  .action-buttons {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 10px;
+    width: 100%;
+  }
+  
+  .attendance-records-btn, 
+  .recent-sessions-btn, 
+  .create-attendance-btn {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+  
+  .attendance-btn {
+    min-width: 100px;
+    padding: 5px 10px;
+  }
+  
+  .attendance-status {
+    font-size: 0.8rem;
+  }
 }
 
 /* Extra adjustments for slim devices */
@@ -1736,52 +1738,44 @@ onMounted(() => {
   }
   
   .title-row {
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-  
-  .create-attendance-btn {
-    margin-left: 0;
+    flex-direction: column;
+    align-items: flex-start;
     width: 100%;
-    justify-content: center;
-    order: 3;
-    margin-top: 10px;
+    gap: 10px;
   }
   
   .back-btn {
-    width: 32px;
-    height: 32px;
+    align-self: flex-start;
   }
   
-  .back-btn .material-icons {
-    font-size: 1.2rem;
+  .action-buttons {
+    width: 100%;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 15px;
   }
   
-  .subtitle {
-    font-size: 0.9rem;
-  }
-  
-  .filter-controls {
+  .attendance-records-btn, 
+  .recent-sessions-btn, 
+  .create-attendance-btn {
+    width: 100%;
+    justify-content: center;
+    margin-left: 0;
     padding: 10px;
-    gap: 10px;
+    font-size: 0.85rem;
   }
   
-  .filter-section label {
-    font-size: 0.8rem;
+  .attendance-btn {
+    min-width: auto;
+    padding: 4px 8px;
   }
   
-  .filter-select {
-    padding: 8px 10px;
-    font-size: 0.9rem;
+  .attendance-status {
+    font-size: 0.75rem;
   }
   
-  .search-box {
-    padding: 0 10px;
-  }
-  
-  .search-box input {
-    padding: 8px 0;
-    font-size: 0.9rem;
+  .attendance-btn .material-icons {
+    font-size: 16px;
   }
   
   .students-table {
@@ -1888,12 +1882,52 @@ onMounted(() => {
   .scanner-btn .material-icons {
     font-size: 0.8rem;
   }
+
+  /* Improve table display on very small screens */
+  .students-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  .students-table th:first-child,
+  .students-table td:first-child {
+    width: 35%;
+  }
+  
+  .students-table th:nth-child(2),
+  .students-table td:nth-child(2) {
+    width: 25%;
+  }
+  
+  .students-table th:last-child,
+  .students-table td:last-child {
+    width: 40%;
+  }
 }
 
 /* Hide specific columns on mobile */
 @media (max-width: 600px) {
   .hide-on-mobile {
     display: none;
+  }
+  
+  /* Hide LRN column on mobile */
+  .students-table th:nth-child(2),
+  .students-table td:nth-child(2) {
+    display: none;
+  }
+  
+  /* Ensure attendance column is properly displayed */
+  .students-table th:last-child,
+  .students-table td:last-child {
+    display: table-cell;
+    width: 40%;
+  }
+  
+  /* Adjust name column width since LRN is hidden */
+  .students-table th:first-child,
+  .students-table td:first-child {
+    width: 60%;
   }
 }
 
@@ -2015,5 +2049,68 @@ onMounted(() => {
 
 .modal-error .material-icons {
   font-size: 18px;
+}
+
+/* Additional styles for very small screens */
+@media (max-width: 400px) {
+  .attendance-btn {
+    min-width: auto;
+    padding: 3px 6px;
+    border-radius: 16px !important;
+  }
+  
+  .attendance-status {
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+  }
+  
+  /* Prevent horizontal scrolling in the table container */
+  .students-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100vw;
+    margin: 0 -10px;
+    padding: 0 10px;
+  }
+  
+  /* Compact filter controls */
+  .filter-controls {
+    flex-direction: column;
+    padding: 8px;
+  }
+  
+  .filter-section, .search-box {
+    width: 100%;
+  }
+  
+  /* Fix modal size and positioning */
+  .modal-container {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+  }
+  
+  /* Further adjust column widths for very small screens */
+  .students-table th:first-child,
+  .students-table td:first-child {
+    width: 50%;
+  }
+  
+  .students-table th:last-child,
+  .students-table td:last-child {
+    width: 50%;
+  }
 }
 </style> 

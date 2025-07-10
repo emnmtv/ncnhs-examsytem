@@ -972,21 +972,32 @@ onMounted(() => {
   .filter-select,
   .date-input {
     min-width: 100%;
+    width: 100%;
   }
   
   .date-range {
     flex-direction: column;
     align-items: flex-start;
+    width: 100%;
+    gap: 10px;
+  }
+  
+  .search-box {
+    width: 100%;
   }
   
   .session-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
+    position: relative;
+    padding-right: 40px; /* Make space for expand icon */
   }
   
   .session-stats {
     margin-right: 0;
+    width: 100%;
+    justify-content: flex-start;
   }
   
   .expand-icon {
@@ -996,7 +1007,103 @@ onMounted(() => {
   }
   
   .status-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+  }
+  
+  .statistics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  /* Make table more mobile-friendly */
+  .attendance-table th,
+  .attendance-table td {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Additional styles for very small screens */
+@media (max-width: 480px) {
+  .title-row {
     flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+  
+  .back-btn {
+    margin-bottom: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.5rem;
+  }
+  
+  .statistics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  /* Hide certain columns on very small screens */
+  .attendance-table th:nth-child(2), 
+  .attendance-table td:nth-child(2) {
+    display: none; /* Hide LRN column */
+  }
+  
+  .attendance-table th:nth-child(4), 
+  .attendance-table td:nth-child(4) {
+    display: none; /* Hide Time column */
+  }
+  
+  /* Make action buttons more touch friendly */
+  .status-btn {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .status-btn .material-icons {
+    font-size: 1.2rem;
+  }
+  
+  /* Fix status badge display */
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  /* Fix session stats display */
+  .session-stats {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .stat {
+    font-size: 0.8rem;
+  }
+  
+  .stat .material-icons {
+    font-size: 1rem;
+  }
+  
+  /* Make session content padding smaller */
+  .session-content {
+    padding: 10px;
+  }
+  
+  .attendance-table {
+    font-size: 0.85rem;
+  }
+}
+
+/* Hide specific columns on mobile */
+@media (max-width: 600px) {
+  .attendance-table th:nth-child(2),
+  .attendance-table td:nth-child(2) {
+    display: none; /* Hide LRN column */
   }
 }
 
