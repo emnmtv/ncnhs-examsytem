@@ -558,15 +558,15 @@
               <span class="avatar-text">{{ getInitials(selectedSubmission?.student) }}</span>
             </div>
             <div class="student-details">
-              <h4>{{ selectedSubmission?.student?.lastName }}, {{ selectedSubmission?.student?.firstName }}</h4>
+              <h4>{{ selectedSubmission?.student?.lastName || '' }}, {{ selectedSubmission?.student?.firstName || '' }}</h4>
               <div class="student-meta">
                 <div class="meta-item">
                   <span class="material-icons">badge</span>
-                  <span>LRN: {{ selectedSubmission?.student?.lrn }}</span>
+                  <span>LRN: {{ selectedSubmission?.student?.lrn || 'N/A' }}</span>
                 </div>
                 <div class="meta-item">
                   <span class="material-icons">school</span>
-                  <span>Grade {{ selectedSubmission?.student?.gradeLevel }}-{{ selectedSubmission?.student?.section }}</span>
+                  <span>Grade {{ selectedSubmission?.student?.gradeLevel || 'N/A' }}-{{ selectedSubmission?.student?.section || 'N/A' }}</span>
                 </div>
                 <div class="meta-item">
                   <span class="material-icons">event</span>
@@ -587,12 +587,14 @@
             </button>
           </div>
           
-          <div class="files-grid">
+          <div v-if="selectedSubmission.files && selectedSubmission.files.length > 0" class="files-grid">
             <div v-for="file in selectedSubmission.files" 
                  :key="file.id" 
                  class="file-card">
+              <div class="file-card-content">
               <img :src="getFileIcon(file.fileName)" :alt="getFileType(file.fileName)" class="file-icon">
-              <span class="file-name">{{ file.fileName }}</span>
+                <span class="file-name" :title="file.fileName">{{ file.fileName }}</span>
+              </div>
               <div class="file-actions">
                 <button 
                   @click="openFilePreview(file)"
@@ -604,9 +606,14 @@
                    download
                    class="file-btn download-file-btn">
                   <span class="material-icons">download</span>
+                  Download
                 </a>
               </div>
             </div>
+          </div>
+          <div v-else class="no-files-message">
+            <span class="material-icons">description_off</span>
+            <p>No files available</p>
           </div>
           
           <div class="scoring-section">
@@ -780,7 +787,8 @@ import {
   getBaseApiUrl,
   getSectionsBySubject,
   downloadAllTaskSubmissions,
-  downloadSubmissionFiles
+  downloadSubmissionFiles,
+  getSubjectDirectStudents
 } from '@/services/authService';
 import { formatDistanceToNow } from 'date-fns';
 // Import file icons
@@ -824,7 +832,18 @@ const submissionComments = ref({});
 
 // Add these new refs for the modal
 const showFilesModal = ref(false);
-const selectedSubmission = ref(null);
+const selectedSubmission = ref({
+  student: {
+    firstName: '',
+    lastName: '',
+    lrn: '',
+    gradeLevel: '',
+    section: ''
+  },
+  files: [],
+  submittedAt: null,
+  id: null
+});
 
 // Add these new refs for file preview
 const showFilePreview = ref(false);
@@ -955,7 +974,7 @@ const loadAvailableStudents = async () => {
   try {
     loadingAvailableStudents.value = true;
     
-    // Get all students from the subject's sections
+    // Get all students from the subject's sections and direct assignments
     const allStudents = [];
     
     // Get sections for this subject
@@ -974,13 +993,38 @@ const loadAvailableStudents = async () => {
       }
     }
     
-    console.log('All students from sections:', allStudents);
+    console.log('Students from sections:', allStudents.length);
+    
+    // Get directly assigned students
+    try {
+      const directStudentsResponse = await getSubjectDirectStudents(subjectId);
+      console.log('Direct students response:', directStudentsResponse);
+      
+      if (directStudentsResponse && directStudentsResponse.data) {
+        // Extract student data from response
+        const directStudents = directStudentsResponse.data.map(item => item.student);
+        console.log(`Found ${directStudents.length} directly assigned students`);
+        
+        // Add direct students to all students array (avoiding duplicates by LRN)
+        const existingLRNs = new Set(allStudents.map(s => s.lrn));
+        for (const student of directStudents) {
+          if (!existingLRNs.has(student.lrn)) {
+            allStudents.push(student);
+            existingLRNs.add(student.lrn);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error loading direct students:', err);
+    }
+    
+    console.log('Total students (sections + direct):', allStudents.length);
     
     // Filter out students who already have visibility
     const visibleLRNs = visibleStudents.value.map(s => s.lrn);
     availableStudents.value = allStudents.filter(s => !visibleLRNs.includes(s.lrn));
     
-    console.log('Available students:', availableStudents.value);
+    console.log('Available students after filtering:', availableStudents.value.length);
     
   } catch (err) {
     console.error('Error loading available students:', err);
@@ -1075,7 +1119,7 @@ const getStudentScore = (student) => {
 
 // Format submission date
 const formatSubmissionDate = (submission) => {
-  if (!submission) return 'No Submission';
+  if (!submission || !submission.submittedAt) return 'No Submission';
   return new Date(submission.submittedAt).toLocaleString();
 };
 
@@ -1249,18 +1293,45 @@ const getFileType = (fileName) => {
 
 // Add these new functions for the modal
 const openFilesModal = (submission) => {
-  selectedSubmission.value = submission;
+  console.log("Opening modal with submission:", submission); // Debug log
+  
+  // Find the student associated with this submission
+  const student = visibleStudents.value.find(s => s.submission && s.submission.id === submission.id);
+  
+  selectedSubmission.value = {
+    ...submission,
+    student: student || {
+      firstName: 'Unknown',
+      lastName: 'Student',
+      lrn: 'N/A',
+      gradeLevel: 'N/A',
+      section: 'N/A'
+    }
+  };
+  
   showFilesModal.value = true;
 };
 
 const closeFilesModal = () => {
   showFilesModal.value = false;
-  selectedSubmission.value = null;
+  // Reset selectedSubmission to default state instead of null
+  selectedSubmission.value = {
+    student: {
+      firstName: '',
+      lastName: '',
+      lrn: '',
+      gradeLevel: '',
+      section: ''
+    },
+    files: [],
+    submittedAt: null,
+    id: null
+  };
 };
 
 // Get student initials for avatar
 const getInitials = (student) => {
-  if (!student) return '';
+  if (!student || !student.firstName || !student.lastName) return 'ST';
   return `${student.firstName.charAt(0)}${student.lastName.charAt(0)}`.toUpperCase();
 };
 
@@ -2331,13 +2402,22 @@ td input[type="checkbox"] {
   
   .visibility-actions {
     width: 100%;
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
   
   .action-btn {
-    width: 100%;
+    flex: 1;
+    min-width: 120px;
     justify-content: center;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+  
+  .action-btn .material-icons {
+    font-size: 16px;
   }
   
   .search-filter {
@@ -2347,12 +2427,14 @@ td input[type="checkbox"] {
   
   .filter-options {
     width: 100%;
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.5rem;
+    flex-wrap: wrap;
   }
   
   .status-filter {
-    width: 100%;
+    flex: 1;
+    min-width: 140px;
   }
   
   .students-grid {
@@ -2413,6 +2495,21 @@ td input[type="checkbox"] {
     width: 100%;
     justify-content: flex-start;
     margin-top: 5px;
+    display: flex;
+    flex-direction: row;
+  }
+  
+  .file-btn, .action-link {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .file-btn .material-icons, .action-link .material-icons {
+    font-size: 16px;
+    margin-right: 2px;
   }
   
   /* Table view responsiveness improvements */
@@ -2472,7 +2569,43 @@ td input[type="checkbox"] {
   }
   
   .files-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .view-files-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    max-width: none;
+  }
+  
+  .view-files-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  /* Improve file card styling in modal */
+  .file-card {
+    padding: 10px;
+  }
+  
+  .file-card .file-icon {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .file-card .file-actions {
+    flex-direction: row;
+    gap: 5px;
+  }
+  
+  .file-card .file-btn {
+    flex: 1;
+    padding: 5px;
+    font-size: 0.75rem;
+  }
+  
+  .file-card .file-btn .material-icons {
+    font-size: 14px;
   }
 }
 
@@ -2508,8 +2641,13 @@ td input[type="checkbox"] {
   }
   
   .action-btn {
-    padding: 8px 12px;
-    font-size: 0.8rem;
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    min-width: 100px;
+  }
+  
+  .action-btn .material-icons {
+    font-size: 14px;
   }
   
   .scoring-section {
@@ -2556,6 +2694,30 @@ td input[type="checkbox"] {
   .download-file-btn {
     padding: 10px 20px;
     font-size: 0.9rem;
+  }
+  
+  .files-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .visibility-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .visibility-actions .action-btn {
+    flex-basis: calc(50% - 0.25rem);
+    min-width: 0;
+  }
+  
+  .file-btn, .action-link {
+    padding: 5px;
+    font-size: 0.7rem;
+  }
+  
+  .file-btn .material-icons, .action-link .material-icons {
+    font-size: 14px;
+    margin-right: 0;
   }
 }
 
@@ -2860,293 +3022,32 @@ td input[type="checkbox"] {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
 }
 
 .modal-content {
   background-color: white;
-  border-radius: 8px;
+  border-radius: 16px;
   width: 90%;
-  max-width: 800px;
+  max-width: 900px;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #5f6368;
-}
-
-.modal-body {
-  padding: 16px;
-  overflow-y: auto;
-}
-
-.files-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.view-files-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #f1f3f4;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #1a73e8;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.view-files-btn:hover {
-  background-color: #e8f0fe;
-}
-
-.no-files {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #5f6368;
-  font-size: 14px;
-}
-
-.student-info-panel {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.student-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background-color: #1a73e8;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.student-details {
-  flex: 1;
-}
-
-.student-details h4 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  color: #202124;
-}
-
-.student-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #5f6368;
-  font-size: 14px;
-}
-
-.meta-item .material-icons {
-  font-size: 16px;
-}
-
-.files-header {
-  margin-bottom: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.files-header h4 {
-  margin: 0;
-  font-size: 16px;
-  color: #202124;
-}
-
-.download-all-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background-color: #e3f2fd;
-  color: #1565c0;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.download-all-btn:hover {
-  background-color: #bbdefb;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.scoring-section {
-  margin-top: 16px;
-}
-
-.scoring-section h4 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  color: #202124;
-}
-
-.score-form {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.score-input-group, .comment-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.score-input-group label, .comment-input-group label {
-  font-size: 14px;
-  color: #5f6368;
-}
-
-.score-input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.save-score-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background-color: #1a73e8;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 10px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  align-self: flex-start;
-  transition: background-color 0.2s;
-}
-
-.save-score-btn:hover {
-  background-color: #1765cc;
-}
-
-/* File Preview Modal */
-.file-preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 20px;
-}
-
-/* Replace with updated modal style */
-.file-preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.65);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  padding: 20px;
-  backdrop-filter: blur(3px);
-}
-
-.preview-content {
-  background-color: white;
-  border-radius: 12px;
-  width: 90%;
-  max-width: 1000px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
-
-/* Replace with updated content style */
-.preview-content {
-  background-color: white;
-  border-radius: 16px;
-  width: 90%;
-  max-width: 1000px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f8f9fa;
-}
-
-/* Replace with updated header style */
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   padding: 18px 24px;
+  border-bottom: 1px solid #e0e0e0;
   background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
   color: white;
   position: relative;
@@ -3154,7 +3055,7 @@ td input[type="checkbox"] {
 }
 
 /* Add texture layers to header */
-.preview-header::after {
+.modal-header::after {
   content: '';
   position: absolute;
   top: 0;
@@ -3172,181 +3073,510 @@ td input[type="checkbox"] {
   pointer-events: none;
 }
 
-.preview-header h3 {
+.modal-header h3 {
   margin: 0;
-  font-size: 1.2rem;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-/* Update header text style */
-.preview-header h3 {
-  margin: 0;
-  font-size: 1.2rem;
-  color: white;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
+  font-size: 1.3rem;
   position: relative;
   z-index: 1;
 }
 
-.preview-body {
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
   flex: 1;
-  overflow: auto;
+}
+
+.student-info-panel {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+  align-items: center;
+}
+
+.student-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: #f2f2f2;
-  min-height: 300px;
+  font-size: 24px;
+  font-weight: 500;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
 }
 
-/* Update preview body style */
-.preview-body {
+.student-details {
   flex: 1;
-  overflow: auto;
+}
+
+.student-details h4 {
+  margin: 0 0 12px 0;
+  font-size: 1.2rem;
+  color: #202124;
+}
+
+.student-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.meta-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  padding: 30px;
-  background: #f9f9f9;
-  min-height: 300px;
+  gap: 6px;
+  color: #5f6368;
+  font-size: 0.9rem;
+  background-color: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 20px;
 }
 
-.close-btn {
-  background: none;
+.meta-item .material-icons {
+  font-size: 18px;
+  color: #1aac5a;
+}
+
+.files-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.files-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #202124;
+}
+
+.download-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #e3f2fd;
+  color: #1565c0;
   border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
   cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.download-all-btn:hover {
+  background-color: #bbdefb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.files-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.file-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.file-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+  border-color: #ccc;
+}
+
+.file-card-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-card .file-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.file-card .file-name {
+  font-size: 0.9rem;
+  text-align: center;
+  color: #333;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-card .file-actions {
+  display: flex;
+  border-top: 1px solid #f0f0f0;
+}
+
+.file-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  font-weight: 500;
+  background-color: #fafafa;
+}
+
+.view-file-btn {
+  color: #2e7d32;
+  border-right: 1px solid #f0f0f0;
+}
+
+.view-file-btn:hover {
+  background-color: #e8f5e9;
+}
+
+.download-file-btn {
+  color: #1565c0;
+}
+
+.download-file-btn:hover {
+  background-color: #e3f2fd;
+}
+
+.scoring-section {
+  background-color: #f8f9fa;
+  padding: 24px;
+  border-radius: 12px;
+}
+
+.scoring-section h4 {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  color: #202124;
+}
+
+.score-form {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+}
+
+.score-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.score-input-group label, .comment-input-group label {
+  font-size: 0.95rem;
+  color: #5f6368;
+  font-weight: 500;
+}
+
+.score-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.score-input-field {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 80px;
+}
+
+.total-score {
+  font-size: 1rem;
   color: #5f6368;
 }
 
-/* Update close button style */
-.close-btn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
+.comment-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comment-input-field {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.save-score-btn {
+  grid-column: span 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  gap: 8px;
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
   color: white;
-  transition: all 0.2s;
-  position: relative;
-  z-index: 1;
-}
-
-.close-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.1);
-}
-
-.preview-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 4px;
-  background: white;
-}
-
-/* Update image preview style */
-.preview-image {
-  max-width: 100%;
-  max-height: 70vh;
-  object-fit: contain;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  background: white;
-  border: 1px solid #eee;
-}
-
-.preview-video {
-  width: 100%;
-  max-width: 800px;
-  max-height: 70vh;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  background: black;
-}
-
-/* Add back PDF preview style */
-.preview-pdf {
-  width: 100%;
-  height: 70vh;
   border: none;
   border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
+  margin-top: 10px;
 }
 
-.preview-fallback {
+.save-score-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(21, 151, 80, 0.3);
+}
+
+.no-files-message {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  background: white;
-  padding: 50px;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 30px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px dashed #ccc;
+}
+
+.no-files-message .material-icons {
+  font-size: 48px;
+  color: #9e9e9e;
+}
+
+.no-files-message p {
+  margin: 0;
+  color: #666;
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .files-modal {
+    padding: 10px;
+    align-items: flex-end;
+}
+
+  .modal-content {
+    width: 100%;
+    max-width: none;
+    height: 90vh;
+    border-radius: 16px 16px 0 0;
+    max-height: none;
+}
+
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+}
+
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .student-info-panel {
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+}
+
+  .student-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .student-details h4 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  
+  .student-meta {
+    gap: 8px;
+}
+
+  .meta-item {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+}
+
+  .meta-item .material-icons {
+    font-size: 16px;
+  }
+  
+  .files-header h4 {
+    font-size: 1rem;
+}
+
+  .download-all-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+}
+
+  .files-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+}
+
+  .file-card-content {
+    padding: 12px;
+}
+
+  .file-card .file-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .file-card .file-name {
+    font-size: 0.8rem;
+  }
+  
+  .file-btn {
+    padding: 10px 6px;
+    font-size: 0.8rem;
+}
+
+  .scoring-section {
+    padding: 16px;
+}
+
+  .score-form {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .save-score-btn {
+    grid-column: 1;
+    padding: 10px;
+}
+}
+
+@media (max-width: 480px) {
+  .files-modal {
+    padding: 0;
+}
+
+  .modal-content {
+    height: 100vh;
+  width: 100%;
+    border-radius: 0;
+  }
+  
+  .modal-header {
+    padding: 12px 16px;
+}
+
+  .modal-body {
+    padding: 12px;
+  }
+  
+  .student-info-panel {
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  border: 1px solid #eee;
+    gap: 10px;
 }
 
-/* Add back the large file icon style */
-.large-file-icon {
-  width: 80px;
-  height: 80px;
-  margin-bottom: 10px;
+  .student-meta {
+    justify-content: center;
+  }
+  
+  .files-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
 }
 
-.download-file-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
-  background: #159750;
-  color: white;
+  .download-all-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .files-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .file-card-content {
+    padding: 10px;
+  }
+  
+  .file-card .file-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .file-card .file-actions {
+    flex-direction: column;
+  }
+  
+  .file-btn {
+    padding: 8px 4px;
+    font-size: 0.75rem;
+    border-right: none;
+    border-top: 1px solid #f0f0f0;
+  }
+  
+  .view-file-btn {
+    border-right: none;
+  }
+  
+  .scoring-section {
+    padding: 12px;
   border-radius: 8px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s;
+  }
+  
+  .scoring-section h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
 }
 
-/* Update download button style */
-.download-file-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
-  color: white;
-  border-radius: 8px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: all 0.3s;
-  box-shadow: 0 4px 10px rgba(21, 151, 80, 0.2);
+  .score-input-field,
+  .comment-input-field {
+    padding: 8px 10px;
 }
 
-.download-file-btn:hover {
-  background: #107040;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  .save-score-btn {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
 }
 
-/* Update download button hover style */
-.download-file-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 12px rgba(21, 151, 80, 0.3);
-}
+/* Other existing styles remain unchanged */
 
-/* Preview loading and error states */
 .preview-loading, .preview-error {
   display: flex;
   flex-direction: column;
@@ -3398,7 +3628,7 @@ td input[type="checkbox"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
+  padding: 10px 16px;
   background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
   color: white;
   box-shadow: 0 2px 10px rgba(0,0,0,0.1);
@@ -3408,12 +3638,12 @@ td input[type="checkbox"] {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
 }
 
 .header-left h3 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1rem;
   max-width: 60vw;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3423,7 +3653,7 @@ td input[type="checkbox"] {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .back-btn, .close-fullscreen-btn {
@@ -3433,8 +3663,8 @@ td input[type="checkbox"] {
   background: rgba(255,255,255,0.15);
   border: none;
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   color: white;
   cursor: pointer;
   transition: all 0.2s;
@@ -3448,11 +3678,11 @@ td input[type="checkbox"] {
 .download-action {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: rgba(255,255,255,0.15);
   border: none;
-  border-radius: 20px;
-  padding: 6px 15px;
+  border-radius: 16px;
+  padding: 5px 12px;
   color: white;
   text-decoration: none;
   cursor: pointer;
@@ -3474,6 +3704,74 @@ td input[type="checkbox"] {
   width: 100%;
   height: 100%;
   border: none;
+}
+
+@media (max-width: 768px) {
+  .fullscreen-header {
+    padding: 8px 12px;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+  
+  .header-left h3 {
+    font-size: 0.9rem;
+    max-width: 50vw;
+  }
+  
+  .back-btn, .close-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .back-btn .material-icons, 
+  .close-fullscreen-btn .material-icons {
+    font-size: 18px;
+  }
+  
+  .download-action {
+    padding: 4px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .download-action .material-icons {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .fullscreen-header {
+    padding: 6px 10px;
+  }
+  
+  .header-left {
+    gap: 6px;
+  }
+  
+  .header-left h3 {
+    font-size: 0.8rem;
+    max-width: 40vw;
+  }
+  
+  .back-btn, .close-fullscreen-btn {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .back-btn .material-icons, 
+  .close-fullscreen-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .download-action {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .download-action .material-icons {
+    font-size: 14px;
+  }
 }
 
 /* Add these new styles to the end of the existing styles */
@@ -3766,5 +4064,90 @@ td input[type="checkbox"] {
 
 .action-link.download:hover {
   background-color: #bbdefb;
+}
+
+/* Update the student item styling in the modal */
+.modal-students-list .student-item {
+  padding: 10px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-students-list .student-item:last-child {
+  border-bottom: none;
+}
+
+.modal-students-list .checkbox-label {
+  color: #333; /* Ensure text is dark and readable */
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.modal-students-list .student-info {
+  color: #666; /* Secondary text is slightly lighter but still readable */
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+}
+
+/* Fix the select all checkbox label color */
+.select-all .checkbox-label {
+  color: #333; /* Ensure text is dark and readable */
+}
+
+/* Fix modal styling for better text contrast */
+.modal-container .modal-header {
+  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-container .modal-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -10%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(45deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 30%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 70%,
+    transparent 100%
+  );
+  transform: skewX(-20deg);
+  pointer-events: none;
+}
+
+.modal-container .modal-header h3 {
+  margin: 0;
+  color: white; /* Ensure header text is white */
+  position: relative;
+  z-index: 1;
+}
+
+.modal-container .close-btn {
+  color: white; /* Ensure close button is white */
+}
+
+.modal-container .modal-body {
+  background: white;
+  color: #333;
+}
+
+.modal-container .empty-state {
+  color: #666;
+}
+
+.modal-search input {
+  color: #333;
+}
+
+/* Ensure submit button has proper contrast */
+.modal-container .submit-btn {
+  background: #159750;
+  color: white;
 }
 </style>

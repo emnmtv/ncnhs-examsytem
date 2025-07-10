@@ -36,6 +36,12 @@ import StudentTasks from '@/components/student/StudentTasks.vue';
 import TaskDetails from '@/components/student/TaskDetails.vue';
 import QuestionBank from '@/components/teacher/QuestionBank.vue';
 import AdminComponentController from "@/components/admin/AdminComponentController.vue";
+import NotFound from "@/components/NotFound.vue";
+import Forbidden from "@/components/Forbidden.vue";
+import TeacherClassList from "@/components/teacher/TeacherClassList.vue";
+import AttendanceScanner from "@/components/teacher/AttendanceScanner.vue";
+import AttendanceRecords from "@/components/teacher/AttendanceRecords.vue";
+
 const routes = [
   { 
     path: "/", 
@@ -254,6 +260,24 @@ const routes = [
     meta: { requiresAuth: true, roles: ['student'] }
   },
   {
+    path: '/class-list',
+    name: 'TeacherClassList',
+    component: TeacherClassList,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/attendance-scanner/:sessionId',
+    name: 'AttendanceScanner',
+    component: AttendanceScanner,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/attendance-records',
+    name: 'AttendanceRecords',
+    component: AttendanceRecords,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
     path: '/exam/:examId/student/:studentId/answers',
     name: 'StudentAnswerDetails',
     component: () => import('@/components/teacher/StudentAnswerDetails.vue'),
@@ -265,12 +289,24 @@ const routes = [
     component: QuestionBank,
     meta: { requiresAuth: true, roles: ['teacher'] }
   },
-  {path: '/admin-component-controller',
+  {
+    path: '/admin-component-controller',
     name: 'AdminComponentController',
     component: AdminComponentController,
     meta: { requiresAuth: true, roles: ['admin'] }
   },
-  
+  {
+    path: '/forbidden',
+    name: 'Forbidden',
+    component: Forbidden,
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound,
+    meta: { requiresAuth: false }
+  }
 ];
 
 
@@ -292,16 +328,14 @@ router.beforeEach((to, from, next) => {
   
   // If route has role restrictions and user's role doesn't match
   if (to.meta.roles && !to.meta.roles.includes(userRole)) {
-    // Redirect to appropriate dashboard based on role
-    if (userRole === 'admin') {
-      next('/admin-dashboard');
-    } else if (userRole === 'teacher') {
-      next('/teacher-dashboard');
-    } else if (userRole === 'student') {
-      next('/dashboard');
-    } else {
-      next('/'); // Fallback to login if role is unknown
-    }
+    // Redirect to forbidden page instead of dashboard
+    next('/forbidden');
+    return;
+  }
+  
+  // Check for admin-only routes
+  if (to.meta.requiresAdmin && userRole !== 'admin') {
+    next('/forbidden');
     return;
   }
   

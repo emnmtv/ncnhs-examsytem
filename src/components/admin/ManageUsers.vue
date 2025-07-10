@@ -2,20 +2,20 @@
   <div class="manage-users">
     <div class="page-header">
       <h1>Manage Users</h1>
-      <div class="header-actions">
-        <button @click="openModal('student')" class="add-btn student">
-          <span class="material-icons">school</span> Add Student
-        </button>
-        <button @click="openModal('teacher')" class="add-btn teacher">
-          <span class="material-icons">person_add</span> Add Teacher
-        </button>
-        <button @click="openModal('admin')" class="add-btn admin">
-          <span class="material-icons">admin_panel_settings</span> Add Admin
-        </button>
-        <button @click="openGradeSectionModal()" class="add-btn grade-section">
-          <span class="material-icons">class</span> Add Grade Section
-        </button>
-      </div>
+          <div class="header-actions">
+      <button @click="openModal('student')" class="add-btn student">
+        <span class="material-icons">school</span> Add Student
+      </button>
+      <button @click="openModal('teacher')" class="add-btn teacher">
+        <span class="material-icons">person_add</span> Add Teacher
+      </button>
+      <button @click="openModal('admin')" class="add-btn admin">
+        <span class="material-icons">admin_panel_settings</span> Add Admin
+      </button>
+      <button @click="openGradeSectionModal()" class="add-btn grade-section">
+        <span class="material-icons">class</span> Add Grade Section
+      </button>
+    </div>
     </div>
 
     <!-- AI Batch Creation Dropdown -->
@@ -51,11 +51,12 @@
 
       <div class="tabs">
         <button 
-          v-for="tab in ['students', 'teachers', 'admins', 'sections']"
+          v-for="tab in ['students', 'teachers', 'admins', 'sections', 'archived']"
           :key="tab"
           :class="['tab-btn', { active: activeTab === tab }]"
-          @click="activeTab = tab"
+          @click="tab === 'archived' ? fetchArchivedUsers() : (activeTab = tab)"
         >
+          <span class="material-icons tab-icon" v-if="tab === 'archived'">archive</span>
           {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
         </button>
       </div>
@@ -89,6 +90,35 @@
             {{ domain }}
           </option>
         </select>
+      </div>
+
+      <!-- Add archived user filters -->
+      <div v-if="activeTab === 'archived'" class="filter-group">
+        <select v-model="archivedFilters.role">
+          <option value="">All Roles</option>
+          <option value="student">Students</option>
+          <option value="teacher">Teachers</option>
+          <option value="admin">Admins</option>
+        </select>
+        <select v-model="archivedFilters.sortBy">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+        <div class="date-filter">
+          <input 
+            type="date" 
+            v-model="archivedFilters.startDate" 
+            placeholder="From Date"
+            class="date-input"
+          />
+          <span class="date-separator">to</span>
+          <input 
+            type="date" 
+            v-model="archivedFilters.endDate" 
+            placeholder="To Date"
+            class="date-input"
+          />
+        </div>
       </div>
     </div>
 
@@ -243,8 +273,169 @@
       </div>
     </div>
 
+    <!-- Archived Users List -->
+    <div v-if="activeTab === 'archived'" class="list-section archived-section">
+     
+      
+      <div v-if="filteredArchivedUsers.length === 0" class="empty-state">
+        <span class="material-icons">archive</span>
+        <p>No archived users found</p>
+      </div>
+      
+      <!-- Grid View -->
+      <div v-else-if="viewMode === 'grid'" class="users-grid">
+        <div v-for="user in paginatedArchivedUsers" :key="user.id" class="user-card archived-user-card">
+          <div class="archived-card-content">
+            <div v-if="user.profilePicture" class="archived-avatar-container">
+              <img 
+                :src="getFullImageUrl(user.profilePicture)" 
+                alt="Profile" 
+                class="archived-avatar-img"
+                @error="handleImageError($event, user)" 
+              />
+            </div>
+            <div v-else class="archived-avatar">
+              {{ user.firstName[0] }}{{ user.lastName[0] }}
+            </div>
+            <div class="archived-user-info">
+              <div class="archived-user-header">
+                <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+                <p class="archived-email">{{ user.email }}</p>
+                <span class="archived-role-badge" :class="user.role">{{ user.role }}</span>
+              </div>
+              <div class="archived-details">
+                <div class="archived-date-info">
+                  <span class="material-icons archived-icon">history</span>
+                  Archived: {{ formatDate(user.archivedAt) }}
+                </div>
+                <div v-if="user.archiveReason" class="archived-reason-info">
+                  <span class="material-icons archived-icon">info</span>
+                  <span class="reason-text">{{ user.archiveReason }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="archived-user-actions">
+            <button class="archived-action-btn view" title="View Details" @click="viewArchivedUserDetails(user.id)">
+              <span class="material-icons">visibility</span>
+            </button>
+            <button class="archived-action-btn restore" title="Restore User" @click="handleRestoreUser(user.id)" :disabled="restoreInProgress === user.id">
+              <span v-if="restoreInProgress === user.id" class="spinner-border spinner-border-sm" role="status"></span>
+              <span v-else class="material-icons">restore</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Table View -->
+      <div v-else class="users-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Profile</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Archived Date</th>
+              <th>Reason</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in paginatedArchivedUsers" :key="user.id">
+              <td>
+                <div v-if="user.profilePicture" class="table-avatar-container">
+                  <img 
+                    :src="getFullImageUrl(user.profilePicture)" 
+                    alt="Profile" 
+                    class="table-avatar-img"
+                    @error="handleImageError($event, user)"
+                  />
+                </div>
+                <div v-else class="table-avatar">
+                  {{ user.firstName[0] }}{{ user.lastName[0] }}
+                </div>
+              </td>
+              <td>{{ user.firstName }} {{ user.lastName }}</td>
+              <td>{{ user.email }}</td>
+              <td><span class="archived-role-badge" :class="user.role">{{ user.role }}</span></td>
+              <td>{{ formatDate(user.archivedAt) }}</td>
+              <td>{{ user.archiveReason || 'N/A' }}</td>
+              <td>
+                <div class="user-actions">
+                  <button class="action-btn view" @click="viewArchivedUserDetails(user.id)">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                  <button class="action-btn restore" @click="handleRestoreUser(user.id)" :disabled="restoreInProgress === user.id">
+                    <span v-if="restoreInProgress === user.id" class="spinner-border spinner-border-sm" role="status"></span>
+                    <span v-else class="material-icons">restore</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Pagination controls for archived users -->
+      <div v-if="pagination.enabled && (filteredArchivedUsers.length > pagination.itemsPerPage)" class="pagination-controls">
+        <div class="pagination-info">
+          <span>{{ displayArchivedRange }}</span>
+        </div>
+        
+        <div class="pagination-buttons">
+          <button 
+            @click="changeArchivedPage(1)" 
+            class="pagination-btn first" 
+            :disabled="archivedPagination.currentPage === 1"
+          >
+            <span class="material-icons">first_page</span>
+          </button>
+          
+          <button 
+            @click="changeArchivedPage(archivedPagination.currentPage - 1)" 
+            class="pagination-btn prev" 
+            :disabled="archivedPagination.currentPage === 1"
+          >
+            <span class="material-icons">chevron_left</span>
+          </button>
+          
+          <div class="pagination-pages">
+            <button 
+              v-for="page in archivedTotalPages" 
+              :key="page" 
+              @click="changeArchivedPage(page)" 
+              class="page-btn" 
+              :class="{ active: archivedPagination.currentPage === page }"
+              v-show="Math.abs(page - archivedPagination.currentPage) < 3 || page === 1 || page === archivedTotalPages"
+            >
+              {{ page }}
+            </button>
+            <span v-if="archivedPagination.currentPage > 4 && archivedTotalPages > 6">...</span>
+            <span v-if="archivedPagination.currentPage < archivedTotalPages - 3 && archivedTotalPages > 6">...</span>
+          </div>
+          
+          <button 
+            @click="changeArchivedPage(archivedPagination.currentPage + 1)" 
+            class="pagination-btn next" 
+            :disabled="archivedPagination.currentPage === archivedTotalPages"
+          >
+            <span class="material-icons">chevron_right</span>
+          </button>
+          
+          <button 
+            @click="changeArchivedPage(archivedTotalPages)" 
+            class="pagination-btn last" 
+            :disabled="archivedPagination.currentPage === archivedTotalPages"
+          >
+            <span class="material-icons">last_page</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Users List -->
-    <div class="users-list" v-if="!loading && activeTab !== 'sections'">
+    <div class="users-list" v-if="!loading && activeTab !== 'sections' && activeTab !== 'archived'">
       <div v-if="filteredUsers.length === 0" class="empty-state">
         <span class="material-icons">group_off</span>
         <p>No users found</p>
@@ -297,8 +488,8 @@
             <button class="action-btn edit" @click="openEditModal(user)">
               <span class="material-icons">edit</span>
             </button>
-            <button class="action-btn delete" @click="handleDeleteUser(user.id)">
-              <span class="material-icons">delete</span>
+            <button class="action-btn archive" @click="openArchiveConfirmModal(user)">
+              <span class="material-icons">archive</span>
             </button>
           </div>
         </div>
@@ -350,8 +541,8 @@
                   <button class="action-btn edit" @click="openEditModal(user)">
                     <span class="material-icons">edit</span>
                   </button>
-                  <button class="action-btn delete" @click="handleDeleteUser(user.id)">
-                    <span class="material-icons">delete</span>
+                  <button class="action-btn archive" @click="openArchiveConfirmModal(user)">
+                    <span class="material-icons">archive</span>
                   </button>
                 </div>
               </td>
@@ -624,11 +815,50 @@
           </button>
         </div>
 
+        <div class="user-profile-header" v-if="selectedUser">
+          <div v-if="selectedUser.profilePicture" class="user-profile-avatar-container" @click="openFullScreenImage(selectedUser.profilePicture)">
+            <img 
+              :src="getFullImageUrl(selectedUser.profilePicture)" 
+              alt="Profile" 
+              class="user-profile-avatar-img"
+              @error="handleImageError($event, selectedUser)"
+            />
+            <div class="view-full-image-hint">
+              <span class="material-icons">zoom_in</span>
+              <span>View full image</span>
+            </div>
+          </div>
+          <div v-else class="user-profile-avatar">
+            {{ selectedUser.firstName ? selectedUser.firstName[0] : '' }}{{ selectedUser.lastName ? selectedUser.lastName[0] : '' }}
+          </div>
+          <h3>{{ selectedUser.firstName }} {{ selectedUser.lastName }}</h3>
+        </div>
+
         <div class="user-details">
-          <div v-for="(value, key) in selectedUser" :key="key" class="detail-item">
+          <div v-for="(value, key) in filteredUserDetails" :key="key" class="detail-item">
             <span class="label">{{ formatLabel(key) }}:</span>
             <span class="value">{{ formatValue(key, value) }}</span>
           </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Full Screen Image Modal -->
+    <div v-if="showFullScreenImage" class="fullscreen-image-modal" @click="showFullScreenImage = false">
+      <div class="fullscreen-image-container">
+        <div class="fullscreen-controls">
+          <button class="fullscreen-close-btn" @click.stop="showFullScreenImage = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <img 
+          :src="getFullImageUrl(fullScreenImageSrc)" 
+          alt="Full Profile" 
+          class="fullscreen-image"
+          @click.stop
+        />
+        <div class="fullscreen-caption" @click.stop>
+          {{ selectedUser ? `${selectedUser.firstName} ${selectedUser.lastName}` : 'Profile Picture' }}
         </div>
       </div>
     </div>
@@ -693,15 +923,24 @@
             </div>
           </div>
 
-          <!-- Password field -->
-          <div class="form-group">
+          <!-- Password field with toggle visibility -->
+          <div class="form-group password-field">
             <label>New Password</label>
-            <input 
-              v-model="editFormData.password" 
-              type="password" 
-              placeholder="Leave blank to keep current password"
-              class="uppercase-input"
-            />
+            <div class="password-input-container">
+              <input 
+                v-model="editFormData.password" 
+                :type="showPassword ? 'text' : 'password'" 
+                placeholder="Leave blank to keep current password"
+                class="uppercase-input"
+              />
+              <button 
+                type="button" 
+                class="password-toggle-btn" 
+                @click="showPassword = !showPassword"
+              >
+                <span class="material-icons">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+              </button>
+            </div>
             <small class="form-hint">Minimum 8 characters</small>
           </div>
 
@@ -911,6 +1150,115 @@
         </div>
       </div>
     </div>
+
+    <!-- Archived Users Modal -->
+    <div v-if="showArchivedUsersModal" class="modal-overlay" @click="showArchivedUsersModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Archived Users</h2>
+          <button class="close-btn" @click="showArchivedUsersModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="archived-users-list">
+          <div v-if="archivedUsers.length === 0" class="empty-state">
+            <span class="material-icons">group_off</span>
+            <p>No archived users found</p>
+          </div>
+
+          <div v-else class="archived-users-grid">
+            <div v-for="user in archivedUsers" :key="user.id" class="archived-user-card">
+              <div class="archived-user-header">
+                <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+              </div>
+              <div class="archived-user-actions">
+                <button @click="viewArchivedUserDetails(user.id)" class="action-btn view">
+                  <span class="material-icons">visibility</span>
+                </button>
+                <button @click="handleRestoreUser(user.id)" class="action-btn restore" :disabled="restoreInProgress">
+                  <span v-if="restoreInProgress" class="spinner-border spinner-border-sm" role="status"></span>
+                  <span v-else class="material-icons">restore</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archived User Details Modal -->
+    <div v-if="showArchivedUserDetailsModal" class="modal-overlay" @click="showArchivedUserDetailsModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>Archived User Details</h2>
+          <button class="close-btn" @click="showArchivedUserDetailsModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="user-profile-header" v-if="selectedUser">
+          <div v-if="selectedUser.profilePicture" class="user-profile-avatar-container" @click="openFullScreenImage(selectedUser.profilePicture)">
+            <img 
+              :src="getFullImageUrl(selectedUser.profilePicture)" 
+              alt="Profile" 
+              class="user-profile-avatar-img"
+              @error="handleImageError($event, selectedUser)"
+            />
+            <div class="view-full-image-hint">
+              <span class="material-icons">zoom_in</span>
+              <span>View full image</span>
+            </div>
+          </div>
+          <div v-else class="user-profile-avatar">
+            {{ selectedUser.firstName ? selectedUser.firstName[0] : '' }}{{ selectedUser.lastName ? selectedUser.lastName[0] : '' }}
+          </div>
+          <h3>{{ selectedUser.firstName }} {{ selectedUser.lastName }}</h3>
+          <span class="archived-badge">
+            <span class="material-icons">archive</span>
+            Archived User
+          </span>
+        </div>
+
+        <div class="archived-user-details">
+          <div v-for="(value, key) in archivedUserDetails" :key="key" class="detail-item">
+            <span class="label">{{ formatLabel(key) }}:</span>
+            <span class="value">{{ formatValue(key, value) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Archive Confirm Modal -->
+    <div v-if="showArchiveConfirmModal" class="modal-overlay" @click="showArchiveConfirmModal = false">
+      <div class="modal-content archive-confirm-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Archive User</h2>
+          <button class="close-btn" @click="showArchiveConfirmModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <form @submit.prevent="handleArchiveUser" class="archive-form">
+          <div class="form-group">
+            <label>Reason for Archiving (Optional)</label>
+            <textarea v-model="archiveReason" placeholder="Enter reason for archiving (optional)" class="uppercase-input" rows="3"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" @click="showArchiveConfirmModal = false">
+              <span class="material-icons">close</span>
+              Cancel
+            </button>
+            <button type="submit" class="save-btn" :disabled="archiveInProgress">
+              <span v-if="archiveInProgress" class="spinner-border spinner-border-sm" role="status"></span>
+              <span v-else class="material-icons">archive</span>
+              Archive User
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -928,9 +1276,13 @@ import {
   updateGradeSection,
   deleteGradeSection,
   updateUser,
-  deleteUser,
+  // deleteUser,
   getUserDetails,
-  getFullImageUrl
+  getFullImageUrl,
+  archiveUser,
+  restoreArchivedUser,
+  getArchivedUsers,
+  getArchivedUserById
 } from '@/services/authService';
 import aiService from '@/services/aiService';
 import Swal from 'sweetalert2';
@@ -955,6 +1307,14 @@ const filters = ref({
   section: '',
   department: '',
   domain: ''
+});
+
+// Add archived filters state
+const archivedFilters = ref({
+  role: '',
+  sortBy: 'newest',
+  startDate: '',
+  endDate: ''
 });
 
 // Pagination state
@@ -1017,6 +1377,13 @@ const availableSectionsForGrade = computed(() => {
     .filter(gs => gs.grade === editFormData.value.gradeLevel)
     .map(gs => gs.section);
 });
+
+// Function to open full screen image modal
+const openFullScreenImage = (imageSrc) => {
+  if (!imageSrc) return;
+  fullScreenImageSrc.value = imageSrc;
+  showFullScreenImage.value = true;
+};
 
 // Add Batch Creation state
 const showBatchModal = ref(false);
@@ -1228,6 +1595,24 @@ const totalPages = computed(() => {
   return Math.ceil(totalItems / pagination.value.itemsPerPage) || 1;
 });
 
+// Filter out the profile picture and password from user details display
+const filteredUserDetails = computed(() => {
+  if (!selectedUser.value) return {};
+  
+  const filtered = {};
+  Object.entries(selectedUser.value).forEach(([key, value]) => {
+    // Skip the profilePicture and password fields
+    if (key !== 'profilePicture' && key !== 'password') {
+      filtered[key] = value;
+    }
+  });
+  return filtered;
+});
+
+// Full screen image state
+const showFullScreenImage = ref(false);
+const fullScreenImageSrc = ref('');
+
 const paginatedUsers = computed(() => {
   if (!pagination.value.enabled) {
     return filteredUsersBeforePagination.value;
@@ -1316,8 +1701,9 @@ const togglePagination = () => {
 };
 
 // Watch for changes in active tab, search query, and filters to reset pagination
-watch([activeTab, searchQuery, filters], () => {
+watch([activeTab, searchQuery, filters, archivedFilters], () => {
   pagination.value.currentPage = 1;
+  archivedPagination.value.currentPage = 1;
 });
 
 // Load grade sections
@@ -1496,6 +1882,9 @@ const editFormData = ref({
   createdAt: ''
 });
 
+// Password visibility state
+const showPassword = ref(false);
+
 // Update user function
 const handleUpdateUser = async () => {
   try {
@@ -1583,35 +1972,7 @@ const formatDate = (dateString) => {
   return new Date(dateString).toLocaleString();
 };
 
-const handleDeleteUser = async (userId) => {
-  try {
-    const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#3085d6',
-      confirmButtonText: 'Yes, delete it!'
-    });
-
-    if (result.isConfirmed) {
-      await deleteUser(userId);
-      await loadAllUsers(); // Refresh the users list
-      Swal.fire(
-        'Deleted!',
-        'User has been deleted.',
-        'success'
-      );
-    }
-  } catch (error) {
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: error.message
-    });
-  }
-};
+// Function removed and replaced with archiveUser functionality
 
 // Add this function to load sections
 const loadSections = async () => {
@@ -2027,6 +2388,29 @@ const getExportData = () => {
       return row;
     });
   }
+  // Add export for archived users
+  else if (activeTab.value === 'archived') {
+    const fields = exportOptions.value.fields;
+    
+    // Build headers array
+    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.email) headers.push('Email');
+    headers.push('Role', 'Archived Date', 'Reason');
+    
+    // Build rows
+    dataToExport = filteredArchivedUsers.value.map(user => {
+      const row = {};
+      if (fields.name) {
+        row['First Name'] = user.firstName;
+        row['Last Name'] = user.lastName;
+      }
+      if (fields.email) row['Email'] = user.email;
+      row['Role'] = user.role;
+      row['Archived Date'] = formatDate(user.archivedAt);
+      row['Reason'] = user.archiveReason || 'N/A';
+      return row;
+    });
+  }
   
   return { headers, data: dataToExport };
 };
@@ -2329,6 +2713,223 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', closeAIDropdownOnClickOutside);
   document.removeEventListener('click', closeExportOptionsOnClickOutside);
 });
+
+// Add state for archived users
+const archivedUsers = ref([]);
+const showArchivedUsersModal = ref(false);
+const archivedUserDetails = ref(null);
+const showArchivedUserDetailsModal = ref(false);
+const archiveReason = ref('');
+const showArchiveConfirmModal = ref(false);
+const userToArchive = ref(null);
+const restoreInProgress = ref(null); // Store user ID being restored
+const archiveInProgress = ref(false);
+
+// Archived users pagination state
+const archivedPagination = ref({
+  currentPage: 1,
+  itemsPerPage: 20
+});
+
+// Filtered archived users computed property
+const filteredArchivedUsers = computed(() => {
+  let users = [...archivedUsers.value];
+  
+  // Apply search filter using the main search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase();
+    users = users.filter(user => 
+      user.firstName.toLowerCase().includes(query) ||
+      user.lastName.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      (user.archiveReason && user.archiveReason.toLowerCase().includes(query)) ||
+      (user.role && user.role.toLowerCase().includes(query))
+    );
+  }
+  
+  // Apply role filter
+  if (archivedFilters.value.role) {
+    users = users.filter(user => user.role === archivedFilters.value.role);
+  }
+  
+  // Apply date filters
+  if (archivedFilters.value.startDate) {
+    const startDate = new Date(archivedFilters.value.startDate);
+    startDate.setHours(0, 0, 0, 0); // Start of day
+    users = users.filter(user => new Date(user.archivedAt) >= startDate);
+  }
+  
+  if (archivedFilters.value.endDate) {
+    const endDate = new Date(archivedFilters.value.endDate);
+    endDate.setHours(23, 59, 59, 999); // End of day
+    users = users.filter(user => new Date(user.archivedAt) <= endDate);
+  }
+  
+  // Sort by date
+  users.sort((a, b) => {
+    const dateA = new Date(a.archivedAt);
+    const dateB = new Date(b.archivedAt);
+    return archivedFilters.value.sortBy === 'oldest' 
+      ? dateA - dateB  // Oldest first
+      : dateB - dateA; // Newest first (default)
+  });
+  
+  return users;
+});
+
+// Paginated archived users
+const paginatedArchivedUsers = computed(() => {
+  if (!pagination.value.enabled) {
+    return filteredArchivedUsers.value;
+  }
+  
+  const startIndex = (archivedPagination.value.currentPage - 1) * pagination.value.itemsPerPage;
+  const endIndex = startIndex + pagination.value.itemsPerPage;
+  return filteredArchivedUsers.value.slice(startIndex, endIndex);
+});
+
+// Archived users pagination
+const archivedTotalPages = computed(() => {
+  if (!pagination.value.enabled) return 1;
+  
+  const totalItems = filteredArchivedUsers.value.length;
+  return Math.ceil(totalItems / pagination.value.itemsPerPage) || 1;
+});
+
+// Display range for archived users
+const displayArchivedRange = computed(() => {
+  const total = filteredArchivedUsers.value.length;
+  if (total === 0) return "0-0 of 0";
+  
+  const start = (archivedPagination.value.currentPage - 1) * pagination.value.itemsPerPage + 1;
+  const end = Math.min(start + pagination.value.itemsPerPage - 1, total);
+  return `${start}-${end} of ${total}`;
+});
+
+// Function to change archived users page
+const changeArchivedPage = (page) => {
+  if (page < 1 || page > archivedTotalPages.value) return;
+  archivedPagination.value.currentPage = page;
+};
+
+const fetchArchivedUsers = async () => {
+  try {
+    archivedUsers.value = await getArchivedUsers();
+    activeTab.value = 'archived';
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Failed to load archived users',
+      text: error.message
+    });
+  }
+};
+
+const handleRestoreUser = async (archivedUserId) => {
+  try {
+    restoreInProgress.value = archivedUserId;
+    const result = await Swal.fire({
+      title: 'Restore User',
+      text: 'Are you sure you want to restore this user? They will regain access to the system.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#4CAF50',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, restore user',
+      cancelButtonText: 'Cancel'
+    });
+
+    if (result.isConfirmed) {
+      // Show loading state
+      Swal.fire({
+        title: 'Restoring User...',
+        text: 'Please wait while we restore the user data.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+      
+      await restoreArchivedUser(archivedUserId);
+      
+      // Refresh lists
+      await fetchArchivedUsers();
+      await loadAllUsers();
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'User Restored',
+        text: 'The user has been successfully restored and can now access the system.',
+        confirmButtonColor: '#4CAF50'
+      });
+    }
+  } catch (error) {
+    console.error('Error restoring user:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Restoration Failed',
+      text: error.message || 'An error occurred while restoring the user.',
+      confirmButtonColor: '#d33'
+    });
+  } finally {
+    restoreInProgress.value = null;
+  }
+};
+
+const viewArchivedUserDetails = async (archivedUserId) => {
+  try {
+    const details = await getArchivedUserById(archivedUserId);
+    // Filter out password field from user details
+    const userData = { ...details.userData };
+    delete userData.password;
+    archivedUserDetails.value = userData;
+    selectedUser.value = userData; // Set selectedUser for consistent display with the profile header
+    showArchivedUserDetailsModal.value = true;
+  } catch (error) {
+    console.error('Error fetching archived user details:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `Failed to fetch archived user details: ${error.message}`
+    });
+  }
+};
+
+const openArchiveConfirmModal = (user) => {
+  userToArchive.value = user;
+  archiveReason.value = '';
+  showArchiveConfirmModal.value = true;
+};
+
+const handleArchiveUser = async () => {
+  if (!userToArchive.value) return;
+  
+  try {
+    // Archive reason is now optional, so we don't need to validate it's presence
+
+    archiveInProgress.value = true;
+    await archiveUser(userToArchive.value.id, archiveReason.value);
+    
+    await loadAllUsers(); // Refresh user list
+    showArchiveConfirmModal.value = false;
+    userToArchive.value = null;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: 'User archived successfully'
+    });
+  } catch (error) {
+    console.error('Error archiving user:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: `Failed to archive user: ${error.message}`
+    });
+  } finally {
+    archiveInProgress.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -2420,11 +3021,22 @@ onBeforeUnmount(() => {
   background: #f5f5f5;
   color: #666;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tab-btn.active {
   background: #2196F3;
   color: white;
+}
+
+.tab-btn:nth-child(5).active {
+  background: #4CAF50;
+}
+
+.tab-icon {
+  font-size: 18px;
 }
 
 .filter-group {
@@ -2575,6 +3187,21 @@ onBeforeUnmount(() => {
 .action-btn.delete {
   background: #ffebee;
   color: #f44336;
+}
+
+.action-btn.archive {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.action-btn.view {
+  background: #e3f2fd;
+  color: #2196F3;
+}
+
+.action-btn.restore {
+  background: #e8f5e9;
+  color: #4caf50;
 }
 
 .action-btn:hover {
@@ -4246,6 +4873,952 @@ input:checked + .toggle-slider:before {
   .view-controls {
     flex-direction: column;
     gap: 0.75rem;
+  }
+}
+
+/* Add more specific media queries for slim devices */
+@media (max-width: 480px) {
+  /* Adjust user card layout for slim phones */
+  .user-card {
+    padding: 0.85rem 0.6rem;
+    gap: 0.5rem;
+  }
+  
+  /* Make avatar slightly larger */
+  .user-avatar-container, .user-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+  }
+  
+  /* Increase text sizes slightly */
+  .user-info h3 {
+    font-size: 0.92rem;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: calc(100% - 10px);
+  }
+  
+  .email {
+    font-size: 0.75rem;
+    line-height: 1.3;
+  }
+  
+  /* Adjust details size and spacing */
+  .details {
+    margin-top: 0.4rem;
+    gap: 0.4rem;
+  }
+  
+  .detail-item {
+    font-size: 0.75rem;
+    margin-right: 0.6rem;
+  }
+  
+  .detail-item .material-icons {
+    font-size: 14px;
+  }
+  
+  /* Make action buttons slightly larger */
+  .user-actions {
+    gap: 0.25rem;
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .action-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  /* Adjust information width to prevent overlap with buttons */
+  .user-info {
+    width: calc(100% - 90px);
+    padding-right: 5px;
+  }
+  
+  /* Table view adjustments for slim devices */
+  .users-table td, .users-table th {
+    padding: 0.45rem 0.35rem;
+    font-size: 0.78rem;
+  }
+  
+  .table-avatar-container, .table-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 0.7rem;
+  }
+}
+
+/* For extremely slim devices */
+@media (max-width: 360px) {
+  .user-card {
+    padding: 0.75rem 0.5rem;
+  }
+  
+  .user-avatar-container, .user-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+  }
+  
+  .user-info h3 {
+    font-size: 0.85rem;
+  }
+  
+  .email {
+    font-size: 0.7rem;
+  }
+  
+  .detail-item {
+    font-size: 0.7rem;
+  }
+  
+  .detail-item .material-icons {
+    font-size: 13px;
+  }
+  
+  .action-btn {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .user-info {
+    width: calc(100% - 80px);
+  }
+  
+  /* Fix header actions for very slim devices */
+  .header-actions {
+    gap: 0.35rem;
+  }
+  
+  .add-btn {
+    padding: 0.45rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Add User Profile Header styles for details modal */
+.user-profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 1rem;
+  border-bottom: 1px solid #eee;
+  text-align: center;
+}
+
+.user-profile-avatar-container {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  border: 3px solid #f5f5f5;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-profile-avatar-container:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.view-full-image-hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 4px;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.view-full-image-hint .material-icons {
+  font-size: 14px;
+  margin-right: 3px;
+}
+
+.user-profile-avatar-container:hover .view-full-image-hint {
+  opacity: 1;
+}
+
+.user-profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: #1976d2;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  border: 3px solid #f5f5f5;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.user-profile-header h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+/* Fullscreen image modal */
+.fullscreen-image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  cursor: pointer;
+}
+
+.fullscreen-image-container {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fullscreen-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  border: 5px solid white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  cursor: default;
+}
+
+.fullscreen-controls {
+  position: absolute;
+  top: -50px;
+  right: 0;
+  z-index: 2010;
+}
+
+.fullscreen-close-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.fullscreen-close-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+}
+
+.fullscreen-caption {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 20px;
+  font-size: 1rem;
+  cursor: default;
+}
+
+/* Responsive styling for profile header and fullscreen modal */
+@media (max-width: 480px) {
+  .user-profile-avatar-container,
+  .user-profile-avatar {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 0.75rem;
+  }
+  
+  .user-profile-avatar {
+    font-size: 2rem;
+  }
+  
+  .user-profile-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .fullscreen-image {
+    max-height: 70vh;
+    border: 3px solid white;
+  }
+  
+  .fullscreen-caption {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .fullscreen-controls {
+    top: -40px;
+  }
+  
+  .fullscreen-close-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+.archived-section h2 {
+  color: #4CAF50;
+  border-bottom: 2px solid #4CAF50;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Using the main grid styles for archived users */
+
+.archived-user-card {
+  position: relative;
+  border-left: 4px solid #4CAF50;
+  padding: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.archived-user-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.archived-card-content {
+  display: flex;
+  gap: 1rem;
+}
+
+.archived-avatar-container, 
+.archived-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.archived-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.archived-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.archived-user-header {
+  margin-bottom: 0.5rem;
+}
+
+.archived-user-header h3 {
+  margin: 0 0 0.2rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.archived-email {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.archived-role-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  border-radius: 4px;
+  background-color: #E8F5E9;
+  color: #388E3C;
+}
+
+.archived-role-badge.student {
+  background-color: #E8F5E9;
+  color: #388E3C;
+}
+
+.archived-role-badge.teacher {
+  background-color: #E3F2FD;
+  color: #1976D2;
+}
+
+.archived-role-badge.admin {
+  background-color: #F3E5F5;
+  color: #7B1FA2;
+}
+
+.archived-details {
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.archived-date-info {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.archived-reason-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  color: #d32f2f;
+  font-style: italic;
+}
+
+.reason-text {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.archived-icon {
+  font-size: 14px;
+  color: #757575;
+  flex-shrink: 0;
+}
+
+.archived-user-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.archived-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #f5f5f5;
+  color: #424242;
+}
+
+.archived-action-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.archived-action-btn.view {
+  color: #1976D2;
+}
+
+.archived-action-btn.restore {
+  color: #4CAF50;
+}
+
+.archived-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Using main user card header styles */
+
+.archived-role-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: #E8F5E9;
+  color: #4CAF50;
+}
+
+/* Using main user info styles */
+
+.archived-date {
+  color: #888;
+  font-size: 0.8rem;
+  margin: 0.25rem 0;
+  display: flex;
+  align-items: center;
+}
+
+/* Using main card action styles */
+
+.action-btn.restore {
+  background: #4CAF50;
+  color: white;
+}
+
+.action-btn.restore:hover {
+  background: #45a049;
+}
+
+.archived-user-details {
+  padding: 1.5rem;
+}
+
+.archived-detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.archived-detail-item:last-child {
+  border-bottom: none;
+}
+
+.archived-label {
+  color: #666;
+  font-weight: 500;
+}
+
+.archived-value {
+  color: #333;
+  font-weight: 400;
+}
+
+/* Archived Users Styles */
+/* Removed redundant archived filters styles */
+
+.archived-role-badge {
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: #E8F5E9;
+  color: #4CAF50;
+}
+
+.archived-role-badge.student {
+  background: #E8F5E9;
+  color: #4CAF50;
+}
+
+.archived-role-badge.teacher {
+  background: #E3F2FD;
+  color: #2196F3;
+}
+
+.archived-role-badge.admin {
+  background: #F3E5F5;
+  color: #9C27B0;
+}
+
+.archived-icon {
+  font-size: 14px;
+  margin-right: 4px;
+  opacity: 0.7;
+}
+
+.archived-date, .archived-reason {
+  display: flex;
+  align-items: center;
+  color: #888;
+  font-size: 0.8rem;
+  margin: 0.25rem 0;
+}
+
+.archived-reason {
+  color: #d32f2f;
+  font-style: italic;
+}
+
+/* Archive Confirm Modal Styles */
+.archive-confirm-modal {
+  max-width: 400px;
+  width: 90vw;
+}
+
+.archive-form {
+  padding: 1.5rem;
+}
+
+.archive-form .form-group {
+  margin-bottom: 1.5rem;
+}
+
+.archive-form .form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.archive-form .form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.archive-form .form-group textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.archive-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #E0E0E0;
+}
+
+.archive-form .save-btn,
+.archive-form .cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.archive-form .save-btn {
+  background: #4CAF50;
+  color: white;
+  border: none;
+}
+
+.archive-form .save-btn:hover {
+  background: #388E3C !important;
+}
+
+.archive-form .cancel-btn {
+  background: #F5F5F5;
+  color: #616161;
+  border: 1px solid #E0E0E0;
+}
+
+.archive-form .cancel-btn:hover {
+  background: #EEEEEE;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .archived-filters {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .archived-filter-group {
+    width: 100%;
+  }
+  
+  .archived-filter-group select {
+    flex: 1;
+  }
+  
+  .archive-form .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .archive-form .form-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .archive-form .save-btn,
+  .archive-form .cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Add styling for archived filters */
+  .date-filter {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  
+  .date-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Add styling for archived filters */
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.date-input {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  min-width: 120px;
+  transition: all 0.3s ease;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.date-separator {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Mobile responsive adjustments for archived user cards */
+@media (max-width: 768px) {
+  .archived-user-card {
+    padding: 0.85rem;
+    position: relative;
+    margin-bottom: 0.5rem;
+    border-left-width: 3px;
+  }
+  
+  .archived-card-content {
+    gap: 0.75rem;
+  }
+  
+  .archived-avatar-container, 
+  .archived-avatar {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+  
+  .archived-user-info {
+    padding-right: 40px; /* Space for action buttons */
+  }
+  
+  .archived-user-header h3 {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.1rem;
+  }
+  
+  .archived-email {
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin: 0 0 0.3rem 0;
+  }
+  
+  .archived-role-badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+  }
+  
+  .archived-user-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    gap: 0.25rem;
+  }
+  
+  .archived-action-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .archived-action-btn .material-icons {
+    font-size: 15px;
+  }
+  
+  .archived-details {
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+  }
+  
+  .archived-date-info,
+  .archived-reason-info {
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+  }
+  
+  .archived-icon {
+    font-size: 12px;
+  }
+}
+
+/* Extremely slim devices */
+/* Password field with toggle button styling */
+.password-field .password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-field input {
+  padding-right: 40px; /* Make room for the toggle button */
+  width: 100%;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border-radius: 50%;
+}
+
+.password-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #2196F3;
+}
+
+.password-toggle-btn .material-icons {
+  font-size: 20px;
+}
+
+.archived-badge {
+  display: inline-flex;
+  align-items: center;
+  background-color: #ff9800;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  margin-top: 8px;
+}
+
+.archived-badge .material-icons {
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+@media (max-width: 360px) {
+  .archived-user-card {
+    padding: 0.75rem 0.65rem;
+    border-left-width: 3px;
+  }
+
+  .archived-card-content {
+    gap: 0.6rem;
+  }
+
+  .archived-avatar-container,
+  .archived-avatar {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+  
+  .archived-user-info {
+    padding-right: 35px;
+  }
+  
+  .archived-user-header h3 {
+    font-size: 0.85rem;
+    margin-bottom: 0.1rem;
+  }
+  
+  .archived-email {
+    font-size: 0.7rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .archived-role-badge {
+    font-size: 0.6rem;
+    padding: 0.1rem 0.3rem;
+  }
+  
+  .archived-user-actions {
+    top: 0.65rem;
+    right: 0.65rem;
+    gap: 0.2rem;
+  }
+  
+  .archived-action-btn {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .archived-action-btn .material-icons {
+    font-size: 13px;
+  }
+  
+  .archived-details {
+    margin-top: 0.4rem;
+    font-size: 0.65rem;
+  }
+  
+  .archived-date-info,
+  .archived-reason-info {
+    line-height: 1.2;
+    margin-bottom: 0.15rem;
+  }
+  
+  .archived-icon {
+    font-size: 11px;
   }
 }
 </style>

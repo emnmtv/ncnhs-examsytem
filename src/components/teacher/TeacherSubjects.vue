@@ -8,6 +8,16 @@
           <p class="subtitle">View and manage your assigned subjects</p>
         </div>
       </div>
+      <div class="header-actions">
+        <router-link to="/attendance-records" class="header-btn attendance-btn">
+          <span class="material-icons">fact_check</span>
+          Attendance Records
+        </router-link>
+        <router-link to="/class-list" class="header-btn class-list-btn">
+          <span class="material-icons">people</span>
+          Class List
+        </router-link>
+      </div>
       <div class="header-background">SUBJECTS</div>
     </div>
 
@@ -71,6 +81,24 @@
               </div>
             </div>
 
+            <!-- Direct Students Info -->
+            <div class="info-item">
+              <span class="material-icons-round">person</span>
+              <div class="info-content">
+                <span class="info-label">Direct Students</span>
+                <div class="direct-students-info">
+                  <div v-if="directStudentsCounts[subject.subject.id] > 0" class="students-count">
+                    <span class="count-badge">{{ directStudentsCounts[subject.subject.id] }}</span>
+                    <span>{{ directStudentsCounts[subject.subject.id] === 1 ? 'student' : 'students' }} directly assigned</span>
+                  </div>
+                  <div v-else class="no-data">
+                    <span class="material-icons">person_off</span>
+                    No direct student assignments
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <!-- Schedule Info -->
             <div class="info-item">
               <span class="material-icons-round">schedule</span>
@@ -125,12 +153,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { getTeacherAssignedSubjects } from '@/services/authService';
+import { ref, onMounted,} from 'vue';
+import { getTeacherAssignedSubjects, getSubjectDirectStudents } from '@/services/authService';
 
 const subjects = ref([]);
 const loading = ref(true);
 const error = ref(null);
+const directStudentsCounts = ref({});
 
 // Formatting functions
 const formatScheduleType = (type) => {
@@ -159,12 +188,32 @@ const formatMultipleDays = (days) => {
   return days?.join(', ') || 'None';
 };
 
+// Get direct students count for a subject
+const loadDirectStudentsCount = async (subjectId) => {
+  try {
+    const response = await getSubjectDirectStudents(subjectId);
+    if (response && response.data) {
+      directStudentsCounts.value[subjectId] = response.data.length;
+    } else {
+      directStudentsCounts.value[subjectId] = 0;
+    }
+  } catch (err) {
+    console.error(`Failed to load direct students for subject ${subjectId}:`, err);
+    directStudentsCounts.value[subjectId] = 0;
+  }
+};
+
 // Load subjects
 const loadSubjects = async () => {
   try {
     loading.value = true;
     error.value = null;
     subjects.value = await getTeacherAssignedSubjects();
+    
+    // Load direct students count for each subject
+    for (const subject of subjects.value) {
+      await loadDirectStudentsCount(subject.subject.id);
+    }
   } catch (err) {
     error.value = err.message;
     console.error('Failed to load subjects:', err);
@@ -212,6 +261,41 @@ onMounted(() => {
   color: #159750;
   font-size: 2.5rem;
   font-weight: 700;
+}
+
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.header-btn {
+  background: #f5f5f5;
+  color: #333;
+  padding: 8px 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-btn .material-icons {
+  font-size: 1.2rem;
 }
 
 .header-background {
@@ -431,6 +515,33 @@ onMounted(() => {
   color: #424242;
 }
 
+.direct-students-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.students-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #e8f5e9;
+  padding: 6px 15px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  color: #2e7d32;
+  font-weight: 500;
+}
+
+.count-badge {
+  background: #a5d6a7;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
 .schedule-info {
   background: #f9f9f9;
   border-radius: 12px;
@@ -613,6 +724,15 @@ onMounted(() => {
   background: #d5ecd7;
 }
 
+.attendance-btn {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  margin-right: 10px;
+}
+
+.attendance-btn:hover {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .manage-subjects {
@@ -631,6 +751,18 @@ onMounted(() => {
 
   .header-content h1 .material-icons {
     font-size: 2rem;
+  }
+
+  .header-actions {
+    position: static;
+    margin-top: 15px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-btn {
+    width: 100%;
+    justify-content: center;
   }
 
   .subjects-grid {

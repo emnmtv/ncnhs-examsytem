@@ -1,5 +1,5 @@
-export const BASE_URL = 'https://emnmtv.shop/auth';
-export const SOCKET_URL = 'https://emnmtv.shop';
+export const BASE_URL = 'http://localhost:3400/auth';
+export const SOCKET_URL = 'http://localhost:3400';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -724,6 +724,126 @@ export const fetchTeacherExams = async () => {
     return processedExams;
   } catch (error) {
     console.error('Error fetching teacher exams:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch archived exams created by the current teacher
+ */
+export const fetchArchivedTeacherExams = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/teacher-exams/archived`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch archived exams');
+    }
+
+    const data = await response.json();
+    console.log('Archived exams response:', data); // Debug log
+    
+    // Check if data.archivedExams exists, otherwise use an empty array
+    const examsArray = data.archivedExams || [];
+    
+    // Process the exam data to ensure options are parsed and image URLs are prepared
+    const processedExams = examsArray.map(exam => {
+      // Process questions to ensure options are properly formatted
+      if (exam.questions) {
+        exam.questions = exam.questions.map(question => {
+          // Ensure options are parsed from JSON if needed
+          if (question.options && typeof question.options === 'string') {
+            try {
+              question.options = JSON.parse(question.options);
+            } catch (e) {
+              console.error('Error parsing options for question:', question.id, e);
+              question.options = [];
+            }
+          }
+          
+          // Ensure image URLs are properly formatted
+          if (question.imageUrl) {
+            question.imageUrl = getFullImageUrl(question.imageUrl);
+          }
+          
+          return question;
+        });
+      }
+      
+      return exam;
+    });
+    
+    return processedExams;
+  } catch (error) {
+    console.error('Error fetching archived teacher exams:', error);
+    return []; // Return empty array on error instead of throwing
+  }
+};
+
+/**
+ * Archive an exam
+ * @param {number} examId - The ID of the exam to archive
+ * @returns {Promise<Object>} - The archive result
+ */
+export const archiveExam = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Archiving exam', { examId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/archive`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to archive exam");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AuthService: Exam archive error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Unarchive an exam
+ * @param {number} examId - The ID of the exam to unarchive
+ * @returns {Promise<Object>} - The unarchive result
+ */
+export const unarchiveExam = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Unarchiving exam', { examId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/unarchive`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to unarchive exam");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AuthService: Exam unarchive error:", error);
     throw error;
   }
 };
@@ -2902,6 +3022,658 @@ export const downloadAllTaskSubmissions = async (taskId) => {
     return blob;
   } catch (error) {
     console.error("AuthService: Download task submissions error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Archive a user and all their related data
+ * @param {number} userId - The ID of the user to archive
+ * @param {string} archiveReason - Optional reason for archiving
+ * @returns {Promise<Object>} - The archived user data
+ */
+export const archiveUser = async (userId, archiveReason) => {
+  try {
+    console.log('AuthService: Archiving user', { userId, archiveReason });
+
+    const response = await fetch(`${BASE_URL}/archived-users/archive`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ userId, archiveReason })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Archive user failed', errorData);
+      throw new Error(errorData.error || "Failed to archive user");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: User archived successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Archive user error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Restore a previously archived user
+ * @param {number} archivedUserId - The ID of the archived user record
+ * @returns {Promise<Object>} - The restored user data
+ */
+export const restoreArchivedUser = async (archivedUserId) => {
+  try {
+    console.log('AuthService: Restoring archived user', { archivedUserId });
+
+    const response = await fetch(`${BASE_URL}/archived-users/restore`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ archivedUserId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Restore user failed', errorData);
+      throw new Error(errorData.error || "Failed to restore user");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: User restored successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Restore user error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get a list of all archived users
+ * @returns {Promise<Array>} - List of archived users
+ */
+export const getArchivedUsers = async () => {
+  try {
+    console.log('AuthService: Fetching archived users');
+
+    const response = await fetch(`${BASE_URL}/archived-users`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Fetch archived users failed', errorData);
+      throw new Error(errorData.error || "Failed to fetch archived users");
+    }
+
+    const { archivedUsers } = await response.json();
+    console.log('AuthService: Archived users fetched successfully', archivedUsers);
+    return archivedUsers;
+  } catch (error) {
+    console.error("AuthService: Fetch archived users error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get details of a specific archived user
+ * @param {number} archivedUserId - The ID of the archived user record
+ * @returns {Promise<Object>} - The archived user details
+ */
+export const getArchivedUserById = async (archivedUserId) => {
+  try {
+    console.log('AuthService: Fetching archived user details', { archivedUserId });
+
+    const response = await fetch(`${BASE_URL}/archived-users/${archivedUserId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Fetch archived user details failed', errorData);
+      throw new Error(errorData.error || "Failed to fetch archived user details");
+    }
+
+    const { archivedUser } = await response.json();
+    console.log('AuthService: Archived user details fetched successfully');
+    return archivedUser;
+  } catch (error) {
+    console.error("AuthService: Fetch archived user details error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Assign a student directly to a subject
+ * @param {number} studentId - The ID of the student to assign
+ * @param {number} subjectId - The ID of the subject to assign to
+ * @returns {Promise<Object>} - The API response
+ */
+export const assignStudentToSubject = async (studentId, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Assigning student to subject', { studentId, subjectId });
+
+    const response = await fetch(`${BASE_URL}/student-subject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ studentId, subjectId }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to assign student to subject', errorData);
+      throw new Error(errorData.error || "Failed to assign student to subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Student assigned to subject successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Student subject assignment error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Remove a student from a subject
+ * @param {number} studentId - The ID of the student to remove
+ * @param {number} subjectId - The ID of the subject to remove from
+ * @returns {Promise<Object>} - The API response
+ */
+export const removeStudentFromSubject = async (studentId, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Removing student from subject', { studentId, subjectId });
+
+    const response = await fetch(`${BASE_URL}/student-subject/${studentId}/${subjectId}`, {
+      method: "DELETE",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to remove student from subject', errorData);
+      throw new Error(errorData.error || "Failed to remove student from subject");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Student removed from subject successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Student subject removal error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get list of students directly assigned to a subject
+ * @param {number} subjectId - The ID of the subject
+ * @returns {Promise<Array>} - List of directly assigned students
+ */
+export const getSubjectDirectStudents = async (subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting direct students for subject', { subjectId });
+
+    const response = await fetch(`${BASE_URL}/subject/${subjectId}/direct-students`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to get direct students");
+    }
+
+    const data = await response.json();
+    console.log('AuthService: Direct students response', data);
+    return data;
+  } catch (error) {
+    console.error("Error getting direct students for subject:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get list of subjects directly assigned to a student
+ * @param {number} studentId - The ID of the student
+ * @returns {Promise<Array>} - List of directly assigned subjects
+ */
+export const getStudentDirectSubjects = async (studentId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting directly assigned subjects for student', { studentId });
+
+    const response = await fetch(`${BASE_URL}/student/${studentId}/direct-subjects`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to get student direct subjects', errorData);
+      throw new Error(errorData.error || "Failed to get student direct subjects");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Retrieved student direct subjects', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Get student direct subjects error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Bulk assign multiple students to a subject
+ * @param {number[]} studentIds - Array of student IDs to assign
+ * @param {number} subjectId - The ID of the subject to assign to
+ * @returns {Promise<Object>} - The API response
+ */
+export const bulkAssignStudentsToSubject = async (studentIds, subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Bulk assigning students to subject', { studentIds, subjectId });
+
+    const response = await fetch(`${BASE_URL}/student-subject/bulk`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ studentIds, subjectId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to bulk assign students to subject");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error in bulkAssignStudentsToSubject:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new attendance session for a subject
+ * @param {number} subjectId - The ID of the subject
+ * @param {string} title - Title for the attendance session
+ * @param {string} date - Date for the attendance session (YYYY-MM-DD)
+ * @param {boolean} [useSubjectSchedule=true] - Whether to use the subject's schedule or manual time
+ * @param {string} [scheduleStartTime=null] - Manual start time (HH:MM) if not using subject schedule
+ * @param {number} [lateThresholdMinutes=15] - Minutes after start time before marking as late
+ * @returns {Promise<Object>} - The created attendance session
+ */
+export const createAttendanceSession = async (
+  subjectId, 
+  title, 
+  date, 
+  scheduleStartTime = null,
+  lateThresholdMinutes = 0
+) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Format the scheduleStartTime if provided
+    let formattedStartTime = null;
+    if (scheduleStartTime) {
+      // Convert HH:MM to a full ISO datetime string by combining with the date
+      // This ensures the backend receives a properly formatted datetime
+      const [hours, minutes] = scheduleStartTime.split(':').map(Number);
+      const startDate = new Date(date);
+      startDate.setHours(hours, minutes, 0, 0);
+      formattedStartTime = startDate.toISOString();
+    }
+
+    console.log('AuthService: Creating attendance session', { 
+      subjectId, 
+      title, 
+      date, 
+      scheduleStartTime,
+      formattedStartTime,
+      lateThresholdMinutes
+    });
+
+    const response = await fetch(`${BASE_URL}/attendance/session`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ 
+        subjectId, 
+        title, 
+        date,
+        scheduleStartTime: formattedStartTime,
+        lateThresholdMinutes
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create attendance session");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Attendance session created', result);
+    
+    // Handle different response formats
+    if (result && result.session) {
+      // If the response has a session property, return it
+      return result.session;
+    } else {
+      // Otherwise return the entire result
+      return result;
+    }
+  } catch (error) {
+    console.error("Error creating attendance session:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get attendance sessions for a subject
+ * @param {number} subjectId - The ID of the subject
+ * @returns {Promise<Array>} - List of attendance sessions
+ */
+export const getAttendanceSessions = async (subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting attendance sessions for subject', { subjectId });
+
+    // Use the correct endpoint based on the backend route definition
+    const response = await fetch(`${BASE_URL}/subjects/${subjectId}/attendance-sessions`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      // For non-JSON responses, return empty array instead of trying to parse JSON
+      if (response.headers.get('content-type')?.indexOf('application/json') === -1) {
+        console.error('Non-JSON response received from API');
+        return [];
+      }
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get attendance sessions");
+    }
+
+    // Try to parse the response, handle different response formats
+    const data = await response.json();
+    
+    // Check different possible response formats
+    if (Array.isArray(data)) {
+      return data; // If response is directly an array
+    } else if (data.sessions && Array.isArray(data.sessions)) {
+      return data.sessions; // If response has a sessions property
+    } else {
+      console.warn('Unexpected response format:', data);
+      return []; // Return empty array as fallback
+    }
+  } catch (error) {
+    console.error("Error getting attendance sessions:", error);
+    // Return empty array instead of throwing to prevent UI errors
+    return [];
+  }
+};
+
+/**
+ * Mark a student's attendance in a session
+ * @param {number} sessionId - ID of the attendance session
+ * @param {number} studentId - ID of the student
+ * @param {string} status - Attendance status ('present', 'late', 'absent', 'excused')
+ * @param {string} [remarks] - Optional remarks about the attendance
+ * @returns {Promise<Object>} - The created attendance record
+ */
+export const markAttendance = async (sessionId, studentId, status, remarks) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Marking attendance', { sessionId, studentId, status });
+
+    const response = await fetch(`${BASE_URL}/attendance/mark`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ sessionId, studentId, status, remarks })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to mark attendance");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error marking attendance:", error);
+    throw error;
+  }
+};
+
+/**
+ * Verify student attendance QR code data
+ * @param {Object} qrData - Data from the scanned QR code
+ * @param {number} sessionId - ID of the attendance session
+ * @returns {Promise<Object>} - Verified student data
+ */
+export const verifyAttendanceQR = async (qrData, sessionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Verifying attendance QR code', { qrData, sessionId });
+
+    const response = await fetch(`${BASE_URL}/attendance/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({ qrData, sessionId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to verify QR code");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: QR code verified', result);
+    return result.student;
+  } catch (error) {
+    console.error("Error verifying QR code:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get attendance records for a session
+ * @param {number} sessionId - ID of the attendance session
+ * @returns {Promise<Array>} - List of attendance records with student data
+ */
+export const getSessionAttendance = async (sessionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting session attendance records', { sessionId });
+
+    const response = await fetch(`${BASE_URL}/attendance/session/${sessionId}/records`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get attendance records");
+    }
+
+    // Handle different response formats
+    const data = await response.json();
+    
+    if (Array.isArray(data)) {
+      return data; // If response is directly an array
+    } else if (data.records && Array.isArray(data.records)) {
+      return data.records; // If response has a records property
+    } else {
+      console.warn('Unexpected response format:', data);
+      return []; // Return empty array as fallback
+    }
+  } catch (error) {
+    console.error("Error getting session attendance:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get attendance statistics for a subject
+ * @param {number} subjectId - ID of the subject
+ * @param {string} [startDate] - Optional start date (YYYY-MM-DD)
+ * @param {string} [endDate] - Optional end date (YYYY-MM-DD)
+ * @returns {Promise<Object>} - Attendance statistics
+ */
+export const getAttendanceStatistics = async (subjectId, startDate, endDate) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting attendance statistics', { subjectId, startDate, endDate });
+
+    // Build query string for date filters
+    let url = `${BASE_URL}/subjects/${subjectId}/attendance-statistics`;
+    const params = new URLSearchParams();
+    
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get attendance statistics");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting attendance statistics:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get students who haven't been marked for a session
+ * @param {number} sessionId - ID of the attendance session
+ * @returns {Promise<Array>} - List of unmarked students
+ */
+export const getUnmarkedStudents = async (sessionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting unmarked students', { sessionId });
+
+    const response = await fetch(`${BASE_URL}/attendance/session/${sessionId}/unmarked`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get unmarked students");
+    }
+
+    // Handle different response formats
+    const data = await response.json();
+    
+    if (Array.isArray(data)) {
+      return data; // If response is directly an array
+    } else if (data.students && Array.isArray(data.students)) {
+      return data.students; // If response has a students property
+    } else {
+      console.warn('Unexpected response format:', data);
+      return []; // Return empty array as fallback
+    }
+  } catch (error) {
+    console.error("Error getting unmarked students:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get details for a specific attendance session
+ * @param {number} sessionId - ID of the attendance session
+ * @returns {Promise<Object>} - Session details
+ */
+export const getAttendanceSessionById = async (sessionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting attendance session details', { sessionId });
+
+    const response = await fetch(`${BASE_URL}/attendance/session/${sessionId}`, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to get session details");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error getting attendance session:", error);
     throw error;
   }
 };

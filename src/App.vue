@@ -26,10 +26,12 @@ export default {
     const clickEffectType = ref('none');
 
     // Define routes where sidebar should NOT be shown
-    const authRoutes = ["/"];
+    const authRoutes = ["/", "/forbidden", "/404"];
 
-    // Show sidebar if NOT on auth routes (login & register)
-    const showSidebar = computed(() => !authRoutes.includes(route.path));
+    // Show sidebar if NOT on auth routes (login & register) or error pages
+    const showSidebar = computed(() => {
+      return !authRoutes.includes(route.path) && !route.name?.includes('NotFound');
+    });
 
     const handleNavToggle = (collapsed) => {
       isNavCollapsed.value = collapsed;

@@ -55,14 +55,14 @@
           <div class="subject-info">
             <!-- Teachers Section -->
             <div class="info-item">
-              <span class="material-icons-round">people</span>
+              <span class="material-icons-round">person</span>
               <div class="info-content">
                 <span class="info-label">Teachers</span>
                 <div class="teachers-list">
-                  <div v-for="teacher in subject.teachers" :key="teacher.id" class="teacher-item">
+                  <div v-for="teacher in subject.teachers" :key="teacher.teacherId" class="teacher-item">
                     {{ teacher.user.firstName }} {{ teacher.user.lastName }}
                     <button 
-                      @click="removeTeacher(subject.id, teacher.user.id)" 
+                      @click="removeTeacher(subject.id, teacher.teacherId)" 
                       class="remove-btn"
                     >
                       <span class="material-icons">close</span>
@@ -73,7 +73,7 @@
                     class="assign-btn"
                   >
                     <span class="material-icons">add</span>
-                    <span class="assign-text">Assign</span>
+                    <span>Assign</span>
                   </button>
                 </div>
               </div>
@@ -99,7 +99,32 @@
                     class="assign-btn"
                   >
                     <span class="material-icons">add</span>
-                    <span class="assign-text">Assign</span>
+                    <span>Assign</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Direct Students Section -->
+            <div class="info-item">
+              <span class="material-icons-round">person</span>
+              <div class="info-content">
+                <span class="info-label">Direct Students</span>
+                <div class="students-list">
+                  <div v-if="subject.directStudents && subject.directStudents.length > 0" class="student-summary">
+                    <span class="student-count">{{ subject.directStudents.length }} student(s)</span>
+                    <button @click="openViewStudentsModal(subject)" class="view-all-btn">
+                      <span class="material-icons">visibility</span>
+                      <span>View All</span>
+                    </button>
+                  </div>
+                  <div v-else class="empty-list">No direct students assigned</div>
+                  <button 
+                    @click="openAssignStudentModal(subject)" 
+                    class="assign-btn"
+                  >
+                    <span class="material-icons">add</span>
+                    <span class="assign-text">Assign Students</span>
                   </button>
                 </div>
               </div>
@@ -295,6 +320,166 @@
       </div>
     </div>
 
+    <!-- Assign Student Modal -->
+    <div v-if="showAssignStudentModal" class="modal-overlay" @click="showAssignStudentModal = false">
+      <div class="modal-content wider-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Assign Students to {{ selectedSubject?.name }}</h2>
+          <button class="close-btn" @click="showAssignStudentModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <form @submit.prevent="bulkAssignStudents" class="assign-form">
+          <div class="form-group">
+            <div class="filters-container">
+              <div class="search-filter">
+                <input 
+                  v-model="studentSearchQuery" 
+                  type="text" 
+                  placeholder="Search students..." 
+                  class="search-input"
+                />
+                <span class="material-icons search-icon">search</span>
+              </div>
+              
+              <div class="filter-options">
+                <div class="filter-option">
+                  <select v-model="gradeFilter" class="filter-select">
+                    <option value="">All Grades</option>
+                    <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
+                      Grade {{ grade }}
+                    </option>
+                  </select>
+                </div>
+                
+                <div class="filter-option">
+                  <select v-model="sectionFilter" class="filter-select">
+                    <option value="">All Sections</option>
+                    <option v-for="section in availableSectionOptions" :key="section" :value="section">
+                      {{ section }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="selection-header">
+              <label>Select Students</label>
+              <div class="selection-actions">
+                <button type="button" class="select-btn" @click="selectAllFilteredStudents">Select All</button>
+                <button type="button" class="select-btn" @click="deselectAllStudents">Deselect All</button>
+              </div>
+            </div>
+            
+            <div class="students-selection-list">
+              <div 
+                v-for="student in filteredAvailableStudents" 
+                :key="student.id" 
+                class="student-selection-item"
+                :class="{ selected: selectedStudentIds.includes(student.id) }"
+                @click="toggleStudentSelection(student.id)"
+              >
+                <div class="student-info">
+                  <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
+                  <div class="student-details">Grade {{ student.gradeLevel }}-{{ student.section }} | {{ student.lrn || 'No LRN' }}</div>
+                </div>
+                <div class="checkbox-container">
+                  <input 
+                    type="checkbox" 
+                    :checked="selectedStudentIds.includes(student.id)"
+                    @click.stop
+                    @change="toggleStudentSelection(student.id)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="selected-count">
+            {{ selectedStudentIds.length }} student(s) selected
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" @click="showAssignStudentModal = false">
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              class="save-btn"
+              :disabled="selectedStudentIds.length === 0"
+            >
+              Assign Students
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- View Assigned Students Modal -->
+    <div v-if="showViewStudentsModal" class="modal-overlay" @click="showViewStudentsModal = false">
+      <div class="modal-content wider-modal view-students-modal" @click.stop>
+        <div class="modal-header">
+          <h2>Students in {{ selectedSubject?.name }}</h2>
+          <button class="close-btn" @click="showViewStudentsModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        
+        <div class="form-group">
+          <div class="search-filter">
+            <input 
+              v-model="assignedStudentSearchQuery" 
+              type="text" 
+              placeholder="Search assigned students..." 
+              class="search-input"
+            />
+            <span class="material-icons search-icon">search</span>
+          </div>
+        </div>
+        
+        <div class="students-list-container">
+          <div v-if="filteredAssignedStudents.length > 0" class="assigned-students-list">
+            <div 
+              v-for="studentRel in filteredAssignedStudents" 
+              :key="(studentRel.student && studentRel.student.id) || studentRel.studentId || studentRel.id" 
+              class="student-selection-item"
+            >
+              <div class="student-info">
+                <div class="student-name">
+                  {{ (studentRel.student && studentRel.student.firstName) || studentRel.firstName }} 
+                  {{ (studentRel.student && studentRel.student.lastName) || studentRel.lastName }}
+                </div>
+                <div class="student-details">
+                  Grade {{ (studentRel.student && studentRel.student.gradeLevel) || studentRel.gradeLevel }}-{{ (studentRel.student && studentRel.student.section) || studentRel.section }} | 
+                  {{ (studentRel.student && studentRel.student.lrn) || studentRel.lrn || 'No LRN' }}
+                </div>
+              </div>
+              <button 
+                @click="removeStudentFromSubjectHandler(
+                  (studentRel.student && studentRel.student.id) || studentRel.studentId || studentRel.id, 
+                  selectedSubject.value.id
+                )" 
+                class="remove-student-btn"
+              >
+                <span class="material-icons">close</span>
+                <span class="btn-text">Remove</span>
+              </button>
+            </div>
+          </div>
+          <div v-else class="empty-list-message">
+            No students assigned directly to this subject
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="showViewStudentsModal = false">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Schedule Modal -->
     <div v-if="showScheduleModal" class="modal-overlay" @click="showScheduleModal = false">
       <div class="modal-content" @click.stop>
@@ -420,8 +605,12 @@ import {
   assignSubjectToSection,
   removeSubjectFromSection,
   fetchTeachers,
+  fetchStudents,
   getAllGradeSections,
-  updateSubjectSchedule
+  updateSubjectSchedule,
+  getSubjectDirectStudents,
+  removeStudentFromSubject,
+  bulkAssignStudentsToSubject
 } from '@/services/authService';
 import Swal from 'sweetalert2';
 
@@ -433,12 +622,16 @@ const showSubjectModal = ref(false);
 const showAssignTeacherModal = ref(false);
 const showAssignSectionModal = ref(false);
 const showScheduleModal = ref(false);
+const showAssignStudentModal = ref(false);
+const showViewStudentsModal = ref(false);
 const currentSubject = ref({ name: '', code: '', description: '' });
 const selectedSubject = ref(null);
 const selectedTeacherId = ref('');
 const selectedGrade = ref('');
 const selectedSection = ref('');
+const selectedStudentIds = ref([]);
 const teachers = ref([]);
+const students = ref([]);
 const availableSections = ref([]);
 const newSchedule = ref({
   scheduleType: '',
@@ -449,6 +642,11 @@ const newSchedule = ref({
   startTime: '',
   endTime: ''
 });
+const studentSearchQuery = ref('');
+const assignedStudentSearchQuery = ref('');
+const gradeFilter = ref('');
+const sectionFilter = ref('');
+// const selectedStudentId = ref(''); // Remove this line
 
 const daysOfWeek = [
   'MONDAY',
@@ -477,6 +675,98 @@ const availableTeachers = computed(() => {
   return teachers.value.filter(teacher => !assignedTeacherIds.includes(teacher.id));
 });
 
+const availableStudents = computed(() => {
+  if (!selectedSubject.value) return students.value;
+  
+  // Ensure directStudents is an array before processing
+  const directStudents = selectedSubject.value.directStudents || [];
+  
+  // Extract student IDs from the directStudents array, handling different data structures
+  const assignedStudentIds = directStudents.map(studentRel => {
+    if (studentRel.student) {
+      // If student data is nested in a 'student' property
+      return studentRel.student.id;
+    } else if (studentRel.studentId) {
+      // If there's a studentId property
+      return studentRel.studentId;
+    } else {
+      // Fall back to the id property
+      return studentRel.id;
+    }
+  }).filter(id => id !== undefined);
+  
+  // Filter out students that are already assigned
+  return students.value.filter(student => !assignedStudentIds.includes(student.id));
+});
+
+const availableSectionOptions = computed(() => {
+  // Get unique sections from all students
+  const uniqueSections = new Set();
+  
+  if (students.value && students.value.length > 0) {
+    students.value.forEach(student => {
+      if (student.section) {
+        uniqueSections.add(student.section);
+      }
+    });
+  }
+  
+  return Array.from(uniqueSections).sort();
+});
+
+const filteredAvailableStudents = computed(() => {
+  if (!availableStudents.value) return [];
+  
+  return availableStudents.value.filter(student => {
+    // Apply search filter
+    const query = studentSearchQuery.value.toLowerCase();
+    const matchesSearch = !query || 
+      student.firstName.toLowerCase().includes(query) || 
+      student.lastName.toLowerCase().includes(query) || 
+      (student.lrn && student.lrn.toLowerCase().includes(query)) ||
+      `${student.gradeLevel}-${student.section}`.toLowerCase().includes(query);
+    
+    // Apply grade filter
+    const matchesGrade = !gradeFilter.value || 
+      student.gradeLevel === parseInt(gradeFilter.value);
+    
+    // Apply section filter
+    const matchesSection = !sectionFilter.value || 
+      student.section === sectionFilter.value;
+    
+    // Return true only if all filters match
+    return matchesSearch && matchesGrade && matchesSection;
+  });
+});
+
+const filteredAssignedStudents = computed(() => {
+  if (!selectedSubject.value || !selectedSubject.value.directStudents) return [];
+  
+  const query = assignedStudentSearchQuery.value.toLowerCase();
+  const directStudents = selectedSubject.value.directStudents;
+  
+  if (!query) return directStudents;
+  
+  return directStudents.filter(studentRel => {
+    // Get the student object, which might be nested in different ways
+    const student = studentRel.student || studentRel;
+    
+    // Extract student properties, with fallbacks
+    const firstName = student.firstName || '';
+    const lastName = student.lastName || '';
+    const lrn = student.lrn || '';
+    const gradeLevel = student.gradeLevel || '';
+    const section = student.section || '';
+    const gradeSection = `${gradeLevel}-${section}`;
+    
+    // Perform the search
+    return firstName.toLowerCase().includes(query) || 
+           lastName.toLowerCase().includes(query) || 
+           lrn.toLowerCase().includes(query) ||
+           gradeSection.toLowerCase().includes(query);
+  });
+});
+
 const availableEndDays = computed(() => {
   if (!newSchedule.value.startDay) return [];
   const startIndex = daysOfWeek.indexOf(newSchedule.value.startDay);
@@ -487,7 +777,29 @@ const availableEndDays = computed(() => {
 const loadSubjects = async () => {
   try {
     loading.value = true;
-    subjects.value = await getAllSubjects();
+    const allSubjects = await getAllSubjects();
+    
+    // For each subject, fetch directly assigned students
+    for (const subject of allSubjects) {
+      try {
+        const response = await getSubjectDirectStudents(subject.id);
+        console.log(`Direct students for subject ${subject.id}:`, response);
+        
+        // Extract the actual data from the API response
+        const directStudents = response.data || [];
+        
+        // Ensure directStudents is properly initialized as an array
+        subject.directStudents = Array.isArray(directStudents) ? directStudents : [];
+        
+        // Log the processed data for debugging
+        console.log(`Processed direct students for subject ${subject.id}:`, subject.directStudents);
+      } catch (error) {
+        console.error(`Error fetching direct students for subject ${subject.id}:`, error);
+        subject.directStudents = [];
+      }
+    }
+    
+    subjects.value = allSubjects;
   } catch (error) {
     Swal.fire({
       icon: 'error',
@@ -504,6 +816,14 @@ const loadTeachers = async () => {
     teachers.value = await fetchTeachers();
   } catch (error) {
     console.error('Error loading teachers:', error);
+  }
+};
+
+const loadStudents = async () => {
+  try {
+    students.value = await fetchStudents();
+  } catch (error) {
+    console.error('Error loading students:', error);
   }
 };
 
@@ -552,6 +872,42 @@ const openScheduleModal = (subject) => {
     endTime: ''
   };
   showScheduleModal.value = true;
+};
+
+const openAssignStudentModal = (subject) => {
+  selectedSubject.value = subject;
+  selectedStudentIds.value = [];
+  studentSearchQuery.value = '';
+  gradeFilter.value = '';
+  sectionFilter.value = '';
+  showAssignStudentModal.value = true;
+};
+
+const openViewStudentsModal = (subject) => {
+  selectedSubject.value = subject;
+  assignedStudentSearchQuery.value = '';
+  showViewStudentsModal.value = true;
+};
+
+const toggleStudentSelection = (studentId) => {
+  const index = selectedStudentIds.value.indexOf(studentId);
+  if (index === -1) {
+    selectedStudentIds.value.push(studentId);
+  } else {
+    selectedStudentIds.value.splice(index, 1);
+  }
+};
+
+const selectAllFilteredStudents = () => {
+  filteredAvailableStudents.value.forEach(student => {
+    if (!selectedStudentIds.value.includes(student.id)) {
+      selectedStudentIds.value.push(student.id);
+    }
+  });
+};
+
+const deselectAllStudents = () => {
+  selectedStudentIds.value = [];
 };
 
 const saveSubject = async () => {
@@ -710,6 +1066,83 @@ const removeSection = async (subjectId, grade, section) => {
   }
 };
 
+const bulkAssignStudents = async () => {
+  try {
+    if (selectedStudentIds.value.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Students Selected',
+        text: 'Please select at least one student to assign'
+      });
+      return;
+    }
+    
+    console.log('Bulk assigning students to subject:', { 
+      studentIds: selectedStudentIds.value, 
+      subjectId: selectedSubject.value.id 
+    });
+    
+    await bulkAssignStudentsToSubject(selectedStudentIds.value, selectedSubject.value.id);
+    await loadSubjects();
+    showAssignStudentModal.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Success',
+      text: `${selectedStudentIds.value.length} student(s) assigned successfully`,
+      timer: 1500
+    });
+  } catch (error) {
+    console.error('Error bulk assigning students to subject:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message || 'Failed to assign students to subject'
+    });
+  }
+};
+
+const removeStudentFromSubjectHandler = async (studentId, subjectId) => {
+  try {
+    console.log('Attempting to remove student from subject:', { studentId, subjectId });
+    
+    const result = await Swal.fire({
+      title: 'Remove Student?',
+      text: "Are you sure you want to remove this student from the subject?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, remove'
+    });
+
+    if (result.isConfirmed) {
+      await removeStudentFromSubject(studentId, subjectId);
+      console.log('Student removed successfully');
+      
+      // Reload the subject data to refresh the UI
+      await loadSubjects();
+      
+      // If we're in the view students modal, we need to refresh the selected subject
+      if (showViewStudentsModal.value && selectedSubject.value) {
+        const updatedSubject = subjects.value.find(s => s.id === selectedSubject.value.id);
+        if (updatedSubject) {
+          selectedSubject.value = updatedSubject;
+        }
+      }
+      
+      Swal.fire('Removed!', 'Student has been removed from the subject.', 'success');
+    }
+  } catch (error) {
+    console.error('Error removing student from subject:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: error.message || 'Failed to remove student from subject'
+    });
+  }
+};
+
 const updateSchedule = async () => {
   try {
     // Validate time range
@@ -796,7 +1229,8 @@ const formatScheduleType = (type) => {
 onMounted(async () => {
   await Promise.all([
     loadSubjects(),
-    loadTeachers()
+    loadTeachers(),
+    loadStudents()
   ]);
 });
 </script>
@@ -1011,23 +1445,196 @@ onMounted(async () => {
 
 .subjects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .subjects-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
 }
 
 .subject-card {
-  background: white;
-  border-radius: 16px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
   overflow: hidden;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s;
-  display: flex;
-  flex-direction: column;
+  transition: all 0.3s ease;
 }
 
-.subject-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+/* Make the card more compact on mobile */
+@media (max-width: 768px) {
+  .subject-card {
+    margin-bottom: 12px;
+  }
+  
+  .card-header {
+    padding: 8px 12px;
+  }
+  
+  .card-header h3 {
+    margin-bottom: 5px;
+    font-size: 1.1rem;
+  }
+  
+  .card-body {
+    padding: 10px 12px;
+  }
+  
+  .info-item {
+    margin-bottom: 8px;
+  }
+  
+  .info-content {
+    margin-left: 8px;
+  }
+  
+  .info-label {
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+  }
+}
+
+/* Even more compact for very small screens */
+@media (max-width: 480px) {
+  .subject-card {
+    margin-bottom: 10px;
+  }
+  
+  .card-header h3 {
+    font-size: 1rem;
+  }
+  
+  .card-body {
+    padding: 8px 10px;
+  }
+  
+  .info-item {
+    margin-bottom: 6px;
+  }
+  
+  .info-label {
+    font-size: 0.8rem;
+  }
+  
+  .section-item, .student-item, .teacher-item {
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    border-radius: 10px;
+  }
+}
+
+.card-header {
+  background-color: #19a463;
+  padding: 15px 20px;
+  border-bottom: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  color: white;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.header-icons {
+  display: flex;
+  gap: 15px;
+}
+
+.header-icon-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.header-icon-item .material-icons {
+  font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    padding: 12px 15px;
+  }
+  
+  .card-header h3 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+  
+  .header-icons {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .card-header {
+    padding: 10px 12px;
+  }
+  
+  .card-header h3 {
+    font-size: 1.2rem;
+    margin-bottom: 6px;
+  }
+  
+  .header-icons {
+    gap: 10px;
+  }
+  
+  .header-icon-item {
+    font-size: 0.8rem;
+  }
+  
+  .header-icon-item .material-icons {
+    font-size: 1rem;
+  }
+}
+
+.subject-code {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.subject-card {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+@media (max-width: 768px) {
+  .card-header {
+    padding: 10px 15px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .card-header h3 {
+    margin-bottom: 8px;
+    font-size: 1.2rem;
+  }
+}
+
+.card-body {
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .card-body {
+    padding: 15px;
+  }
 }
 
 .subject-header {
@@ -1149,41 +1756,76 @@ onMounted(async () => {
 
 .info-item {
   display: flex;
+  margin-bottom: 15px;
   align-items: flex-start;
-  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .info-item {
+    margin-bottom: 12px;
+  }
 }
 
 .info-content {
+  margin-left: 15px;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .info-content {
+    margin-left: 10px;
+  }
 }
 
 .info-label {
-  font-size: 0.8rem;
-  color: #9e9e9e;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin-bottom: 5px;
+  display: block;
+  color: #19a463;
+}
+
+@media (max-width: 768px) {
+  .info-label {
+    font-size: 0.9rem;
+    margin-bottom: 3px;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1.1rem;
+  }
 }
 
 .teachers-list,
-.sections-list {
+.sections-list,
+.students-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
-.teacher-item,
-.section-item {
-  background: #f5f5f5;
-  padding: 4px 12px;
-  border-radius: 20px;
+@media (max-width: 768px) {
+  .sections-list, .students-list, .teachers-list {
+    gap: 5px;
+  }
+}
+
+.section-item, .student-item, .teacher-item {
+  background-color: #e8f5e9;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
+  color: #2e7d32;
+}
+
+@media (max-width: 768px) {
+  .section-item, .student-item, .teacher-item {
+    padding: 3px 8px;
+    font-size: 0.8rem;
+    border-radius: 12px;
+  }
 }
 
 .assign-btn,
@@ -1250,43 +1892,75 @@ onMounted(async () => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Modal Styles */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   z-index: 1000;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .modal-content {
-  background: white;
+  background-color: #fff;
   border-radius: 12px;
-  width: 90%;
-  max-width: 500px;
+  width: 500px;
+  max-width: 90%;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.wider-modal {
+  width: 700px;
+}
+
+@media (max-width: 768px) {
+  .modal-content, .wider-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px;
+  }
+  
+  .modal-overlay {
+    padding: 10px;
+  }
 }
 
 .modal-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 10px 15px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 1.5rem;
   cursor: pointer;
-  color: #666;
+  color: #6c757d;
+}
+
+.close-btn:hover {
+  color: #343a40;
 }
 
 .subject-form,
@@ -1296,24 +1970,45 @@ onMounted(async () => {
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: 15px;
+  padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .form-group {
+    margin-bottom: 10px;
+    padding: 0 15px;
+  }
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 5px;
   color: #333;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .form-label {
+    font-size: 0.9rem;
+  }
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
   font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .form-input {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
 }
 
 .form-group textarea {
@@ -1324,8 +2019,15 @@ onMounted(async () => {
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    padding: 10px 15px;
+  }
 }
 
 .cancel-btn,
@@ -1359,92 +2061,318 @@ onMounted(async () => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Loading State */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
+.save-btn:disabled {
+  background-color: #b0c4de;
+  cursor: not-allowed;
 }
 
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #2196F3;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.search-input {
+  width: 100%;
+  padding: 10px 15px 10px 35px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1rem;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive Design */
 @media (max-width: 768px) {
-  .manage-subjects {
-    padding: 1rem;
-  }
-  
-  .subjects-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .add-btn {
-    width: 100%;
-    justify-content: center;
+  .search-input {
+    padding: 8px 15px 8px 30px;
+    font-size: 0.9rem;
   }
 }
 
-/* Add this to ensure uppercase input */
-.uppercase-input {
-  text-transform: uppercase;
+.search-filter {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
 }
 
-.uppercase-input::placeholder {
-  text-transform: none;
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 1.2rem;
 }
 
-.form-row {
+@media (max-width: 768px) {
+  .search-icon {
+    font-size: 1rem;
+    left: 8px;
+  }
+}
+
+.filters-container {
   display: flex;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.form-row .form-group {
-  flex: 1;
+@media (max-width: 768px) {
+  .filters-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 
-.days-checkboxes {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+.filter-options {
+  display: flex;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.day-checkbox {
+@media (max-width: 768px) {
+  .filter-options {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.filter-option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .filter-option {
+    flex: 1;
+  }
+}
+
+.filter-select {
+  padding: 0.75rem;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 8px;
+  font-size: 1rem;
+  width: 150px;
+}
+
+@media (max-width: 768px) {
+  .filter-select {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    width: 100%;
+  }
+}
+
+.students-selection-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .students-selection-list {
+    max-height: 250px;
+  }
+}
+
+.student-selection-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
 }
 
-.day-checkbox input[type="checkbox"] {
-  width: auto;
-  margin: 0;
+@media (max-width: 768px) {
+  .student-selection-item {
+    padding: 8px 10px;
+  }
 }
 
-.day-checkbox:hover {
-  background: #f5f5f5;
+.student-selection-item:last-child {
+  border-bottom: none;
+}
+
+.student-selection-item:hover {
+  background-color: #f8f9fa;
+}
+
+.student-selection-item.selected {
+  background-color: #e7f5ff;
+}
+
+.student-info {
+  flex: 1;
+}
+
+.student-name {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .student-name {
+    font-size: 0.9rem;
+  }
+}
+
+.student-details {
+  font-size: 0.85rem;
+  color: #6c757d;
+}
+
+@media (max-width: 768px) {
+  .student-details {
+    font-size: 0.75rem;
+  }
+}
+
+.selection-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .selection-header {
+    margin-bottom: 8px;
+  }
+}
+
+.selection-actions {
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .selection-actions {
+    gap: 5px;
+  }
+}
+
+.select-btn {
+  background-color: transparent;
+  border: 1px solid #007bff;
+  color: #007bff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .select-btn {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+}
+
+.select-btn:hover {
+  background-color: #f0f7ff;
+}
+
+.selected-count {
+  text-align: center;
+  padding: 10px;
+  font-weight: 500;
+  color: #495057;
+}
+
+@media (max-width: 768px) {
+  .selected-count {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+}
+
+.student-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 768px) {
+  .student-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+}
+
+.student-count {
+  font-weight: 500;
+  color: #2e7d32;
+}
+
+.view-students-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #e9ecef;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #495057;
+  transition: background-color 0.2s;
+}
+
+.view-students-btn:hover {
+  background-color: #dee2e6;
+}
+
+.view-students-btn .material-icons {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .view-students-btn {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    border-radius: 12px;
+  }
+  
+  .view-students-btn .material-icons {
+    font-size: 14px;
+  }
+}
+
+.view-students-modal .students-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+  .view-students-modal .students-list {
+    max-height: 300px;
+  }
+}
+
+.empty-list {
+  color: #6c757d;
+  font-style: italic;
+  padding: 5px 0;
+}
+
+.remove-student-btn {
+  background-color: transparent;
+  color: #e57373;
+  border: 1px solid #e57373;
+  border-radius: 15px;
+  padding: 2px 8px;
+  margin-left: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.remove-student-btn:hover {
+  background-color: #ffebee;
+}
+
+@media (max-width: 768px) {
+  .remove-student-btn {
+    padding: 1px 6px;
+  }
 }
 
 .schedule-info {
@@ -1544,5 +2472,219 @@ onMounted(async () => {
 .remove-btn:hover {
   background: #ffebee;
   color: #f44336;
+}
+
+.remove-btn .material-icons {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .remove-btn .material-icons {
+    font-size: 14px;
+  }
+}
+
+.empty-list {
+  color: #888;
+  font-style: italic;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.wider-modal {
+  width: 700px;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.students-list-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+@media (max-width: 768px) {
+  .students-list-container {
+    max-height: 300px;
+    padding: 0 15px;
+  }
+}
+
+.assigned-students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.empty-list-message {
+  padding: 20px;
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .empty-list-message {
+    padding: 15px;
+    font-size: 0.9rem;
+  }
+}
+
+.modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .modal-footer {
+    padding: 10px 15px;
+  }
+}
+
+.btn-text {
+  display: inline-block;
+  margin-left: 3px;
+}
+
+@media (max-width: 480px) {
+  .btn-text {
+    display: none;
+  }
+  
+  .remove-student-btn {
+    padding: 3px;
+    border-radius: 50%;
+  }
+}
+
+/* General responsive improvements */
+.manage-subjects {
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .manage-subjects {
+    padding: 10px;
+  }
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    margin-bottom: 15px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Restore View All button design */
+.view-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #e9ecef;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #495057;
+  transition: background-color 0.2s;
+}
+
+.view-all-btn:hover {
+  background-color: #dee2e6;
+}
+
+.view-all-btn .material-icons {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .view-all-btn {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    border-radius: 12px;
+  }
+  
+  .view-all-btn .material-icons {
+    font-size: 14px;
+  }
+}
+
+.assign-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #e8f5e9;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #2e7d32;
+  transition: background-color 0.2s;
+  margin-top: 5px;
+}
+
+.assign-btn:hover {
+  background-color: #c8e6c9;
+}
+
+.assign-btn .material-icons {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .assign-btn {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    border-radius: 12px;
+  }
+  
+  .assign-btn .material-icons {
+    font-size: 14px;
+  }
+}
+
+.student-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .student-summary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .section-item, .student-item, .teacher-item, .view-all-btn, .assign-btn {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+  }
+  
+  .view-all-btn .material-icons, .assign-btn .material-icons {
+    font-size: 12px;
+  }
+}
+
+.info-item .material-icons-round {
+  color: #19a463;
+  font-size: 1.2rem;
 }
 </style>

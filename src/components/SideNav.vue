@@ -114,7 +114,7 @@ const navigationItems = {
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },
     { name: 'Exam Monitor', path: '/admin-exam-monitor', icon: 'admin_panel_settings' },
-    { name: 'Manage Subjects', path: '/manage-subjects', icon: 'subject' },
+    { name: 'Manage Subject', path: '/manage-subjects', icon: 'subject' },
     // {name:'Game', path:'/game', icon:'controller'},
     { name: 'Profile', path: '/admin-profile', icon: 'person' },
     { name: 'Settings', path: '/settings', icon: 'settings' },
@@ -125,10 +125,10 @@ const navigationItems = {
   { name: 'Classes', path: '/teacher-subjects', icon: 'subject' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
-    { name: 'Manage Exams', path: '/manage-exams', icon: 'bar_chart' },
+    { name: 'Manage Exam', path: '/manage-exams', icon: 'bar_chart' },
     { name: 'Question Bank', path: '/question-bank', icon: 'question_answer' },
     { name: 'Create Survey', path: '/create-survey', icon: 'addchart' },
-    { name: 'Manage Surveys', path: '/my-surveys', icon: 'assignment' },
+    { name: 'Manage Survey', path: '/my-surveys', icon: 'assignment' },
     
     // {name:'Game', path:'/game', icon:''},
     { name: 'Profile', path: '/teacher-profile', icon: 'person' },
@@ -158,7 +158,7 @@ const handleLogout = async () => {
       showCancelButton: true,
       confirmButtonColor: '#f1416c',
       cancelButtonColor: '#b5b5c3',
-      confirmButtonText: 'Yes, logout',
+      confirmButtonText: 'logout',
       cancelButtonText: 'Cancel',
       reverseButtons: true
     });

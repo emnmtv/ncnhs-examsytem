@@ -853,6 +853,10 @@ const removeFile = async (fileId) => {
   cursor: pointer;
   transition: all 0.3s;
   border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .file-select-btn:hover, .submit-btn:hover, .resubmit-btn:hover, .edit-btn:hover {
@@ -868,6 +872,10 @@ const removeFile = async (fileId) => {
   padding: 12px;
   transition: all 0.3s;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .file-item:hover {
@@ -878,21 +886,24 @@ const removeFile = async (fileId) => {
 /* Responsive Design */
 @media (max-width: 768px) {
   .task-details {
-    padding: 10px;
+    padding: 12px;
   }
 
   .header-content h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
+    margin: 0.75rem 0;
   }
 
   .header-background {
     font-size: 4rem;
-    right: 0.3rem;
+    right: 0.5rem;
+    top: 40%;
   }
 
   .task-info, .task-section, .your-work {
     padding: 16px;
     border-radius: 12px;
+    margin-bottom: 16px;
   }
 
   .info-row {
@@ -901,32 +912,105 @@ const removeFile = async (fileId) => {
     gap: 8px;
   }
 
+  .info-row .due-date {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+
   .file-actions {
-    flex-direction: column;
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .file-select-btn, .clear-files-btn {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  .file-item {
+    padding: 10px;
     gap: 8px;
   }
 
-  .file-select-btn, .submit-btn, .resubmit-btn {
-    width: 100%;
-    padding: 8px 16px;
+  .file-name {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .view-btn, .download-btn, .remove-btn {
+    padding: 6px;
+  }
+
+  .view-btn {
+    padding: 4px 6px;
+    font-size: 0.8rem;
+  }
+
+  .view-btn .material-icons, 
+  .download-btn .material-icons, 
+  .remove-btn .material-icons {
+    font-size: 18px;
   }
 }
 
 @media (max-width: 480px) {
+  .task-details {
+    padding: 8px;
+  }
+
   .header-content h1 {
     font-size: 1.5rem;
   }
 
+  .header-background {
+    font-size: 3rem;
+    right: 0.3rem;
+  }
+
+  .task-info, .task-section, .your-work {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
   .file-item {
     padding: 8px;
+    gap: 6px;
+  }
+
+  .file-icon {
+    width: 20px;
+    height: 20px;
   }
 
   .file-name {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
   }
 
-  .view-btn, .download-btn {
-    padding: 4px;
+  .view-btn {
+    padding: 3px 5px;
+    font-size: 0.75rem;
+  }
+
+  .view-btn .material-icons {
+    font-size: 16px;
+  }
+
+  .file-actions {
+    flex-direction: column;
+  }
+
+  .file-select-btn, .clear-files-btn {
+    width: 100%;
+  }
+
+  .submit-btn, .resubmit-btn {
+    padding: 10px;
   }
 }
 
@@ -969,6 +1053,8 @@ const removeFile = async (fileId) => {
   display: flex;
   align-items: center;
   margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .info-label {
@@ -1012,24 +1098,20 @@ const removeFile = async (fileId) => {
   margin: 10px 0;
 }
 
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  background: #f8f9fa;
-  border-radius: 4px;
-}
-
 .file-icon {
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
 }
 
 .file-name {
   flex: 1;
   color: #202124;
   font-size: 14px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .check-icon {
@@ -1053,7 +1135,7 @@ const removeFile = async (fileId) => {
 }
 
 .submit-btn {
-  display: block;
+  display: flex;
   width: 100%;
   margin-top: 20px;
   background: #1a73e8;
@@ -1063,6 +1145,8 @@ const removeFile = async (fileId) => {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Add these new styles for the attachment section */
@@ -1077,6 +1161,7 @@ const removeFile = async (fileId) => {
   padding: 4px 8px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  flex-shrink: 0;
 }
 
 .view-btn:hover {
@@ -1089,6 +1174,7 @@ const removeFile = async (fileId) => {
   padding: 4px;
   border-radius: 50%;
   transition: background-color 0.2s;
+  flex-shrink: 0;
 }
 
 .download-btn:hover {
@@ -1133,9 +1219,14 @@ const removeFile = async (fileId) => {
   color: #5f6368;
   background: none;
   border: none;
-  padding: 4px 8px;
+  padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 10px;
 }
 
 .cancel-btn:hover {
@@ -1145,8 +1236,13 @@ const removeFile = async (fileId) => {
 .remove-btn {
   background: none;
   border: none;
-  padding: 0;
+  padding: 6px;
   cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .remove-btn:hover {
@@ -1161,19 +1257,25 @@ const removeFile = async (fileId) => {
 
 .attach-btn {
   background: none;
-  border: none;
+  border: 1px solid #1a73e8;
   color: #1a73e8;
   font-weight: 500;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
 }
 
 .attach-btn:hover {
-  text-decoration: underline;
+  background-color: rgba(26, 115, 232, 0.05);
 }
 
 .resubmit-btn {
-  display: block;
+  display: flex;
   width: 100%;
   margin-top: 20px;
   background: #1a73e8;
@@ -1183,6 +1285,8 @@ const removeFile = async (fileId) => {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
+  justify-content: center;
+  align-items: center;
 }
 
 .files-list {
@@ -1205,6 +1309,7 @@ const removeFile = async (fileId) => {
   padding: 8px;
   background: #f8f9fa;
   border-radius: 4px;
+  flex-wrap: wrap;
 }
 
 .relative-date {
@@ -1281,6 +1386,7 @@ const removeFile = async (fileId) => {
   color: #5f6368;
   cursor: pointer;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .remove-file:hover {
@@ -1477,6 +1583,7 @@ const removeFile = async (fileId) => {
   display: flex;
   align-items: center;
   gap: 15px;
+  overflow: hidden;
 }
 
 .header-left h3 {
@@ -1506,6 +1613,7 @@ const removeFile = async (fileId) => {
   color: white;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .back-btn:hover, .close-fullscreen-btn:hover {
@@ -1576,5 +1684,126 @@ const removeFile = async (fileId) => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Additional mobile optimizations */
+@media (max-width: 768px) {
+  .preview-content {
+    width: 95%;
+    max-height: 95vh;
+  }
+  
+  .preview-header {
+    padding: 14px 16px;
+  }
+  
+  .preview-header h3 {
+    font-size: 1rem;
+  }
+  
+  .preview-body {
+    padding: 15px;
+  }
+  
+  .preview-fallback {
+    padding: 30px 15px;
+  }
+  
+  .large-file-icon {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .download-file-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .fullscreen-header {
+    padding: 10px 12px;
+  }
+  
+  .header-left h3 {
+    font-size: 0.95rem;
+    max-width: 50vw;
+  }
+  
+  .back-btn, .close-fullscreen-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .download-action {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .download-action .material-icons {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .preview-content {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+  
+  .preview-header {
+    padding: 12px;
+  }
+  
+  .preview-body {
+    padding: 10px;
+  }
+  
+  .preview-fallback {
+    padding: 20px 10px;
+  }
+  
+  .large-file-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .download-file-btn {
+    width: 100%;
+    padding: 10px;
+    justify-content: center;
+  }
+  
+  .fullscreen-header {
+    padding: 8px 10px;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+  
+  .header-left h3 {
+    font-size: 0.9rem;
+    max-width: 40vw;
+  }
+  
+  .back-btn, .close-fullscreen-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .back-btn .material-icons, 
+  .close-fullscreen-btn .material-icons {
+    font-size: 18px;
+  }
+  
+  .download-action {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .download-action .material-icons {
+    font-size: 16px;
+  }
 }
 </style>

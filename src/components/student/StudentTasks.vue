@@ -28,9 +28,11 @@
         </div>
 
         <div class="tasks">
-          <div v-for="task in subjectTasks" 
-               :key="task.id" 
-               class="task-item">
+          <router-link 
+            v-for="task in subjectTasks" 
+            :key="task.id" 
+            :to="`/student/tasks/${task.id}`"
+            class="task-item">
             <div class="task-status">
               <span class="material-icons-round" 
                     :class="getTaskStatus(task)">
@@ -68,14 +70,11 @@
             </div>
 
             <div class="task-actions">
-              <router-link 
-                :to="`/student/tasks/${task.id}`"
-                class="activity-btn"
-              >
+              <span class="activity-btn">
                 Activity
-              </router-link>
+              </span>
             </div>
-          </div>
+          </router-link>
         </div>
       </div>
     </div>
@@ -301,6 +300,9 @@ const getTimeStatusText = (task) => {
   transition: all 0.3s;
   position: relative;
   min-height: 80px; /* Add minimum height to task items */
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .task-item:hover {
@@ -421,11 +423,7 @@ const getTimeStatusText = (task) => {
   align-items: center;
   justify-content: center;
   font-size: 0.9rem;
-}
-
-.activity-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  pointer-events: none; /* Prevent clicks on the button itself */
 }
 
 /* Loading State */
@@ -642,5 +640,11 @@ const getTimeStatusText = (task) => {
 .meta-row.placeholder {
   height: 24px; /* Increase placeholder height */
   margin-bottom: 5px;
+}
+
+/* Add active state for touch feedback */
+.task-item:active {
+  background-color: #e9f5ff;
+  transform: scale(0.995);
 }
 </style>

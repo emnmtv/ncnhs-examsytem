@@ -46,7 +46,7 @@
           ></textarea>
         </div>
 
-        <div class="form-row">
+        <!-- Changed to separate form groups to prevent overlap -->
           <div class="form-group">
             <label>Due Date</label>
             <input 
@@ -65,7 +65,6 @@
               required 
               min="1"
             >
-          </div>
         </div>
 
         <!-- File Attachment -->
@@ -185,7 +184,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { 
   getTeacherAssignedSubjects, 
   createSubjectTask, 
-  getStudentsBySection 
+  getStudentsBySection,
+  getSubjectDirectStudents 
 } from '@/services/authService';
 // Import file icons
 import csvIcon from '@/assets/FileIcons/csv.png';
@@ -257,20 +257,59 @@ const loadTeacherSubjects = async () => {
   }
 };
 
-// Load students from all sections of the selected subject
+// Load students from all sections of the selected subject and directly assigned students
 const loadStudentsFromSections = async () => {
-  if (!selectedSubject.value || !selectedSubject.value.sections) return;
+  if (!selectedSubject.value) return;
   
   try {
     isLoadingStudents.value = true;
     allStudents.value = [];
     selectedStudents.value = [];
     
-    // Get students from each section
-    for (const section of selectedSubject.value.sections) {
-      const sectionStudents = await getStudentsBySection(section.grade, section.section);
-      allStudents.value = [...allStudents.value, ...sectionStudents];
+    console.log('Selected subject:', selectedSubject.value);
+    
+    // Get students from each section if sections exist
+    if (selectedSubject.value.sections && selectedSubject.value.sections.length > 0) {
+      console.log('Fetching students from sections:', selectedSubject.value.sections);
+      for (const section of selectedSubject.value.sections) {
+        const sectionStudents = await getStudentsBySection(section.grade, section.section);
+        console.log(`Found ${sectionStudents.length} students in grade ${section.grade} section ${section.section}`);
+        allStudents.value = [...allStudents.value, ...sectionStudents];
+      }
+    } else {
+      console.log('No sections found for this subject');
     }
+    
+    // Get directly assigned students
+    try {
+      console.log('Fetching directly assigned students for subject ID:', selectedSubject.value.id);
+      const directStudentsResponse = await getSubjectDirectStudents(selectedSubject.value.id);
+      console.log('Direct students response:', directStudentsResponse);
+      
+      if (directStudentsResponse && directStudentsResponse.data) {
+        // The direct students are returned in a different format
+        // Each item has a student property containing the actual student data
+        const directStudentsData = directStudentsResponse.data;
+        console.log(`Found ${directStudentsData.length} directly assigned students records`);
+        
+        // Extract the student objects from the response
+        const directStudents = directStudentsData.map(item => item.student);
+        console.log('Extracted direct students:', directStudents);
+        
+        // Add direct students to the allStudents array, avoiding duplicates
+        for (const directStudent of directStudents) {
+          if (!allStudents.value.some(student => student.id === directStudent.id)) {
+            allStudents.value.push(directStudent);
+          }
+        }
+      } else {
+        console.log('No direct students found or invalid response format');
+      }
+    } catch (error) {
+      console.error('Failed to load direct students:', error);
+    }
+    
+    console.log(`Total students found: ${allStudents.value.length}`);
     
     // Automatically select all students' LRNs
     selectedStudents.value = allStudents.value.map(student => student.lrn);
@@ -499,16 +538,21 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .header-container {
-    padding: 0rem;
-  
+  .create-task {
+    padding: 10px;
   }
+  
+  .header-container {
+    padding: 0;
+    margin-bottom: 20px;
+  }
+  
   .header-content h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
   
   .header-content h1 .material-icons {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
   
   .header-background {
@@ -520,28 +564,160 @@ onMounted(() => {
   .divider {
     margin: 1rem 0;
   }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .task-form-container {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  .task-form {
+    gap: 1rem;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+  
+  .submit-btn, .cancel-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+  
+  .file-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .file-select-btn, .clear-files-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-task {
+    padding: 5px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.5rem;
+  }
+  
+  .task-form-container {
+    padding: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .task-form {
+    gap: 0.75rem;
+  }
+  
+  .form-group {
+    gap: 0.25rem;
+  }
+  
+  label {
+    font-size: 0.9rem;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .students-list {
+    max-height: 250px;
+  }
+  
+  .student-item {
+    padding: 0.4rem;
+  }
+  
+  .student-info {
+    font-size: 0.75rem;
+  }
 }
 
 .task-form-container {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1.5rem;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
  max-width: 1200px;
   margin: 0 auto;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .task-form-container {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .task-form-container {
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .task-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .task-form {
+    gap: 0.75rem;
+  }
+  
+  .form-group {
+    gap: 0.25rem;
+    margin-bottom: 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .task-form {
   gap: 0.5rem;
+  }
+  
+  .form-group {
+    gap: 0.2rem;
+    margin-bottom: 0.25rem;
+  }
 }
 
 .form-row {
@@ -560,10 +736,34 @@ input[type="number"],
 input[type="datetime-local"],
 select,
 textarea {
-  padding: 0.75rem;
+  padding: 0.6rem;
   border: 1px solid #ddd;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    border-radius: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    padding: 0.4rem;
+    font-size: 0.85rem;
+    border-radius: 4px;
+  }
 }
 
 .file-input {
@@ -603,6 +803,9 @@ textarea {
   flex: 1;
   color: #202124;
   font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .remove-file {
@@ -628,7 +831,7 @@ textarea {
 }
 
 .search-box {
-  padding: 1rem;
+  padding: 0.75rem;
   border-bottom: 1px solid #ddd;
 }
 
@@ -639,11 +842,11 @@ textarea {
 .students-list {
   max-height: 300px;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .student-item {
-  padding: 0.5rem;
+  padding: 0.4rem 0.3rem;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -653,33 +856,114 @@ textarea {
 
 .checkbox-label {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  align-items: flex-start;
+  gap: 0.4rem;
   cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin-top: 0.2rem;
 }
 
 .student-info {
   color: #666;
   font-size: 0.875rem;
+  display: block;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 768px) {
+  .search-box {
+    padding: 0.5rem;
+  }
+  
+  .students-list {
+    padding: 0.5rem;
+    max-height: 250px;
+  }
+  
+  .student-item {
+    padding: 0.3rem 0.2rem;
+  }
+  
+  .checkbox-label {
+    font-size: 0.9rem;
+  }
+  
+  .student-info {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-box {
+    padding: 0.4rem;
+  }
+  
+  .students-list {
+    padding: 0.4rem;
+    max-height: 220px;
+  }
+  
+  .student-item {
+    padding: 0.25rem 0.15rem;
+  }
+  
+  .checkbox-label {
+    font-size: 0.85rem;
+    gap: 0.3rem;
+  }
+  
+  .student-info {
+    font-size: 0.75rem;
+  }
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 1rem;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 .submit-btn,
 .cancel-btn {
-  padding: 0.75rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 6px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   cursor: pointer;
   transition: all 0.3s;
+}
+
+@media (max-width: 768px) {
+  .form-actions {
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+  
+  .submit-btn,
+  .cancel-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-actions {
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+  
+  .submit-btn,
+  .cancel-btn {
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+  }
 }
 
 .submit-btn {
@@ -727,10 +1011,24 @@ textarea {
 }
 
 .select-all {
-  padding: 0.75rem;
+  padding: 0.5rem;
   border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   background-color: #f5f5f5;
+}
+
+@media (max-width: 768px) {
+  .select-all {
+    padding: 0.4rem;
+    margin-bottom: 0.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .select-all {
+    padding: 0.3rem;
+    margin-bottom: 0.2rem;
+  }
 }
 
 .file-actions {

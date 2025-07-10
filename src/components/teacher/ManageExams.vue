@@ -11,6 +11,22 @@
       <div class="header-background">EXAMS</div>
     </div>
 
+    <!-- Add tab navigation -->
+    <div class="exam-tabs">
+      <button 
+        :class="['tab-btn', { 'active': activeTab === 'active' }]" 
+        @click="switchTab('active')"
+      >
+        <i class="fas fa-clipboard-list"></i> Active Exams
+      </button>
+      <button 
+        :class="['tab-btn', { 'active': activeTab === 'archived' }]" 
+        @click="switchTab('archived')"
+      >
+        <i class="fas fa-archive"></i> Archived Exams
+      </button>
+    </div>
+
       <div class="header-actions">
         <button class="template-btn" @click="downloadTemplate">
           <i class="fas fa-file-download"></i> Download Template
@@ -46,18 +62,26 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="!exams.length" class="empty-state">
-      <span class="material-icons-round">assignment</span>
-      <p>No exams found</p>
+    <div v-else-if="!displayedExams.length" class="empty-state">
+      <span class="material-icons-round">{{ activeTab === 'active' ? 'assignment' : 'archive' }}</span>
+      <p>No {{ activeTab === 'active' ? 'active' : 'archived' }} exams found</p>
+      
+      <!-- Different messages based on active tab -->
+      <template v-if="activeTab === 'active'">
       <p class="subtitle">Create your first exam to get started</p>
       <router-link to="/create-exam" class="create-btn">
         <i class="fas fa-plus"></i> Create Exam
       </router-link>
+      </template>
+      
+      <template v-else>
+        <p class="subtitle">Archive exams to see them here</p>
+      </template>
     </div>
 
     <!-- Exams List -->
     <div v-else class="exams-grid">
-      <div v-for="exam in exams" :key="exam.id" class="exam-card" :class="exam.status">
+      <div v-for="exam in displayedExams" :key="exam.id" class="exam-card" :class="exam.status">
         <div class="exam-header">
           <div class="texture-layer"></div>
           <h2>{{ exam.examTitle }}</h2>
@@ -137,12 +161,30 @@
           </button>
 
           <button 
-            v-if="exam.status !== 'started' && !exam.scores.length"
+            v-if="activeTab === 'active' && exam.status !== 'started' && !exam.scores.length"
             @click="confirmDelete(exam)" 
             class="action-btn delete-btn"
             title="Delete exam"
           >
             <i class="fas fa-trash"></i> Delete
+          </button>
+
+          <button 
+            v-if="activeTab === 'active'"
+            @click="confirmArchive(exam)" 
+            class="action-btn archive-btn"
+            title="Archive exam"
+          >
+            <i class="fas fa-archive"></i> Archive
+          </button>
+
+          <button 
+            v-if="activeTab === 'archived'"
+            @click="confirmUnarchive(exam)" 
+            class="action-btn unarchive-btn"
+            title="Unarchive exam"
+          >
+            <i class="fas fa-box-open"></i> Unarchive
           </button>
 
           <button 
@@ -356,10 +398,13 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { 
   fetchTeacherExams, 
+  fetchArchivedTeacherExams,
+  archiveExam as archiveExamApi,
+  unarchiveExam as unarchiveExamApi,
   deleteExam, 
   startExam as startExamApi, 
   stopExam as stopExamApi,
@@ -378,6 +423,8 @@ export default {
   setup() {
     const router = useRouter();
     const exams = ref([]);
+    const archivedExams = ref([]);
+    const activeTab = ref('active');
     const loading = ref(true);
     const error = ref(null);
     const socket = ref(null);
@@ -398,14 +445,52 @@ export default {
       loadGradeSections();
     });
 
+    // Computed property for currently displayed exams based on active tab
+    const displayedExams = computed(() => {
+      if (activeTab.value === 'active') {
+        return exams.value || [];
+      } else {
+        return archivedExams.value || [];
+      }
+    });
+
+    // Switch between active and archived exams tabs
+    const switchTab = async (tab) => {
+      activeTab.value = tab;
+      if (tab === 'active') {
+        if (exams.value.length === 0) {
+          await loadExams();
+        }
+      } else if (tab === 'archived') {
+        await loadArchivedExams(); // Always reload archived exams when switching to that tab
+      }
+    };
+
     const loadExams = async () => {
       try {
         loading.value = true;
         error.value = null;
-        exams.value = await fetchTeacherExams();
+        const fetchedExams = await fetchTeacherExams();
+        exams.value = fetchedExams || [];
       } catch (err) {
         error.value = err.message || 'Failed to load exams';
         console.error('Error loading exams:', err);
+        exams.value = []; // Ensure exams is always an array
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const loadArchivedExams = async () => {
+      try {
+        loading.value = true;
+        error.value = null;
+        const fetchedExams = await fetchArchivedTeacherExams();
+        archivedExams.value = fetchedExams || [];
+      } catch (err) {
+        error.value = err.message || 'Failed to load archived exams';
+        console.error('Error loading archived exams:', err);
+        archivedExams.value = []; // Ensure archivedExams is always an array
       } finally {
         loading.value = false;
       }
@@ -774,13 +859,53 @@ export default {
       router.push(`/exam-mps/${exam.id}`);
     };
 
-    // Clean up socket listeners on component unmount
-    onUnmounted(() => {
-      if (socket.value) {
-        // No need to disconnect, just remove any listeners if needed
-        socket.value.off('examStatusUpdate');
+    const confirmArchive = async (exam) => {
+      const result = await Swal.fire({
+        title: 'Archive Exam?',
+        text: "This exam will be moved to the archives. You can restore it later.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ff9800',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, archive it!'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          await archiveExamApi(exam.id);
+          await loadExams(); // Refresh active exams
+          // Reset archived exams list to force a refresh next time the tab is opened
+          archivedExams.value = [];
+          Swal.fire('Archived!', 'The exam has been archived.', 'success');
+        } catch (error) {
+          Swal.fire('Error!', error.message, 'error');
+        }
       }
-    });
+    };
+
+    const confirmUnarchive = async (exam) => {
+      const result = await Swal.fire({
+        title: 'Unarchive Exam?',
+        text: "This exam will be moved back to active exams.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#4caf50',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, unarchive it!'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          await unarchiveExamApi(exam.id);
+          await loadArchivedExams(); // Refresh archived exams
+          // Reset active exams list to force a refresh next time the tab is opened
+          exams.value = [];
+          Swal.fire('Unarchived!', 'The exam has been unarchived.', 'success');
+        } catch (error) {
+          Swal.fire('Error!', error.message, 'error');
+      }
+      }
+    };
 
     // Computed property to filter sections based on selected grade
     const availableSectionsForGrade = computed(() => {
@@ -794,13 +919,20 @@ export default {
 
     return {
       exams,
+      archivedExams,
+      activeTab,
+      displayedExams,
       loading,
       error,
       loadExams,
+      loadArchivedExams,
+      switchTab,
       formatStatus,
       calculateAverageScore,
       editExam,
       confirmDelete,
+      confirmArchive,
+      confirmUnarchive,
       startExam,
       stopExam,
       viewResults,
@@ -881,6 +1013,51 @@ export default {
   pointer-events: none;
   overflow: hidden;
   white-space: nowrap;
+}
+
+/* Add styles for exam tabs */
+.exam-tabs {
+  display: flex;
+  margin-bottom: 25px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.tab-btn::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: transparent;
+  transition: all 0.3s;
+}
+
+.tab-btn.active {
+  color: #159750;
+}
+
+.tab-btn.active::after {
+  background: #159750;
+}
+
+.tab-btn:hover {
+  color: #159750;
 }
 
 .divider {
@@ -1301,6 +1478,24 @@ export default {
 
 .paper-btn:hover {
   background-color: #CFD8DC;
+}
+
+.archive-btn {
+  background-color: #FFF3E0;
+  color: #FF9800;
+}
+
+.archive-btn:hover {
+  background-color: #FFE0B2;
+}
+
+.unarchive-btn {
+  background-color: #E8F5E9;
+  color: #4CAF50;
+}
+
+.unarchive-btn:hover {
+  background-color: #C8E6C9;
 }
 
 /* Modal styles remain the same */

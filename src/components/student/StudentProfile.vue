@@ -3,6 +3,7 @@ import { ref, onMounted, watch, computed, onUnmounted } from 'vue';
 import { fetchUserProfile, updateProfile, getAvailableSections, getFullImageUrl, deleteProfilePicture, getProfileEditPermissions, } from '@/services/authService';
 import ProfileCard from '../shared/ProfileCard.vue';
 import Swal from 'sweetalert2';
+import QRCode from 'vue3-qrcode';
 
 const profile = ref({
   firstName: '',
@@ -14,8 +15,27 @@ const profile = ref({
   section: '',
   role: '',
   createdAt: '',
-  profilePicture: null
+  profilePicture: null,
+  id: null
 });
+
+// QR code related refs
+const showQrModal = ref(false);
+const qrCodeValue = computed(() => {
+  if (!profile.value.id) return '';
+  // Create a value with student ID and current timestamp for added security
+  const timestamp = new Date().toISOString();
+  const data = {
+    studentId: profile.value.id,
+    firstName: profile.value.firstName,
+    lastName: profile.value.lastName,
+    timestamp: timestamp
+  };
+  return JSON.stringify(data);
+});
+
+// QR code update timer for security
+let qrUpdateTimer = null;
 
 // Add profile edit permissions
 const editPermissions = ref({
@@ -67,6 +87,14 @@ const selectedCameraId = ref('');
 onMounted(async () => {
   await loadProfile();
   await loadProfileEditPermissions();
+  
+  // Set up QR code refresh timer for security
+  qrUpdateTimer = setInterval(() => {
+    if (showQrModal.value) {
+      // Force QR code to regenerate with new timestamp
+      profile.value = { ...profile.value };
+    }
+  }, 60000); // Update every minute
 });
 
 const loadProfile = async () => {
@@ -692,7 +720,29 @@ const changeCamera = async (cameraId) => {
 // Clean up camera on component unmount
 onUnmounted(() => {
   closeCamera();
+  
+  // Clear the QR code update timer
+  if (qrUpdateTimer) {
+    clearInterval(qrUpdateTimer);
+  }
 });
+
+// Toggle QR modal
+const toggleQrModal = () => {
+  showQrModal.value = !showQrModal.value;
+};
+
+// Function to download QR code as image
+const downloadQrCode = () => {
+  const canvas = document.querySelector('.qr-modal-content canvas');
+  if (!canvas) return;
+  
+  const link = document.createElement('a');
+  link.download = `attendance-qr-${profile.value.lastName}-${profile.value.firstName}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};
+
 </script>
 
 <template>
@@ -706,6 +756,48 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="header-background">PROFILE</div>
+    </div>
+    
+    <!-- QR Code Button - Only for student role -->
+    <div v-if="profile.role === 'student' && !loading" class="qr-code-button-container">
+      <button @click="toggleQrModal" class="qr-code-button">
+        <span class="material-icons-round">qr_code_2</span>
+        Show Attendance QR Code
+      </button>
+    </div>
+    
+    <!-- QR Code Modal -->
+    <div v-if="showQrModal" class="qr-modal">
+      <div class="qr-modal-content">
+        <div class="qr-modal-header">
+          <h2>Your Attendance QR Code</h2>
+          <button @click="toggleQrModal" class="close-modal">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+        <div class="qr-code-wrapper">
+          <QRCode 
+            :value="qrCodeValue" 
+            :size="250" 
+            level="H" 
+            render-as="canvas"
+            :margin="2"
+            class="qr-code"
+          />
+          <div class="qr-info">
+            <p class="qr-name">{{ profile.firstName }} {{ profile.lastName }}</p>
+            <p class="qr-details">Grade {{ profile.gradeLevel }} - {{ profile.section }}</p>
+            <p class="qr-instruction">Show this QR code to your teacher to mark your attendance</p>
+            <p class="qr-security">QR code refreshes every minute for security</p>
+          </div>
+        </div>
+        <div class="qr-actions">
+          <button @click="downloadQrCode" class="download-btn">
+            <span class="material-icons-round">download</span>
+            Download QR Code
+          </button>
+        </div>
+      </div>
     </div>
     
     <div v-if="loading" class="loading-state">
@@ -1691,5 +1783,188 @@ onUnmounted(() => {
   color: #f44336;
   font-style: italic;
   margin-left: 0.5rem;
+}
+
+/* QR Code Button Styles */
+.qr-code-button-container {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.qr-code-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.qr-code-button:hover {
+  background: #388E3C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* QR Modal Styles */
+.qr-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.qr-modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 90%;
+  width: 500px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.qr-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.qr-modal-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.close-modal:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.qr-code-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f5f5f5;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.qr-code {
+  border: 10px solid white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.qr-info {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.qr-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 0.25rem;
+}
+
+.qr-details {
+  font-size: 1.1rem;
+  color: #666;
+  margin: 0 0 1rem;
+}
+
+.qr-instruction {
+  font-size: 0.9rem;
+  color: #4CAF50;
+  margin: 0 0 0.5rem;
+}
+
+.qr-security {
+  font-size: 0.8rem;
+  color: #f44336;
+  font-style: italic;
+}
+
+.qr-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.download-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+  background: #388E3C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+  .qr-modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+  
+  .qr-code-wrapper {
+    padding: 1rem;
+  }
+  
+  .qr-code {
+    max-width: 200px;
+    height: auto;
+  }
+  
+  .qr-name {
+    font-size: 1.2rem;
+  }
+  
+  .qr-details {
+    font-size: 1rem;
+  }
+  
+  .qr-code-button-container {
+    justify-content: center;
+  }
 }
 </style>
