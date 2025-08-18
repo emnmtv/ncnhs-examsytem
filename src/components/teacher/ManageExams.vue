@@ -379,6 +379,66 @@
                 </div>
               </div>
             </div>
+
+            <!-- Specific Students Access -->
+            <div class="section-list-card">
+              <div class="list-header">
+                <h4>
+                  <span class="material-icons-round">person_add</span>
+                  Specific Student Access
+                </h4>
+              </div>
+
+              <!-- Search input -->
+              <div class="form-row">
+                <div class="form-group" style="flex:2;">
+                  <label for="studentSearchInput">Search students (name or LRN)</label>
+                  <input 
+                    id="studentSearchInput"
+                    v-model="studentSearch" 
+                    @input="searchStudents" 
+                    class="form-select" 
+                    placeholder="Type to search..." 
+                  />
+                </div>
+              </div>
+
+              <!-- Search results -->
+              <div v-if="studentSearch && studentSearchResults.length" class="section-list" style="max-height:200px;">
+                <div v-for="student in studentSearchResults" :key="student.id" class="section-item">
+                  <div class="section-info">
+                    <span class="section-grade">{{ student.firstName }} {{ student.lastName }}</span>
+                    <span class="section-name">LRN: {{ student.lrn || 'N/A' }}</span>
+                    <span class="section-name">Grade {{ student.gradeLevel }} - {{ student.section }}</span>
+                  </div>
+                  <button @click="addSpecificStudent(student)" class="add-section-btn" style="background:#2196F3">Add</button>
+                </div>
+              </div>
+
+              <!-- Selected specific students -->
+              <div class="section-list" v-if="userAccessList.length">
+                <div v-for="(u, idx) in userAccessList" :key="u.userId" class="section-item">
+                  <div class="section-info">
+                    <span class="section-grade">{{ u.name || ('User #' + u.userId) }}</span>
+                    <span class="section-name">LRN: {{ u.lrn || 'N/A' }}</span>
+                  </div>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <label class="switch">
+                      <input type="checkbox" :checked="u.isEnabled" @change="toggleSpecificStudent(idx)" />
+                      <span class="slider round"></span>
+                    </label>
+                    <button @click="removeSpecificStudent(idx)" class="remove-section-btn">
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-sections">
+                <span class="material-icons-round">info</span>
+                <p>No specific students added</p>
+                <p class="empty-hint">Use the search box above to add specific students.</p>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -411,7 +471,9 @@ import {
   createExam,
   getAllGradeSections,
   setExamAccess,
-  getExamAccess
+  getExamAccess,
+  setExamUserAccess,
+  fetchStudents
 } from '../../services/authService';
 import Swal from 'sweetalert2';
 import socketManager from '@/utils/socketManager';
@@ -436,6 +498,11 @@ export default {
     const accessSections = ref([]);
     const availableGrades = ref([]);
     const availableSections = ref([]);
+    // Specific user access list
+    const userAccessList = ref([]);
+    const studentSearch = ref('');
+    const studentSearchResults = ref([]);
+    const isSearchingStudents = ref(false);
     const isClosing = ref(false);
 
     // Initialize socket connection
@@ -677,6 +744,7 @@ export default {
       newAccessGrade.value = '';
       newAccessSection.value = '';
       accessSections.value = [];
+      userAccessList.value = [];
       
       // Load grade sections if not already loaded
       if (availableGrades.value.length === 0) {
@@ -699,6 +767,7 @@ export default {
       if (!restrictAccess.value) {
         // When switching to open access, clear the sections list
         accessSections.value = [];
+        userAccessList.value = [];
       }
     };
 
@@ -739,11 +808,63 @@ export default {
       accessSections.value.splice(index, 1);
     };
 
+    // Specific student search and management
+    const searchStudents = async () => {
+      const q = studentSearch.value.trim().toLowerCase();
+      if (!q) {
+        studentSearchResults.value = [];
+        return;
+      }
+      try {
+        isSearchingStudents.value = true;
+        const students = await fetchStudents();
+        const existingIds = new Set(userAccessList.value.map(u => u.userId));
+        studentSearchResults.value = (students || [])
+          .filter(s =>
+            !existingIds.has(s.id) && (
+              `${s.firstName} ${s.lastName}`.toLowerCase().includes(q) ||
+              (s.lrn || '').toString().toLowerCase().includes(q)
+            )
+          )
+          .slice(0, 20);
+      } catch (e) {
+        console.error('Student search error:', e);
+        studentSearchResults.value = [];
+      } finally {
+        isSearchingStudents.value = false;
+      }
+    };
+
+    const addSpecificStudent = (student) => {
+      if (!student || !student.id) return;
+      const exists = userAccessList.value.some(u => u.userId === student.id);
+      if (exists) return;
+      userAccessList.value.push({
+        userId: student.id,
+        isEnabled: true,
+        name: `${student.firstName} ${student.lastName}`,
+        lrn: student.lrn
+      });
+      studentSearch.value = '';
+      studentSearchResults.value = [];
+    };
+
+    const removeSpecificStudent = (index) => {
+      userAccessList.value.splice(index, 1);
+    };
+
+    const toggleSpecificStudent = (index) => {
+      const item = userAccessList.value[index];
+      if (!item) return;
+      item.isEnabled = !item.isEnabled;
+    };
+
     const saveAccessSettings = async () => {
       try {
         if (!restrictAccess.value) {
           // If not restricting access, remove all access settings
           await setExamAccess(selectedExam.value.id, []);
+          await setExamUserAccess(selectedExam.value.id, []);
           Swal.fire({
             icon: 'success',
             title: 'Access Updated',
@@ -753,12 +874,12 @@ export default {
           return;
         }
         
-        // If restricting but no sections added
-        if (accessSections.value.length === 0) {
+        // If restricting but neither sections nor specific students added
+        if (accessSections.value.length === 0 && userAccessList.value.length === 0) {
           Swal.fire({
             icon: 'warning',
-            title: 'No Sections Added',
-            text: 'Please add at least one section or disable access restriction'
+            title: 'No Access Entries Added',
+            text: 'Please add at least one section or specific student, or disable access restriction'
           });
           return;
         }
@@ -771,8 +892,14 @@ export default {
           isEnabled: true
         }));
         
-        // Save access settings
+        const userAccess = userAccessList.value.map(u => ({
+          userId: u.userId,
+          isEnabled: u.isEnabled !== false
+        }));
+        
+        // Save both access settings
         await setExamAccess(selectedExam.value.id, gradeAccess);
+        await setExamUserAccess(selectedExam.value.id, userAccess);
         
         Swal.fire({
           icon: 'success',
@@ -841,6 +968,21 @@ export default {
             accessSections.value = [];
           }
         }
+        
+        // Load user-specific access if available
+        if (response && response.userAccess) {
+          userAccessList.value = response.userAccess.map(ua => ({
+            userId: ua.userId,
+            isEnabled: ua.isEnabled,
+            name: ua.user?.firstName && ua.user?.lastName ? `${ua.user.firstName} ${ua.user.lastName}` : undefined,
+            lrn: ua.user?.lrn
+          }));
+        } else {
+          userAccessList.value = [];
+        }
+        
+        // Determine restricted mode based on either list having entries
+        restrictAccess.value = (accessSections.value.length > 0) || (userAccessList.value.length > 0);
       } catch (error) {
         console.error('Error loading exam access settings:', error);
         Swal.fire({
@@ -957,6 +1099,15 @@ export default {
       removeAccessSection,
       saveAccessSettings,
       isClosing,
+      // specific students access
+      userAccessList,
+      studentSearch,
+      studentSearchResults,
+      isSearchingStudents,
+      searchStudents,
+      addSpecificStudent,
+      removeSpecificStudent,
+      toggleSpecificStudent,
       viewPrintableExam,
       viewMPS
     };
@@ -1518,9 +1669,9 @@ export default {
 .access-modal {
   background: white;
   border-radius: 16px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
+  max-width: 1100px;
+  width: 95%;
+  max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;

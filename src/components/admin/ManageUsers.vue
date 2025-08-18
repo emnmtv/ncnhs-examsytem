@@ -15,6 +15,9 @@
       <button @click="openGradeSectionModal()" class="add-btn grade-section">
         <span class="material-icons">class</span> Add Grade Section
       </button>
+      <button @click="openBulkUploadModal" class="add-btn bulk-upload">
+        <span class="material-icons">upload_file</span> Bulk Upload Students
+      </button>
     </div>
     </div>
 
@@ -37,6 +40,8 @@
         </button>
       </div>
     </div>
+
+    
 
     <div class="filters-section">
       <div class="search-box">
@@ -118,6 +123,134 @@
             placeholder="To Date"
             class="date-input"
           />
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Upload Modal -->
+    <div v-if="showBulkModal" class="modal-overlay" @click="showBulkModal = false">
+      <div class="modal-content bulk-modal" :class="{ 'bulk-modal-large': bulkPreviewRows.length }" @click.stop>
+        <div class="modal-header">
+          <h2>Bulk Upload Students</h2>
+          <button class="close-btn" @click="showBulkModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="registration-form">
+          <div class="form-actions" style="justify-content:flex-start; gap:0.5rem; margin-top:0;">
+            <button type="button" class="bulk-btn" @click="downloadBulkTemplate">
+              <span class="material-icons">download</span>
+              Download Template
+            </button>
+            <label class="bulk-file-label">
+              <span class="material-icons">attach_file</span>
+              <input type="file" accept=".csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" @change="onBulkFileChange" />
+            </label>
+          </div>
+
+          <!-- Drag & drop zone -->
+          <div 
+            class="bulk-dropzone" 
+            :class="{ active: dropActive }"
+            @dragover.prevent
+            @dragenter.prevent="onDragEnter"
+            @dragleave="onDragLeave"
+            @drop.prevent="onDrop"
+          >
+            <span class="material-icons">file_upload</span>
+            <div>
+              <p style="margin: 0; font-weight: 600;">Drag & drop CSV/XLSX here</p>
+              <small style="color:#666;">or use the picker above</small>
+            </div>
+          </div>
+
+          <!-- Template generator -->
+          <div class="bulk-template-gen" style="margin: 12px 0; padding: 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap: wrap;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <strong>Generate Template</strong>
+                <select v-model="templateExampleType" class="uppercase-input" style="min-width:180px; padding:6px 8px;">
+                  <option value="blank">Blank rows</option>
+                  <option value="sample">With sample names/emails</option>
+                  <option value="headers">Headers only</option>
+                </select>
+                <input type="number" min="1" max="5000" v-model.number="templateCount" placeholder="Count" style="width:110px; padding:6px 8px; border:1px solid #e0e0e0; border-radius:6px;" />
+                <select v-model.number="templateGrade" class="uppercase-input" style="min-width:120px; padding:6px 8px;">
+                  <option disabled value="">Grade</option>
+                  <option v-for="g in [7,8,9,10,11,12]" :key="g" :value="g">Grade {{ g }}</option>
+                </select>
+                <select v-model="templateSection" class="uppercase-input" :disabled="!templateGrade" style="min-width:140px; padding:6px 8px;">
+                  <option disabled value="">Section</option>
+                  <option v-for="s in availableSectionsForTemplate" :key="s" :value="s">{{ s }}</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:8px;">
+                <label style="display:flex; align-items:center; gap:4px; font-size:0.9rem; color:#333;">
+                  <input type="checkbox" v-model="templateIncludeEmail" /> Email
+                </label>
+                <label style="display:flex; align-items:center; gap:4px; font-size:0.9rem; color:#333;">
+                  <input type="checkbox" v-model="templateIncludeLRN" /> LRN
+                </label>
+                <label style="display:flex; align-items:center; gap:4px; font-size:0.9rem; color:#333;">
+                  <input type="checkbox" v-model="templateIncludeAddress" /> Address
+                </label>
+              </div>
+            </div>
+            <div class="form-actions" style="justify-content:flex-end; margin:10px 0 0 0; padding-top:10px; border-top:1px solid #eee;">
+              <button type="button" class="save-btn" @click="generateAndDownloadTemplate">
+                <span class="material-icons">download</span>
+                Generate CSV
+              </button>
+            </div>
+          </div>
+
+          <div v-if="bulkParseError" class="empty-state">
+            <p>{{ bulkParseError }}</p>
+          </div>
+
+          <div v-else-if="bulkPreviewRows.length" class="users-table">
+            <table>
+              <thead>
+                <tr>
+                  <th v-for="h in bulkPreviewHeaders" :key="h">{{ h }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(row, idx) in bulkPreviewRows.slice(0, 20)" :key="idx">
+                  <td v-for="h in bulkPreviewHeaders" :key="h">{{ row[h] ?? '' }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="pagination-info" style="margin-top:8px;">
+              Showing {{ Math.min(20, bulkPreviewRows.length) }} of {{ bulkPreviewRows.length }} rows
+            </div>
+          </div>
+
+          <div v-else class="empty-state">
+            <span class="material-icons">upload_file</span>
+            <p>Select a CSV/XLSX file to preview</p>
+          </div>
+
+          <div v-if="bulkResult" class="bulk-result">
+            <p><strong>Created:</strong> {{ bulkResult.created }} | <strong>Failed:</strong> {{ bulkResult.failed }}</p>
+            <div v-if="bulkResult.errors && bulkResult.errors.length">
+              <h4>Errors</h4>
+              <ul>
+                <li v-for="(err, idx) in bulkResult.errors" :key="idx">Row {{ err.row }}: {{ err.error }}</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" @click="showBulkModal = false">
+              Cancel
+            </button>
+            <button type="button" class="save-btn" :disabled="!bulkFile || !bulkPreviewRows.length || bulkUploading" @click="confirmBulkUpload">
+              <span class="material-icons">cloud_upload</span>
+              {{ bulkUploading ? 'Uploading...' : 'Confirm Upload' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -632,6 +765,27 @@
         </div>
 
         <form @submit.prevent="handleSubmit" class="registration-form">
+          <div class="form-group">
+            <label>Profile Picture</label>
+            <div class="avatar-uploader">
+              <div class="avatar-wrapper" @click="triggerRegisterFile">
+                <img v-if="registerProfilePreview" :src="registerProfilePreview" alt="Avatar" />
+                <div v-else class="avatar-placeholder">
+                  <span class="material-icons">person</span>
+                </div>
+                <div class="avatar-overlay">
+                  <span class="material-icons">photo_camera</span>
+                  <span>Upload</span>
+                </div>
+              </div>
+              <input ref="registerFileInput" type="file" accept="image/*" @change="onRegisterProfileSelected" style="display:none;" />
+              <div v-if="registerProfilePreview" class="avatar-actions">
+                <button type="button" class="avatar-btn" @click="clearRegisterProfile">
+                  <span class="material-icons">delete</span> Remove
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="form-row">
             <div class="form-group">
               <label>First Name</label>
@@ -650,23 +804,21 @@
           </div>
 
           <div class="form-group">
-            <label>Email (auto-generated)</label>
+            <label>Email (auto-generated, editable)</label>
             <input 
               v-model="formData.email" 
               type="email" 
               required 
-              readonly 
-              class="generated-input"
+              @input="emailEdited = true"
             />
           </div>
           <div class="form-group">
-            <label>Password (auto-generated)</label>
+            <label>Password (auto-generated, editable)</label>
             <input 
               v-model="formData.password" 
               type="text" 
               required 
-              readonly 
-              class="generated-input"
+              @input="passwordEdited = true"
             />
           </div>
 
@@ -687,9 +839,9 @@
                 <label>Grade</label>
                 <select 
                   v-model="formData.gradeLevel" 
-                  required
                   class="uppercase-input"
                 >
+                  <option value="">None</option>
                   <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
                     Grade {{ grade }}
                   </option>
@@ -700,13 +852,17 @@
               <label>Section</label>
               <select 
                 v-model="formData.section" 
-                required
                 class="uppercase-input"
+                :disabled="!formData.gradeLevel"
               >
-                <option value="">Select Section</option>
-                <option v-for="section in availableSections" :key="section" :value="section">
-                  {{ section }}
-                </option>
+                <option v-if="!formData.gradeLevel" value="">None</option>
+                <template v-else>
+                  <option value="" disabled>Select Section</option>
+                  <option v-for="section in availableSections" :key="section" :value="section">
+                    {{ section }}
+                  </option>
+                  <option v-if="availableSections.length === 0" value="">None</option>
+                </template>
               </select>
             </div>
           </template>
@@ -874,6 +1030,27 @@
         </div>
 
         <form @submit.prevent="handleUpdateUser" class="registration-form">
+          <div class="form-group">
+            <label>Profile Picture</label>
+            <div class="avatar-uploader">
+              <div class="avatar-wrapper" @click="triggerEditFile">
+                <img v-if="editProfilePreview || editFormData.profilePicture" :src="editProfilePreview || getFullImageUrl(editFormData.profilePicture)" alt="Avatar" />
+                <div v-else class="avatar-placeholder">
+                  <span class="material-icons">person</span>
+                </div>
+                <div class="avatar-overlay">
+                  <span class="material-icons">photo_camera</span>
+                  <span>Change</span>
+                </div>
+              </div>
+              <input ref="editFileInput" type="file" accept="image/*" @change="onEditProfileSelected" style="display:none;" />
+              <div v-if="editProfilePreview || editFormData.profilePicture" class="avatar-actions">
+                <button type="button" class="avatar-btn" @click="clearEditProfile">
+                  <span class="material-icons">delete</span> Remove
+                </button>
+              </div>
+            </div>
+          </div>
           <!-- Common fields -->
           <div class="form-group">
             <label>First Name</label>
@@ -899,13 +1076,13 @@
           <div v-if="editFormData.role === 'student'">
             <div class="form-group">
               <label>LRN (12-digit)</label>
-              <input v-model="editFormData.lrn" type="text" maxlength="12" pattern="[0-9]*" required class="uppercase-input" />
+              <input v-model="editFormData.lrn" type="text" maxlength="12" pattern="[0-9]*" class="uppercase-input" />
               <small>The Learner Reference Number is a unique 12-digit identifier</small>
             </div>
 
             <div class="form-group">
               <label>Grade Level</label>
-              <select v-model.number="editFormData.gradeLevel" required @change="editFormData.section = ''" class="uppercase-input">
+              <select v-model.number="editFormData.gradeLevel" @change="editFormData.section = ''" class="uppercase-input">
                 <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
                   Grade {{ grade }}
                 </option>
@@ -914,7 +1091,7 @@
 
             <div class="form-group">
               <label>Section</label>
-              <select v-model="editFormData.section" required :disabled="!editFormData.gradeLevel" class="uppercase-input">
+              <select v-model="editFormData.section" :disabled="!editFormData.gradeLevel" class="uppercase-input">
                 <option value="">Select Section</option>
                 <option v-for="section in availableSectionsForGrade" :key="section" :value="section">
                   {{ section }}
@@ -1282,7 +1459,10 @@ import {
   archiveUser,
   restoreArchivedUser,
   getArchivedUsers,
-  getArchivedUserById
+  getArchivedUserById,
+  bulkUploadUsers,
+  uploadImage,
+  deleteUserProfilePicture
 } from '@/services/authService';
 import aiService from '@/services/aiService';
 import Swal from 'sweetalert2';
@@ -1328,9 +1508,24 @@ const pagination = ref({
 const showModal = ref(false);
 const modalType = ref('');
 const formData = ref({
-  gradeLevel: 7,
+  gradeLevel: '',
   section: ''
 });
+
+// Bulk upload modal state and preview
+const showBulkModal = ref(false);
+const bulkPreviewHeaders = ref([]);
+const bulkPreviewRows = ref([]);
+const bulkParseError = ref('');
+
+const openBulkUploadModal = () => {
+  showBulkModal.value = true;
+  bulkFile.value = null;
+  bulkPreviewHeaders.value = [];
+  bulkPreviewRows.value = [];
+  bulkParseError.value = '';
+  bulkResult.value = null;
+};
 
 // Add grade section state
 const gradeSections = ref([]);
@@ -1480,11 +1675,13 @@ const generateCredentials = (firstName, lastName) => {
 };
 
 // Update the updateCredentials function to use both first and last name
+const emailEdited = ref(false);
+const passwordEdited = ref(false);
 const updateCredentials = () => {
   if (formData.value.firstName && formData.value.lastName) {
     const { email, password } = generateCredentials(formData.value.firstName, formData.value.lastName);
-    formData.value.email = email;
-    formData.value.password = password;
+    if (!emailEdited.value) formData.value.email = email;
+    if (!passwordEdited.value) formData.value.password = password;
   }
 };
 
@@ -1556,12 +1753,28 @@ const handleSubmit = async () => {
     let response;
     switch (modalType.value) {
       case 'student':
+        // If a profile file is selected, upload as base64 for backend image endpoint
+        if (registerProfileFile.value) {
+          const base64 = await fileToBase64(registerProfileFile.value);
+          const imgRes = await uploadImage(base64);
+          if (imgRes?.imageUrl) registrationData.profilePicture = imgRes.imageUrl;
+        }
         response = await registerStudent(registrationData);
         break;
       case 'teacher':
+        if (registerProfileFile.value) {
+          const base64 = await fileToBase64(registerProfileFile.value);
+          const imgRes = await uploadImage(base64);
+          if (imgRes?.imageUrl) registrationData.profilePicture = imgRes.imageUrl;
+        }
         response = await registerTeacher(registrationData);
         break;
       case 'admin':
+        if (registerProfileFile.value) {
+          const base64 = await fileToBase64(registerProfileFile.value);
+          const imgRes = await uploadImage(base64);
+          if (imgRes?.imageUrl) registrationData.profilePicture = imgRes.imageUrl;
+        }
         response = await registerAdmin(registrationData);
         break;
       default:
@@ -1577,6 +1790,9 @@ const handleSubmit = async () => {
       });
       await loadAllUsers();
       showModal.value = false;
+      // reset profile state
+      registerProfileFile.value = null;
+      registerProfilePreview.value = '';
     }
   } catch (error) {
     Swal.fire({
@@ -1586,6 +1802,14 @@ const handleSubmit = async () => {
     });
   }
 };
+
+// helper to convert image file to base64 string
+const fileToBase64 = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
 
 // Add these computed properties for pagination
 const totalPages = computed(() => {
@@ -1612,6 +1836,24 @@ const filteredUserDetails = computed(() => {
 // Full screen image state
 const showFullScreenImage = ref(false);
 const fullScreenImageSrc = ref('');
+
+// Registration modal profile image state
+const registerProfileFile = ref(null);
+const registerProfilePreview = ref('');
+const onRegisterProfileSelected = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  registerProfileFile.value = file || null;
+  registerProfilePreview.value = file ? URL.createObjectURL(file) : '';
+};
+const registerFileInput = ref(null);
+const triggerRegisterFile = () => {
+  registerFileInput.value && registerFileInput.value.click();
+};
+const clearRegisterProfile = () => {
+  registerProfileFile.value = null;
+  registerProfilePreview.value = '';
+  if (registerFileInput.value) registerFileInput.value.value = '';
+};
 
 const paginatedUsers = computed(() => {
   if (!pagination.value.enabled) {
@@ -1816,11 +2058,19 @@ const deleteGrade = async (id) => {
 
 // Watch grade level changes to update sections
 watch(() => formData.value.gradeLevel, async (newGrade) => {
+  if (!newGrade) {
+    availableSections.value = [];
+    formData.value.section = '';
+    return;
+  }
   const response = await getAllGradeSections();
   availableSections.value = response.gradeSections
     .filter(gs => gs.grade === newGrade)
     .map(gs => gs.section);
-  formData.value.section = availableSections.value[0] || '';
+  // do not auto-pick; keep empty until user selects
+  if (!availableSections.value.includes(formData.value.section)) {
+    formData.value.section = '';
+  }
 });
 
 // Add user details modal
@@ -1879,8 +2129,50 @@ const editFormData = ref({
   department: '',
   domain: '',
   role: '',
-  createdAt: ''
+  createdAt: '',
+  profilePicture: ''
 });
+
+// Edit modal profile image state
+const editProfileFile = ref(null);
+const editProfilePreview = ref('');
+const onEditProfileSelected = async (e) => {
+  const file = e.target.files && e.target.files[0];
+  editProfileFile.value = file || null;
+  editProfilePreview.value = file ? URL.createObjectURL(file) : '';
+};
+const editFileInput = ref(null);
+const triggerEditFile = () => {
+  editFileInput.value && editFileInput.value.click();
+};
+const clearEditProfile = async () => {
+  try {
+    // If there is an unsaved new file preview, just clear local selection
+    if (editProfilePreview.value) {
+      editProfileFile.value = null;
+      editProfilePreview.value = '';
+      if (editFileInput.value) editFileInput.value.value = '';
+      return;
+    }
+    // If no new preview but an existing profilePicture, remove from server
+    if (editFormData.value?.id && editFormData.value.profilePicture) {
+      const res = await Swal.fire({
+        title: 'Remove Profile Picture?',
+        text: 'This will remove the current profile picture from the account.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, remove',
+        cancelButtonText: 'Cancel'
+      });
+      if (!res.isConfirmed) return;
+      await deleteUserProfilePicture(editFormData.value.id);
+      editFormData.value.profilePicture = '';
+      Swal.fire({ icon: 'success', title: 'Removed', timer: 1200, showConfirmButton: false });
+    }
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Failed', text: err.message || 'Unable to remove profile picture' });
+  }
+};
 
 // Password visibility state
 const showPassword = ref(false);
@@ -1909,6 +2201,12 @@ const handleUpdateUser = async () => {
       delete updateData.password;
     }
 
+    // If a new profile image selected, upload first and set profilePicture
+    if (editProfileFile.value) {
+      const base64 = await fileToBase64(editProfileFile.value);
+      const imgRes = await uploadImage(base64);
+      if (imgRes?.imageUrl) updateData.profilePicture = imgRes.imageUrl;
+    }
     await updateUser(editFormData.value.id, updateData);
     
     Swal.fire({
@@ -1919,6 +2217,8 @@ const handleUpdateUser = async () => {
     
     await loadAllUsers(); // Refresh the users list
     showEditModal.value = false;
+    editProfileFile.value = null;
+    editProfilePreview.value = '';
   } catch (error) {
     Swal.fire({
       icon: 'error',
@@ -1948,13 +2248,18 @@ const openEditModal = async (user) => {
       gradeLevel: userDetails.gradeLevel || null,
       section: userDetails.section || '',
       department: userDetails.department || '',
-      domain: userDetails.domain || ''
+      domain: userDetails.domain || '',
+      profilePicture: userDetails.profilePicture || ''
     };
 
     // Load grade sections if editing a student
     if (userDetails.role === 'student') {
       await loadGradeSections();
     }
+
+    // reset any previous local selection
+    editProfileFile.value = null;
+    editProfilePreview.value = '';
 
     showEditModal.value = true;
   } catch (error) {
@@ -2930,6 +3235,197 @@ const handleArchiveUser = async () => {
     archiveInProgress.value = false;
   }
 };
+
+// Bulk upload reactive state
+const bulkFile = ref(null);
+const bulkUploading = ref(false);
+const bulkResult = ref(null);
+
+const dropActive = ref(false);
+
+const parseSelectedFile = (file) => {
+  bulkFile.value = file || null;
+  bulkPreviewHeaders.value = [];
+  bulkPreviewRows.value = [];
+  bulkParseError.value = '';
+  if (!file) return;
+  try {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const sheetName = wb.SheetNames[0];
+        const ws = wb.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+        if (!rows || rows.length === 0) {
+          bulkParseError.value = 'No rows detected in the file.';
+          return;
+        }
+        const headers = Object.keys(rows[0]);
+        bulkPreviewHeaders.value = headers;
+        bulkPreviewRows.value = rows;
+      } catch (err) {
+        console.error(err);
+        bulkParseError.value = 'Failed to parse file. Please ensure it is a valid CSV/XLSX with headers.';
+      }
+    };
+    reader.onerror = () => {
+      bulkParseError.value = 'Failed to read the selected file.';
+    };
+    reader.readAsArrayBuffer(file);
+  } catch (err) {
+    bulkParseError.value = 'Unexpected error while preparing preview.';
+  }
+};
+
+const onBulkFileChange = (e) => {
+  const file = e.target.files && e.target.files[0];
+  parseSelectedFile(file);
+};
+
+const onDragEnter = () => { dropActive.value = true; };
+const onDragLeave = () => { dropActive.value = false; };
+const onDrop = (e) => {
+  try {
+    const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) parseSelectedFile(file);
+  } finally {
+    dropActive.value = false;
+  }
+};
+
+const handleBulkUpload = async () => {
+  try {
+    if (!bulkFile.value) return;
+    bulkUploading.value = true;
+    const result = await bulkUploadUsers(bulkFile.value);
+    bulkResult.value = result;
+    bulkFile.value = null;
+    await loadAllUsers();
+  } catch (err) {
+    Swal.fire({ icon: 'error', title: 'Bulk Upload Failed', text: err.message || 'Upload failed' });
+  } finally {
+    bulkUploading.value = false;
+  }
+};
+
+const confirmBulkUpload = async () => {
+  try {
+    if (!bulkFile.value || !bulkPreviewRows.value.length) return;
+    const result = await Swal.fire({
+      title: 'Confirm Bulk Upload',
+      text: `Upload ${bulkPreviewRows.value.length} student record(s)?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, upload',
+      cancelButtonText: 'Cancel'
+    });
+    if (!result.isConfirmed) return;
+    await handleBulkUpload();
+  } catch (err) {
+    // handled inside handleBulkUpload
+  }
+};
+
+const downloadBulkTemplate = () => {
+  const headers = ['firstName','lastName','email','lrn','gradeLevel','section','address'];
+  const csv = headers.join(',') + '\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bulk_students_template.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// Template generator state
+const templateExampleType = ref('blank'); // blank | sample | headers
+const templateCount = ref(30);
+const templateGrade = ref('');
+const templateSection = ref('');
+const templateIncludeEmail = ref(true);
+const templateIncludeLRN = ref(true);
+const templateIncludeAddress = ref(false);
+
+const availableSectionsForTemplate = computed(() => {
+  if (!templateGrade.value) return [];
+  return gradeSections.value
+    .filter(gs => gs.grade === Number(templateGrade.value))
+    .map(gs => gs.section);
+});
+
+const sampleFirstNames = ['JUAN','MARIA','JOSE','ANA','PEDRO','LUIS','CARLA','ROSA','NOAH','EMMA','OLIVIA','LIAM','AVA','SOPHIA'];
+const sampleLastNames = ['DELA CRUZ','SANTOS','REYES','GARCIA','MENDOZA','RAMOS','BAUTISTA','VILLANUEVA','SMITH','JOHNSON','BROWN','WILSON'];
+
+const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+const generateAndDownloadTemplate = () => {
+  try {
+    const headers = ['firstName','lastName'];
+    if (templateIncludeEmail.value) headers.push('email');
+    if (templateIncludeLRN.value) headers.push('lrn');
+    headers.push('gradeLevel','section');
+    if (templateIncludeAddress.value) headers.push('address');
+
+    let rows = [];
+    if (templateExampleType.value === 'headers') {
+      rows = [];
+    } else {
+      const count = Math.max(1, Math.min(5000, Number(templateCount.value) || 1));
+      for (let i = 0; i < count; i++) {
+        let firstName = '';
+        let lastName = '';
+        if (templateExampleType.value === 'sample') {
+          firstName = pickRandom(sampleFirstNames);
+          lastName = pickRandom(sampleLastNames);
+        }
+        const gradeLevel = templateGrade.value ? Number(templateGrade.value) : '';
+        const section = templateSection.value || '';
+        const row = { firstName, lastName };
+        if (templateIncludeEmail.value) {
+          if (firstName && lastName) {
+            const local = `${firstName}.${lastName}`.toLowerCase().replace(/\s+/g, '').replace(/\.+/g, '.');
+            row.email = `${local}@ncnhs.edu.ph`;
+          } else {
+            row.email = '';
+          }
+        }
+        if (templateIncludeLRN.value) {
+          row.lrn = '';
+        }
+        row.gradeLevel = gradeLevel;
+        row.section = section;
+        if (templateIncludeAddress.value) row.address = '';
+        rows.push(row);
+      }
+    }
+
+    const lines = [];
+    lines.push(headers.join(','));
+    for (const r of rows) {
+      const vals = headers.map(h => {
+        const v = r[h] !== undefined && r[h] !== null ? String(r[h]) : '';
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+      });
+      lines.push(vals.join(','));
+    }
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const gradePart = templateGrade.value ? `G${templateGrade.value}_` : '';
+    const sectionPart = templateSection.value ? `${templateSection.value}_` : '';
+    a.download = `bulk_students_${gradePart}${sectionPart}${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Template generation error:', err);
+    Swal.fire({ icon: 'error', title: 'Template Generation Failed', text: 'Could not generate CSV template.' });
+  }
+};
 </script>
 
 <style scoped>
@@ -2968,6 +3464,7 @@ const handleArchiveUser = async () => {
 .add-btn.teacher { background-color: #2196F3; }
 .add-btn.admin { background-color: #9C27B0; }
 .add-btn.grade-section { background-color: #9C27B0; }
+.add-btn.bulk-upload { background-color: #4CAF50; }
 
 .add-btn:hover {
   transform: translateY(-2px);
@@ -4405,6 +4902,18 @@ const handleArchiveUser = async () => {
   max-height: 85vh;
 }
 
+.bulk-modal-large {
+  max-width: 1100px;
+  width: 95vw;
+}
+
+@media (min-width: 1280px) {
+  .bulk-modal.bulk-modal-large {
+    max-width: 1280px;
+    width: 90vw;
+  }
+}
+
 .batch-modal-content {
   padding: 1.5rem;
   overflow-y: auto;
@@ -5820,5 +6329,117 @@ input:checked + .toggle-slider:before {
   .archived-icon {
     font-size: 11px;
   }
+}
+
+.bulk-upload-panel { margin: 16px 0; padding: 12px; background: #f9fafb; border: 1px solid #eee; border-radius: 8px; }
+.bulk-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bulk-controls select { padding: 8px 10px; border: 1px solid #e0e0e0; border-radius: 6px; background: white; }
+.bulk-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fff; cursor: pointer; }
+.bulk-btn.primary { background: #2196F3; color: white; border-color: #2196F3; }
+.bulk-file-label { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px dashed #bbb; border-radius: 6px; cursor: pointer; background: #fff; }
+.bulk-file-label input { display: none; }
+.bulk-result { margin-top: 10px; color: #333; }
+
+/* Drag & drop styles */
+.bulk-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  border: 2px dashed #bdbdbd;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+  color: #616161;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.bulk-dropzone .material-icons {
+  color: #9e9e9e;
+}
+
+.bulk-dropzone.active {
+  border-color: #4CAF50;
+  background: #f1f8e9;
+  color: #2e7d32;
+}
+
+/* Avatar uploader */
+.avatar-uploader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.avatar-wrapper {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  background: #f5f7fa;
+  border: 2px dashed #cfd8dc;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avatar-wrapper:hover {
+  border-color: #90caf9;
+}
+
+.avatar-wrapper img,
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #90a4ae;
+}
+
+.avatar-placeholder .material-icons {
+  font-size: 40px;
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  font-size: 0.85rem;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.avatar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.avatar-btn {
+  border: 1px solid #e0e0e0;
+  background: #fff;
+  color: #333;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.avatar-btn:hover {
+  background: #f5f5f5;
 }
 </style>

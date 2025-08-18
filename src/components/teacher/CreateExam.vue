@@ -106,6 +106,14 @@
             >
               <i class="fas fa-redo"></i> Attempts
             </button>
+            <button 
+              type="button" 
+              class="settings-toggle"
+              :class="{ active: activeSettingsTab === 'history' }"
+              @click="toggleSettingsTab('history')"
+            >
+              <i class="fas fa-history"></i> History
+            </button>
           </div>
         </div>
         <div class="card-body">
@@ -176,6 +184,29 @@
                   placeholder="e.g., 60 (leave empty for no waiting period)"
                 />
                 <small>Minimum waiting time between attempts in minutes (leave empty for no waiting period)</small>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Exam History Settings - Collapsible -->
+          <div class="settings-section" v-show="activeSettingsTab === 'history'">
+            <div class="form-row">
+              <div class="form-group full-width">
+                <div class="toggle-switch-container">
+                  <label class="toggle-label">
+                    <span class="toggle-text">Allow Students to View Exam History</span>
+                    <small>When enabled, students can see their previous attempts, answers, and scores for this exam</small>
+                  </label>
+                  <div class="toggle-switch">
+                    <input 
+                      type="checkbox" 
+                      id="studentExamHistory" 
+                      v-model="examData.studentExamHistory"
+                      class="toggle-input"
+                    />
+                    <label for="studentExamHistory" class="toggle-slider"></label>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -655,8 +686,8 @@
         <!-- File Upload Tab -->
         <div v-if="documentTab === 'file'">
           <div class="upload-instructions">
-            <p>Upload a PDF or DOCX file containing exam questions. The AI will automatically extract and format the questions for your exam.</p>
-            <p class="smaller">Supported formats: PDF, DOCX (max 10MB)</p>
+            <p>Upload a PDF  file containing exam questions. The AI will automatically extract and format the questions for your exam.</p>
+            <p class="smaller">Supported formats: PDF (max 10MB)</p>
           </div>
 
           <div class="document-upload-area" @click="triggerFileUpload" @dragover.prevent @drop.prevent="handleFileDrop">
@@ -806,7 +837,8 @@ export default {
       startDateTime: '',
       endDateTime: '',
       maxAttempts: null,
-      attemptSpacing: null
+      attemptSpacing: null,
+      studentExamHistory: true
     });
     
     // Add state for active settings tab
@@ -874,7 +906,8 @@ export default {
               startDateTime: exam.startDateTime ? new Date(exam.startDateTime).toISOString().slice(0, 16) : '',
               endDateTime: exam.endDateTime ? new Date(exam.endDateTime).toISOString().slice(0, 16) : '',
               maxAttempts: exam.maxAttempts || null,
-              attemptSpacing: exam.attemptSpacing || null
+              attemptSpacing: exam.attemptSpacing || null,
+              studentExamHistory: exam.studentExamHistory !== undefined ? exam.studentExamHistory : true
             };
             questions.value = exam.questions.map(q => ({
               text: q.questionText,
@@ -1254,7 +1287,8 @@ export default {
             startDateTime: examData.value.startDateTime ? new Date(examData.value.startDateTime) : undefined,
             endDateTime: examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
             maxAttempts: examData.value.maxAttempts,
-            attemptSpacing: examData.value.attemptSpacing
+            attemptSpacing: examData.value.attemptSpacing,
+            studentExamHistory: examData.value.studentExamHistory
           });
         } else {
           await createExam(
@@ -1268,7 +1302,8 @@ export default {
             examData.value.startDateTime ? new Date(examData.value.startDateTime) : undefined,
             examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
             examData.value.maxAttempts,
-            examData.value.attemptSpacing
+            examData.value.attemptSpacing,
+            examData.value.studentExamHistory
           );
         }
 
@@ -1444,7 +1479,8 @@ export default {
         startDateTime: '',
         endDateTime: '',
         maxAttempts: null,
-        attemptSpacing: null
+        attemptSpacing: null,
+        studentExamHistory: true
       };
       questions.value = [];
       
@@ -2926,6 +2962,25 @@ small {
   .form-row {
     gap: 8px;
     margin-bottom: 8px;
+  }
+  
+  /* Toggle switch mobile adjustments */
+  .toggle-switch-container {
+    flex-direction: column;
+    gap: 15px;
+    align-items: flex-start;
+  }
+  
+  .toggle-switch {
+    align-self: flex-end;
+  }
+  
+  .toggle-text {
+    font-size: 0.9rem;
+  }
+  
+  .toggle-label small {
+    font-size: 0.8rem;
   }
 
   /* Question type buttons */
@@ -4740,9 +4795,13 @@ small {
   .settings-toggle {
     flex: 1;
     min-width: 0;
-    padding: 8px 10px;
-    font-size: 0.85rem;
+    padding: 6px 8px;
+    font-size: 0.75rem;
     justify-content: center;
+  }
+  
+  .settings-toggle i {
+    font-size: 14px;
   }
   
   .form-row {
@@ -4921,6 +4980,86 @@ small {
   margin-top: 20px;
 }
 
+/* Toggle Switch Styling */
+.toggle-switch-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.toggle-label {
+  flex: 1;
+  cursor: pointer;
+}
+
+.toggle-text {
+  display: block;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+.toggle-label small {
+  color: #666;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 60px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: 0.3s;
+  border-radius: 34px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-input:checked + .toggle-slider:before {
+  transform: translateX(26px) translateY(-50%);
+}
+
+.toggle-input:focus + .toggle-slider {
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
 /* Model selection styling */
 .model-selection {
   margin-bottom: 20px;
@@ -4985,5 +5124,25 @@ small {
 /* Update document tabs to appear after model selection */
 .document-tabs {
   margin-top: 5px;
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+  .settings-toggle {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+  }
+  
+  .settings-toggle i {
+    font-size: 12px;
+  }
+  
+  .card-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .settings-toggles {
+    gap: 6px;
+  }
 }
 </style>

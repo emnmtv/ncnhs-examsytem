@@ -1,5 +1,5 @@
-export const BASE_URL = 'https://emnmtv.shop/auth';
-export const SOCKET_URL = 'https://emnmtv.shop/';
+export const BASE_URL = 'http://localhost:3400/auth';
+export const SOCKET_URL = 'http://localhost:3400/';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -249,6 +249,30 @@ export const deleteProfilePicture = async () => {
   if (!response.ok) {
     const errorData = await response.json();
     throw new Error(errorData.error || "Failed to delete profile picture");
+  }
+
+  return await response.json();
+};
+
+// Bulk upload users via CSV/XLSX
+export const bulkUploadUsers = async (file) => {
+  const token = localStorage.getItem('jwtToken');
+  if (!token) throw new Error('No token found');
+
+  const form = new FormData();
+  form.append('file', file);
+
+  const response = await fetch(`${BASE_URL}/users/bulk-upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: form
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Failed to bulk upload users');
   }
 
   return await response.json();
@@ -1319,6 +1343,30 @@ export const getExamAccess = async (examId) => {
   }
 };
 
+// User-specific exam access
+export const setExamUserAccess = async (examId, userAccess) => {
+  try {
+    const response = await fetch(`${BASE_URL}/exam/${examId}/user-access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      },
+      body: JSON.stringify({ userAccess })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to set user exam access');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Set user exam access error:', error);
+    throw error;
+  }
+};
+
 export const checkExamAccess = async (examId, grade, section) => {
   try {
     const response = await fetch(
@@ -1383,6 +1431,26 @@ export const uploadImage = async (imageData) => {
     return await response.json();
   } catch (error) {
     console.error('Image upload error:', error);
+    throw error;
+  }
+};
+
+// Delete specific user's profile picture (admin)
+export const deleteUserProfilePicture = async (userId) => {
+  try {
+    const response = await fetch(`${BASE_URL}/user/${userId}/profile-picture`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
+      }
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to delete profile picture');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Delete user profile picture error:', error);
     throw error;
   }
 };
