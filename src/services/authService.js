@@ -1323,6 +1323,8 @@ export const setExamAccess = async (examId, gradeAccess) => {
   }
 };
 
+
+
 export const getExamAccess = async (examId) => {
   try {
     const response = await fetch(`${BASE_URL}/exam/${examId}/access`, {
@@ -1367,16 +1369,20 @@ export const setExamUserAccess = async (examId, userAccess) => {
   }
 };
 
-export const checkExamAccess = async (examId, grade, section) => {
+export const checkExamAccess = async (examId, grade, section, userId = null) => {
   try {
-    const response = await fetch(
-      `${BASE_URL}/exam/${examId}/check-access?grade=${grade}&section=${section}`, 
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
-        }
+    let url = `${BASE_URL}/exam/${examId}/check-access?grade=${grade}&section=${section}`;
+    
+    // Add userId parameter if provided
+    if (userId) {
+      url += `&userId=${userId}`;
+    }
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('jwtToken')}`
       }
-    );
+    });
 
     if (!response.ok) {
       const errorData = await response.json();

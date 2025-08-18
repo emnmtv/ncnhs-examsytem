@@ -155,60 +155,62 @@ export default {
         return false;
       }
       
-      // Ensure the profile has grade and section info
-      if (userProfile.value.gradeLevel === undefined || !userProfile.value.section) {
-        console.log('Missing grade or section info in profile', userProfile.value);
-        return false;
-      }
-      
       try {
         // Check if the exam has access restrictions
         console.log(`Checking access for exam ${exam.id}`);
         const accessResponse = await getExamAccess(exam.id);
         console.log('Access response:', accessResponse);
         
-        // If no access array in response, consider access denied
-        if (!accessResponse.access) {
-          console.log(`No access info for exam ${exam.id}, denying access`);
-          return false;
+        // Check for user-specific access first
+        if (accessResponse.userAccess && Array.isArray(accessResponse.userAccess)) {
+          const userSpecificAccess = accessResponse.userAccess.find(access => 
+            access.userId === userProfile.value.id && access.isEnabled
+          );
+          
+          if (userSpecificAccess) {
+            console.log(`User has specific access to exam ${exam.id}`);
+            return true;
+          }
         }
         
-        // If access array is empty, the exam is restricted to nobody (this is different than open access)
-        if (accessResponse.access.length === 0) {
-          console.log(`Exam ${exam.id} has empty access list, denying access`);
-          return false; 
+        // Check grade/section access
+        if (accessResponse.access && Array.isArray(accessResponse.access)) {
+          // If access array is empty, the exam is restricted to nobody
+          if (accessResponse.access.length === 0) {
+            console.log(`Exam ${exam.id} has empty access list, denying access`);
+            return false; 
+          }
+          
+          // Check if there's an "all" access entry indicating this exam is open to everyone
+          const hasAllAccess = accessResponse.access.some(access => 
+            access.grade === 0 && access.section === "all" && access.isEnabled
+          );
+          
+          if (hasAllAccess) {
+            console.log(`Exam ${exam.id} is open to all students`);
+            return true;
+          }
+          
+          // Check if student's grade/section matches any access entry
+          const gradeLevel = Number(userProfile.value.gradeLevel);
+          const section = userProfile.value.section;
+          
+          console.log(`User grade: ${gradeLevel}, section: ${section}`);
+          
+          const hasMatchingAccess = accessResponse.access.some(access => 
+            access.grade === gradeLevel && 
+            access.section === section && 
+            access.isEnabled
+          );
+          
+          if (hasMatchingAccess) {
+            console.log(`User has grade/section access to exam ${exam.id}`);
+            return true;
+          }
         }
         
-        // Check if there's an "all" access entry indicating this exam is open to everyone
-        const hasAllAccess = accessResponse.access.some(access => 
-          access.grade === 0 && access.section === "all" && access.isEnabled
-        );
-        
-        if (hasAllAccess) {
-          console.log(`Exam ${exam.id} is open to all students`);
-          return true;
-        }
-        
-        // Otherwise, check if student's grade/section matches any access entry
-        const gradeLevel = Number(userProfile.value.gradeLevel);
-        const section = userProfile.value.section;
-        
-        console.log(`User grade: ${gradeLevel}, section: ${section}`);
-        
-        // Manual check if any access entry matches the student's grade and section
-        const hasMatchingAccess = accessResponse.access.some(access => 
-          access.grade === gradeLevel && 
-          access.section === section && 
-          access.isEnabled
-        );
-        
-        if (hasMatchingAccess) {
-          console.log(`User has direct access to exam ${exam.id}`);
-          return true;
-        }
-        
-        // As a backup, also use the API endpoint
-        const apiAccessCheck = await checkExamAccess(exam.id, gradeLevel, section);
+        // As a backup, also use the API endpoint with user ID
+        const apiAccessCheck = await checkExamAccess(exam.id, userProfile.value.gradeLevel, userProfile.value.section, userProfile.value.id);
         console.log(`API access check for exam ${exam.id}: ${apiAccessCheck}`);
         
         return apiAccessCheck;
