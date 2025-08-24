@@ -9,6 +9,12 @@
         <button @click="$router.back()" class="back-btn">
           <i class="fas fa-arrow-left"></i> Back
         </button>
+        
+        <button @click="openBulkArchiveModal" class="bulk-archive-btn">
+          <span class="material-icons">archive</span>
+          Archive All Results
+        </button>
+        
         <!-- Update export button with FontAwesome icons -->
         <div class="export-container">
           <button @click="toggleExportOptions" class="export-btn">
@@ -233,6 +239,14 @@
               <span class="material-icons">assignment</span>
               View Answers
             </button>
+            <button 
+              class="archive-result-btn"
+              @click="openArchiveModal(result)"
+              title="Archive this result"
+            >
+              <span class="material-icons">archive</span>
+              Archive Result
+            </button>
           </div>
         </div>
       </div>
@@ -290,13 +304,23 @@
                               </td>
                 <td class="mobile-hide">{{ formatDate(result.submittedAt) }}</td>
                 <td>
-                  <button 
-                    class="view-answers-btn"
-                    @click="viewStudentAnswers(result)"
-                  >
-                    <span class="material-icons">assignment</span>
-                    <span class="btn-text">View</span>
-                  </button>
+                  <div class="action-buttons">
+                    <button 
+                      class="view-answers-btn"
+                      @click="viewStudentAnswers(result)"
+                    >
+                      <span class="material-icons">assignment</span>
+                      <span class="btn-text">View</span>
+                    </button>
+                    <button 
+                      class="archive-result-btn"
+                      @click="openArchiveModal(result)"
+                      title="Archive this result"
+                    >
+                      <span class="material-icons">archive</span>
+                      <span class="btn-text">Archive</span>
+                    </button>
+                  </div>
                 </td>
             </tr>
           </tbody>
@@ -739,13 +763,119 @@
         </div>
       </div>
     </div>
+
+    <!-- Archive Result Modal -->
+    <div v-if="showArchiveModal" class="archive-modal" @click.self="closeArchiveModal">
+      <div class="archive-modal-content">
+        <h2 class="archive-modal-title">
+          <span>Archive Exam Result</span>
+          <button class="close-modal-btn" @click="closeArchiveModal">
+            <span class="material-icons">close</span>
+          </button>
+        </h2>
+        
+        <div class="archive-modal-body">
+          <div class="archive-student-info">
+            <p><strong>Student:</strong> {{ archiveModalData.studentName }}</p>
+            <p><strong>Exam:</strong> {{ $route.query.title }}</p>
+          </div>
+          
+          <div class="archive-reason-input">
+            <label for="archiveReason"><strong>Reason for archiving:</strong></label>
+            <textarea 
+              id="archiveReason"
+              v-model="archiveModalData.reason"
+              placeholder="Enter the reason for archiving this exam result..."
+              rows="4"
+              maxlength="500"
+            ></textarea>
+            <small class="char-count">{{ archiveModalData.reason.length }}/500 characters</small>
+          </div>
+          
+          <div class="archive-actions">
+            <button 
+              class="cancel-btn"
+              @click="closeArchiveModal"
+            >
+              Cancel
+            </button>
+            <button 
+              class="archive-confirm-btn"
+              @click="archiveResult"
+              :disabled="isArchivingResult || !archiveModalData.reason.trim()"
+            >
+              <span v-if="isArchivingResult" class="material-icons spinning">sync</span>
+              <span class="material-icons">archive</span>
+              {{ isArchivingResult ? 'Archiving...' : 'Archive Result' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Archive Modal -->
+    <div v-if="showBulkArchiveModal" class="archive-modal" @click.self="closeBulkArchiveModal">
+      <div class="archive-modal-content">
+        <h2 class="archive-modal-title">
+          <span>Archive All Exam Results</span>
+          <button class="close-modal-btn" @click="closeBulkArchiveModal">
+            <span class="material-icons">close</span>
+          </button>
+        </h2>
+        
+        <div class="archive-modal-body">
+          <div class="archive-student-info">
+            <p><strong>Exam:</strong> {{ $route.query.title }}</p>
+            <p><strong>Total Results:</strong> {{ filteredResults.length }} student(s)</p>
+            <p><strong>Warning:</strong> This action will archive ALL exam results for this exam. This cannot be undone.</p>
+          </div>
+          
+          <div class="archive-reason-input">
+            <label for="bulkArchiveReason"><strong>Reason for bulk archiving:</strong></label>
+            <textarea 
+              id="bulkArchiveReason"
+              v-model="bulkArchiveModalData.reason"
+              placeholder="Enter the reason for archiving all exam results..."
+              rows="4"
+              maxlength="500"
+            ></textarea>
+            <small class="char-count">{{ bulkArchiveModalData.reason.length }}/500 characters</small>
+          </div>
+          
+          <div class="archive-actions">
+            <button 
+              class="cancel-btn"
+              @click="closeBulkArchiveModal"
+            >
+              Cancel
+            </button>
+            <button 
+              class="archive-confirm-btn"
+              @click="bulkArchiveResults"
+              :disabled="isBulkArchiving || !bulkArchiveModalData.reason.trim()"
+            >
+              <span v-if="isBulkArchiving" class="material-icons spinning">sync</span>
+              <span class="material-icons">archive</span>
+              {{ isBulkArchiving ? 'Archiving...' : 'Archive All Results' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, onMounted, computed, onUnmounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { fetchStudentScores, fetchExamAnalysis, restoreAttemptScore } from '../../services/authService';
+import { 
+  fetchStudentScores, 
+  fetchExamAnalysis, 
+  restoreAttemptScore,
+  archiveExamResult,
+  archiveAllExamResults
+} from '../../services/authService';
+/* eslint-disable no-unused-vars */
 // Import libraries for export functionality
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -823,6 +953,25 @@ export default {
       records: []
     });
     const isRestoringRecord = ref(null);
+
+    // Add archive modal state
+    const showArchiveModal = ref(false);
+    const archiveModalData = ref({
+      resultId: null,
+      studentId: null,
+      examId: null,
+      studentName: '',
+      reason: ''
+    });
+    const isArchivingResult = ref(false);
+
+    // Add bulk archive modal state
+    const showBulkArchiveModal = ref(false);
+    const bulkArchiveModalData = ref({
+      examId: null,
+      reason: ''
+    });
+    const isBulkArchiving = ref(false);
 
     const checkMobile = () => {
       isMobile.value = window.innerWidth <= 768;
@@ -1699,6 +1848,128 @@ export default {
       }
     };
 
+    // Archive modal functions
+    const openArchiveModal = (result) => {
+      archiveModalData.value = {
+        resultId: result.id,
+        studentId: result.user.id,
+        examId: parseInt(route.params.examId),
+        studentName: `${result.user.firstName} ${result.user.lastName}`,
+        reason: ''
+      };
+      showArchiveModal.value = true;
+    };
+
+    const closeArchiveModal = () => {
+      showArchiveModal.value = false;
+      archiveModalData.value = {
+        resultId: null,
+        studentId: null,
+        examId: null,
+        studentName: '',
+        reason: ''
+      };
+    };
+
+    // Function to archive an exam result
+    const archiveResult = async () => {
+      try {
+        if (!archiveModalData.value.reason.trim()) {
+          alert('Please provide a reason for archiving this result.');
+          return;
+        }
+
+        isArchivingResult.value = true;
+        
+        const result = await archiveExamResult(
+          archiveModalData.value.examId,
+          archiveModalData.value.studentId,
+          archiveModalData.value.reason
+        );
+        
+        if (result) {
+          // Reload the data to get updated information
+          await loadResults();
+          
+          // Show success message
+          alert('Exam result archived successfully.');
+          
+          // Close the modal
+          closeArchiveModal();
+        }
+      } catch (err) {
+        console.error('Error archiving exam result:', err);
+        alert('Failed to archive exam result: ' + (err.message || 'Unknown error'));
+      } finally {
+        isArchivingResult.value = false;
+      }
+    };
+
+
+
+    // Bulk archive functions
+    const openBulkArchiveModal = () => {
+      bulkArchiveModalData.value = {
+        examId: parseInt(route.params.examId),
+        reason: ''
+      };
+      showBulkArchiveModal.value = true;
+    };
+
+    const closeBulkArchiveModal = () => {
+      showBulkArchiveModal.value = false;
+      bulkArchiveModalData.value = {
+        examId: null,
+        reason: ''
+      };
+    };
+
+    const bulkArchiveResults = async () => {
+      try {
+        if (!bulkArchiveModalData.value.reason.trim()) {
+          alert('Please provide a reason for bulk archiving.');
+          return;
+        }
+
+        if (filteredResults.value.length === 0) {
+          alert('No results to archive.');
+          return;
+        }
+
+        // Confirm the action
+        const confirmed = confirm(
+          `Are you sure you want to archive ALL ${filteredResults.value.length} exam results for this exam? This action cannot be undone.`
+        );
+
+        if (!confirmed) {
+          return;
+        }
+
+        isBulkArchiving.value = true;
+        
+        const result = await archiveAllExamResults(
+          bulkArchiveModalData.value.examId,
+          bulkArchiveModalData.value.reason
+        );
+        
+        if (result) {
+          // Show success message with details
+          alert(`Successfully archived ${result.archivedCount} out of ${result.totalResults} exam results.`);
+          
+          // Close the modal
+          closeBulkArchiveModal();
+          
+          // Reload the data to reflect the changes
+          await loadResults();
+        }
+      } catch (err) {
+        console.error('Error bulk archiving exam results:', err);
+        alert('Failed to bulk archive exam results: ' + (err.message || 'Unknown error'));
+      } finally {
+        isBulkArchiving.value = false;
+      }
+    };
+
     return {
       results,
       loading,
@@ -1760,7 +2031,21 @@ export default {
       showAttemptModal,
       attemptRecordsModalData,
       restoreRecord,
-      isRestoringRecord
+      isRestoringRecord,
+      // Add new archive related methods
+      showArchiveModal,
+      openArchiveModal,
+      closeArchiveModal,
+      archiveResult,
+      archiveModalData,
+      isArchivingResult,
+      // Add new bulk archive related methods
+      showBulkArchiveModal,
+      openBulkArchiveModal,
+      closeBulkArchiveModal,
+      bulkArchiveResults,
+      bulkArchiveModalData,
+      isBulkArchiving
     };
   }
 };
@@ -1816,6 +2101,27 @@ export default {
   font-weight: 600;
   box-shadow: 0 2px 5px rgba(21, 151, 80, 0.1);
   transition: all 0.2s;
+}
+
+.bulk-archive-btn {
+  padding: 10px 18px;
+  background: #ff9800;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(255, 152, 0, 0.2);
+  transition: all 0.2s;
+}
+
+.bulk-archive-btn:hover {
+  background: #f57c00;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
 }
 
 .header-actions {
@@ -3457,7 +3763,7 @@ tr:hover {
     justify-content: space-between;
   }
 
-  .back-btn, .export-btn {
+  .back-btn, .export-btn, .bulk-archive-btn {
     padding: 8px 12px;
     font-size: 0.9rem;
   }
@@ -4036,6 +4342,230 @@ tr:hover {
   .view-answers-btn .material-icons {
     margin: 0;
     font-size: 18px;
+  }
+}
+
+/* Action Buttons Styling */
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.archive-result-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s;
+}
+
+.archive-result-btn:hover {
+  background: #f57c00;
+}
+
+/* Result Actions for Grid View */
+.result-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Archive Modal Styling */
+.archive-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s;
+}
+
+.archive-modal-content {
+  background: white;
+  width: 100%;
+  max-width: 500px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.archive-modal-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f5f5f5;
+  margin: 0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 18px;
+}
+
+.archive-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.archive-student-info {
+  background: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.archive-student-info p {
+  margin: 5px 0;
+  color: #333;
+}
+
+.archive-reason-input {
+  margin-bottom: 20px;
+}
+
+.archive-reason-input label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.archive-reason-input textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s;
+}
+
+.archive-reason-input textarea:focus {
+  outline: none;
+  border-color: #ff9800;
+  box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  margin-top: 5px;
+  color: #666;
+  font-size: 12px;
+}
+
+.archive-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #e0e0e0;
+}
+
+.archive-confirm-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(255, 152, 0, 0.2);
+}
+
+.archive-confirm-btn:hover:not(:disabled) {
+  background: #f57c00;
+  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+}
+
+.archive-confirm-btn:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+}
+
+/* Mobile responsiveness for archive modal */
+@media (max-width: 768px) {
+  .archive-modal-content {
+    max-width: 95%;
+    max-height: 85vh;
+  }
+
+  .archive-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-btn,
+  .archive-confirm-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .archive-result-btn {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+  
+  .result-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 600px) {
+  .archive-result-btn {
+    padding: 8px;
+    min-width: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .archive-result-btn .material-icons {
+    margin-right: 0;
+    font-size: 20px;
+  }
+  
+  .archive-result-btn .btn-text {
+    display: none;
   }
 }
 

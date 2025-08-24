@@ -2,30 +2,39 @@
   <div class="manage-users">
     <div class="page-header">
       <h1>Manage Users</h1>
-          <div class="header-actions">
-      <button @click="openModal('student')" class="add-btn student">
-        <span class="material-icons">school</span> Add Student
-      </button>
-      <button @click="openModal('teacher')" class="add-btn teacher">
-        <span class="material-icons">person_add</span> Add Teacher
-      </button>
-      <button @click="openModal('admin')" class="add-btn admin">
-        <span class="material-icons">admin_panel_settings</span> Add Admin
-      </button>
-      <button @click="openGradeSectionModal()" class="add-btn grade-section">
-        <span class="material-icons">class</span> Add Grade Section
-      </button>
-      <button @click="openBulkUploadModal" class="add-btn bulk-upload">
-        <span class="material-icons">upload_file</span> Bulk Upload Students
-      </button>
-    </div>
+      <div class="header-actions">
+        <!-- Register Dropdown -->
+        <div class="register-dropdown">
+          <button @click="toggleRegisterDropdown" class="register-main-btn" :class="{ 'active': showRegisterDropdown }">
+            <span class="material-icons">person_add</span> 
+            <span>Register</span>
+            <span class="material-icons dropdown-icon" :class="{ 'rotated': showRegisterDropdown }">expand_more</span>
+          </button>
+          <div class="register-dropdown-content" v-if="showRegisterDropdown">
+            <button @click="openModal('student')" class="register-dropdown-item">
+              <span class="material-icons">school</span> Add Student
+            </button>
+            <button @click="openModal('teacher')" class="register-dropdown-item">
+              <span class="material-icons">person_add</span> Add Teacher
+            </button>
+            <button @click="openModal('admin')" class="register-dropdown-item">
+              <span class="material-icons">admin_panel_settings</span> Add Admin
+            </button>
+            <button @click="openGradeSectionModal()" class="register-dropdown-item">
+              <span class="material-icons">class</span> Add Grade Section
+            </button>
+            <button @click="openBulkUploadModal" class="register-dropdown-item">
+              <span class="material-icons">upload_file</span> Bulk Upload Students
+            </button>
+      </div>
     </div>
 
     <!-- AI Batch Creation Dropdown -->
     <div class="ai-batch-dropdown">
       <button @click="toggleAIDropdown" class="ai-batch-main-btn" :class="{ 'active': showAIDropdown }">
         <span class="material-icons">psychology</span> 
-        <span>AI Batch Creation</span>
+            <span class="ai-text">AI Batch Creation</span>
+            <span class="ai-text-mobile">AI</span>
         <span class="material-icons dropdown-icon" :class="{ 'rotated': showAIDropdown }">expand_more</span>
       </button>
       <div class="ai-dropdown-content" v-if="showAIDropdown">
@@ -38,10 +47,10 @@
         <button @click="openBatchModal('section')" class="ai-dropdown-item section">
           <span class="material-icons">dashboard_customize</span> Batch Add Sections
         </button>
+          </div>
+        </div>
       </div>
     </div>
-
-    
 
     <div class="filters-section">
       <div class="search-box">
@@ -80,6 +89,36 @@
             {{ section }}
           </option>
         </select>
+        <!-- Add sorting for students -->
+        <div class="sorting-controls">
+          <div class="sort-select-wrapper">
+            <select v-model="filters.sortBy" class="sort-select">
+              <option value="">Sort by...</option>
+              <option value="firstName">First Name (A-Z)</option>
+              <option value="firstName-desc">First Name (Z-A)</option>
+              <option value="lastName">Last Name (A-Z)</option>
+              <option value="lastName-desc">Last Name (Z-A)</option>
+            </select>
+            <div v-if="filters.sortBy" class="sort-indicator">
+              <span class="material-icons" :class="getSortIconClass()">
+                {{ getSortIcon() }}
+              </span>
+            </div>
+          </div>
+          <button 
+            v-if="filters.sortBy" 
+            @click="clearSorting" 
+            class="clear-sort-btn"
+            :title="`Clear ${getSortDescription()}`"
+          >
+            <span class="material-icons">clear</span>
+          </button>
+        </div>
+        <!-- Display format indicator -->
+        <div v-if="filters.sortBy && filters.sortBy.includes('lastName')" class="display-format-indicator">
+          <span class="material-icons">info</span>
+          <span>Display: Last Name, First Name</span>
+        </div>
       </div>
 
       <div v-if="activeTab === 'teachers'" class="filter-group">
@@ -95,6 +134,69 @@
             {{ domain }}
           </option>
         </select>
+        <!-- Add sorting for teachers -->
+        <div class="sorting-controls">
+          <div class="sort-select-wrapper">
+            <select v-model="filters.sortBy" class="sort-select">
+              <option value="">Sort by...</option>
+              <option value="firstName">First Name (A-Z)</option>
+              <option value="firstName-desc">First Name (Z-A)</option>
+              <option value="lastName">Last Name (A-Z)</option>
+              <option value="lastName-desc">Last Name (Z-A)</option>
+            </select>
+            <div v-if="filters.sortBy" class="sort-indicator">
+              <span class="material-icons" :class="getSortIconClass()">
+                {{ getSortIcon() }}
+              </span>
+            </div>
+          </div>
+          <button 
+            v-if="filters.sortBy" 
+            @click="clearSorting" 
+            class="clear-sort-btn"
+            :title="`Clear ${getSortDescription()}`"
+          >
+            <span class="material-icons">clear</span>
+          </button>
+        </div>
+        <!-- Display format indicator -->
+        <div v-if="filters.sortBy && filters.sortBy.includes('lastName')" class="display-format-indicator">
+          <span class="material-icons">info</span>
+          <span>Display: Last Name, First Name</span>
+        </div>
+      </div>
+
+      <div v-if="activeTab === 'admins'" class="filter-group">
+        <!-- Add sorting for admins -->
+        <div class="sorting-controls">
+          <div class="sort-select-wrapper">
+            <select v-model="filters.sortBy" class="sort-select">
+              <option value="">Sort by...</option>
+              <option value="firstName">First Name (A-Z)</option>
+              <option value="firstName-desc">First Name (Z-A)</option>
+              <option value="lastName">Last Name (A-Z)</option>
+              <option value="lastName-desc">Last Name (Z-A)</option>
+            </select>
+            <div v-if="filters.sortBy" class="sort-indicator">
+              <span class="material-icons" :class="getSortIconClass()">
+                {{ getSortIcon() }}
+              </span>
+            </div>
+          </div>
+          <button 
+            v-if="filters.sortBy" 
+            @click="clearSorting" 
+            class="clear-sort-btn"
+            :title="`Clear ${getSortDescription()}`"
+          >
+            <span class="material-icons">clear</span>
+          </button>
+        </div>
+        <!-- Display format indicator -->
+        <div v-if="filters.sortBy && filters.sortBy.includes('lastName')" class="display-format-indicator">
+          <span class="material-icons">info</span>
+          <span>Display: Last Name, First Name</span>
+        </div>
       </div>
 
       <!-- Add archived user filters -->
@@ -217,13 +319,36 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row, idx) in bulkPreviewRows.slice(0, 20)" :key="idx">
+                <tr v-for="(row, idx) in paginatedBulkPreviewRows" :key="idx">
                   <td v-for="h in bulkPreviewHeaders" :key="h">{{ row[h] ?? '' }}</td>
                 </tr>
               </tbody>
             </table>
             <div class="pagination-info" style="margin-top:8px;">
-              Showing {{ Math.min(20, bulkPreviewRows.length) }} of {{ bulkPreviewRows.length }} rows
+              Showing {{ (bulkPreviewPage - 1) * bulkPreviewPageSize + 1 }} to {{ Math.min(bulkPreviewPage * bulkPreviewPageSize, bulkPreviewRows.length) }} of {{ bulkPreviewRows.length }} rows
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div v-if="bulkPreviewRows.length > bulkPreviewPageSize" class="bulk-pagination">
+              <button 
+                @click="bulkPreviewPage--" 
+                :disabled="bulkPreviewPage <= 1"
+                class="pagination-btn"
+              >
+                <span class="material-icons">chevron_left</span>
+                Previous
+              </button>
+              <span class="page-info">
+                Page {{ bulkPreviewPage }} of {{ Math.ceil(bulkPreviewRows.length / bulkPreviewPageSize) }}
+              </span>
+              <button 
+                @click="bulkPreviewPage++" 
+                :disabled="bulkPreviewPage >= Math.ceil(bulkPreviewRows.length / bulkPreviewPageSize)"
+                class="pagination-btn"
+              >
+                Next
+                <span class="material-icons">chevron_right</span>
+              </button>
             </div>
           </div>
 
@@ -302,7 +427,7 @@
             <div class="export-checkboxes">
               <label v-if="activeTab === 'students'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name
+                Name (with current sort format)
               </label>
               <label v-if="activeTab === 'students'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -323,7 +448,7 @@
               
               <label v-if="activeTab === 'teachers'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name
+                Name (with current sort format)
               </label>
               <label v-if="activeTab === 'teachers'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -340,7 +465,7 @@
               
               <label v-if="activeTab === 'admins'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name
+                Name (with current sort format)
               </label>
               <label v-if="activeTab === 'admins'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -432,7 +557,7 @@
             </div>
             <div class="archived-user-info">
               <div class="archived-user-header">
-                <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+                <h3>{{ getDisplayName(user) }}</h3>
                 <p class="archived-email">{{ user.email }}</p>
                 <span class="archived-role-badge" :class="user.role">{{ user.role }}</span>
               </div>
@@ -489,7 +614,7 @@
                   {{ user.firstName[0] }}{{ user.lastName[0] }}
                 </div>
               </td>
-              <td>{{ user.firstName }} {{ user.lastName }}</td>
+              <td>{{ getDisplayName(user) }}</td>
               <td>{{ user.email }}</td>
               <td><span class="archived-role-badge" :class="user.role">{{ user.role }}</span></td>
               <td>{{ formatDate(user.archivedAt) }}</td>
@@ -589,7 +714,7 @@
             {{ user.firstName[0] }}{{ user.lastName[0] }}
           </div>
           <div class="user-info">
-            <h3>{{ user.firstName }} {{ user.lastName }}</h3>
+            <h3>{{ getDisplayName(user) }}</h3>
             <p class="email">{{ user.email }}</p>
             <div class="details">
               <template v-if="activeTab === 'students'">
@@ -645,8 +770,15 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="user in filteredUsers" :key="user.id">
+            <tr 
+              v-for="user in filteredUsers" 
+              :key="user.id" 
+              :class="{ 'editing-row': isRowEditing(user.id) }"
+              @click="toggleRowEdit(user)"
+            >
+                            <!-- Profile Picture -->
               <td>
+                <div v-if="!isRowEditing(user.id)" class="table-avatar-container">
                 <div v-if="user.profilePicture" class="table-avatar-container">
                   <img 
                     :src="getFullImageUrl(user.profilePicture)" 
@@ -657,25 +789,152 @@
                 </div>
                 <div v-else class="table-avatar">
                   {{ user.firstName[0] }}{{ user.lastName[0] }}
+                  </div>
+                </div>
+                <div v-else class="inline-edit-profile">
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    @change="onInlineProfileChange($event, user)"
+                    class="inline-file-input"
+                  />
                 </div>
               </td>
-              <td>{{ user.firstName }} {{ user.lastName }}</td>
-              <td>{{ user.email }}</td>
-              <td v-if="activeTab === 'students'">{{ user.lrn || 'N/A' }}</td>
-              <td v-if="activeTab === 'students'">{{ user.gradeLevel || 'N/A' }}</td>
-              <td v-if="activeTab === 'students'">{{ user.section || 'N/A' }}</td>
-              <td v-if="activeTab === 'teachers'">{{ user.department || 'N/A' }}</td>
-              <td v-if="activeTab === 'teachers'">{{ user.domain || 'N/A' }}</td>
+              
+              <!-- Name -->
               <td>
-                <div class="user-actions">
-                  <button class="action-btn view" @click="viewUserDetails(user)">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.firstName }} {{ user.lastName }}
+                </div>
+                <div v-else class="inline-edit-name">
+                  <input 
+                    v-model="inlineEditData[user.id].firstName" 
+                    type="text" 
+                    class="inline-input"
+                    placeholder="First Name"
+                  />
+                  <input 
+                    v-model="inlineEditData[user.id].lastName" 
+                    type="text" 
+                    class="inline-input"
+                    placeholder="Last Name"
+                  />
+                </div>
+              </td>
+              
+              <!-- Email -->
+              <td>
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.email }}
+                </div>
+                <div v-else class="inline-edit-email">
+                  <input 
+                    v-model="inlineEditData[user.id].email" 
+                    type="email" 
+                    class="inline-input"
+                    placeholder="Email"
+                  />
+                </div>
+              </td>
+              
+              <!-- LRN (Students only) -->
+              <td v-if="activeTab === 'students'">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.lrn || 'N/A' }}
+                </div>
+                <div v-else class="inline-edit-lrn">
+                  <input 
+                    v-model="inlineEditData[user.id].lrn" 
+                    type="text" 
+                    maxlength="12"
+                    pattern="[0-9]*"
+                    class="inline-input"
+                    placeholder="12-digit LRN"
+                  />
+                </div>
+              </td>
+              
+              <!-- Grade (Students only) -->
+              <td v-if="activeTab === 'students'">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.gradeLevel || 'N/A' }}
+                </div>
+                <div v-else class="inline-edit-grade">
+                  <select v-model="inlineEditData[user.id].gradeLevel" class="inline-select">
+                    <option value="">None</option>
+                    <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
+                      Grade {{ grade }}
+                    </option>
+                  </select>
+                </div>
+              </td>
+              
+              <!-- Section (Students only) -->
+              <td v-if="activeTab === 'students'">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.section || 'N/A' }}
+                </div>
+                <div v-else class="inline-edit-section">
+                  <select v-model="inlineEditData[user.id].section" class="inline-select" :disabled="!inlineEditData[user.id].gradeLevel">
+                    <option value="">None</option>
+                    <option v-for="section in availableSectionsForGrade" :key="section" :value="section">
+                      {{ section }}
+                    </option>
+                  </select>
+                </div>
+              </td>
+              
+              <!-- Department (Teachers only) -->
+              <td v-if="activeTab === 'teachers'">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.department || 'N/A' }}
+                </div>
+                <div v-else class="inline-edit-department">
+                  <input 
+                    v-model="inlineEditData[user.id].department" 
+                    type="text" 
+                    class="inline-input"
+                    placeholder="Department"
+                  />
+                </div>
+              </td>
+              
+              <!-- Domain (Teachers only) -->
+              <td v-if="activeTab === 'teachers'">
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.domain || 'N/A' }}
+                </div>
+                <div v-else class="inline-edit-domain">
+                  <input 
+                    v-model="inlineEditData[user.id].domain" 
+                    type="text" 
+                    class="inline-input"
+                    placeholder="Domain"
+                  />
+                </div>
+              </td>
+              
+              <!-- Actions with Save/Cancel when editing -->
+              <td>
+                <div v-if="!isRowEditing(user.id)" class="user-actions">
+                  <button class="action-btn view" @click.stop="viewUserDetails(user)">
                     <span class="material-icons">visibility</span>
                   </button>
-                  <button class="action-btn edit" @click="openEditModal(user)">
+                  <button class="action-btn edit" @click.stop="openEditModal(user)">
                     <span class="material-icons">edit</span>
                   </button>
-                  <button class="action-btn archive" @click="openArchiveConfirmModal(user)">
+                  <button class="action-btn archive" @click.stop="openArchiveConfirmModal(user)">
                     <span class="material-icons">archive</span>
+                  </button>
+                </div>
+                <div v-else class="row-edit-actions">
+                  <button @click.stop="saveRowEdit(user)" class="row-save-btn">
+                    <span class="material-icons">check</span>
+                    Save
+                  </button>
+                  <button @click.stop="cancelRowEdit(user.id)" class="row-cancel-btn">
+                    <span class="material-icons">close</span>
+                    Cancel
                   </button>
                 </div>
               </td>
@@ -987,7 +1246,7 @@
           <div v-else class="user-profile-avatar">
             {{ selectedUser.firstName ? selectedUser.firstName[0] : '' }}{{ selectedUser.lastName ? selectedUser.lastName[0] : '' }}
           </div>
-          <h3>{{ selectedUser.firstName }} {{ selectedUser.lastName }}</h3>
+          <h3>{{ getDisplayName(selectedUser) }}</h3>
         </div>
 
         <div class="user-details">
@@ -1083,6 +1342,7 @@
             <div class="form-group">
               <label>Grade Level</label>
               <select v-model.number="editFormData.gradeLevel" @change="editFormData.section = ''" class="uppercase-input">
+                <option value="">None</option>
                 <option v-for="grade in [7,8,9,10,11,12]" :key="grade" :value="grade">
                   Grade {{ grade }}
                 </option>
@@ -1092,10 +1352,14 @@
             <div class="form-group">
               <label>Section</label>
               <select v-model="editFormData.section" :disabled="!editFormData.gradeLevel" class="uppercase-input">
-                <option value="">Select Section</option>
+                <option v-if="!editFormData.gradeLevel" value="">None</option>
+                <template v-else>
+                  <option value="" disabled>Select Section</option>
                 <option v-for="section in availableSectionsForGrade" :key="section" :value="section">
                   {{ section }}
                 </option>
+                  <option v-if="availableSectionsForGrade.length === 0" value="">None</option>
+                </template>
               </select>
             </div>
           </div>
@@ -1346,9 +1610,9 @@
 
           <div v-else class="archived-users-grid">
             <div v-for="user in archivedUsers" :key="user.id" class="archived-user-card">
-              <div class="archived-user-header">
-                <h3>{{ user.firstName }} {{ user.lastName }}</h3>
-              </div>
+                          <div class="archived-user-header">
+              <h3>{{ getDisplayName(user) }}</h3>
+            </div>
               <div class="archived-user-actions">
                 <button @click="viewArchivedUserDetails(user.id)" class="action-btn view">
                   <span class="material-icons">visibility</span>
@@ -1390,7 +1654,7 @@
           <div v-else class="user-profile-avatar">
             {{ selectedUser.firstName ? selectedUser.firstName[0] : '' }}{{ selectedUser.lastName ? selectedUser.lastName[0] : '' }}
           </div>
-          <h3>{{ selectedUser.firstName }} {{ selectedUser.lastName }}</h3>
+          <h3>{{ getDisplayName(selectedUser) }}</h3>
           <span class="archived-badge">
             <span class="material-icons">archive</span>
             Archived User
@@ -1486,7 +1750,8 @@ const filters = ref({
   gradeLevel: '',
   section: '',
   department: '',
-  domain: ''
+  domain: '',
+  sortBy: ''
 });
 
 // Add archived filters state
@@ -1517,6 +1782,8 @@ const showBulkModal = ref(false);
 const bulkPreviewHeaders = ref([]);
 const bulkPreviewRows = ref([]);
 const bulkParseError = ref('');
+const bulkPreviewPage = ref(1);
+const bulkPreviewPageSize = ref(20);
 
 const openBulkUploadModal = () => {
   showBulkModal.value = true;
@@ -1735,8 +2002,8 @@ const handleSubmit = async () => {
       registrationData = {
         ...registrationData,
         lrn: formData.value.lrn,
-        gradeLevel: formData.value.gradeLevel,
-        section: formData.value.section.toUpperCase()
+        gradeLevel: formData.value.gradeLevel === '' ? null : formData.value.gradeLevel,
+        section: formData.value.section === '' ? null : formData.value.section.toUpperCase()
       };
     }
 
@@ -1891,7 +2158,7 @@ const filteredUsersBeforePagination = computed(() => {
       break;
   }
 
-  return users.filter(user => {
+  let filteredUsers = users.filter(user => {
     const searchMatch = !searchQuery.value || 
       user.firstName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       user.lastName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -1919,6 +2186,26 @@ const filteredUsersBeforePagination = computed(() => {
 
     return searchMatch && filterMatch;
   });
+
+  // Apply sorting if specified
+  if (filters.value.sortBy) {
+    filteredUsers.sort((a, b) => {
+      switch (filters.value.sortBy) {
+        case 'firstName':
+          return a.firstName.localeCompare(b.firstName);
+        case 'firstName-desc':
+          return b.firstName.localeCompare(a.firstName);
+        case 'lastName':
+          return a.lastName.localeCompare(b.lastName);
+        case 'lastName-desc':
+          return b.lastName.localeCompare(a.lastName);
+        default:
+          return 0;
+      }
+    });
+  }
+
+  return filteredUsers;
 });
 
 // Replace the existing filteredUsers computed property
@@ -1935,6 +2222,64 @@ const changePage = (page) => {
 const changeItemsPerPage = (items) => {
   pagination.value.itemsPerPage = items;
   pagination.value.currentPage = 1; // Reset to first page when changing items per page
+};
+
+// Clear sorting function
+const clearSorting = () => {
+  filters.value.sortBy = '';
+};
+
+// Get sort description for tooltip
+const getSortDescription = () => {
+  if (!filters.value.sortBy) return '';
+  
+  switch (filters.value.sortBy) {
+    case 'firstName':
+      return 'First Name (A-Z)';
+    case 'firstName-desc':
+      return 'First Name (Z-A)';
+    case 'lastName':
+      return 'Last Name (A-Z)';
+    case 'lastName-desc':
+      return 'Last Name (Z-A)';
+    default:
+      return '';
+  }
+};
+
+// Get sort icon
+const getSortIcon = () => {
+  if (!filters.value.sortBy) return '';
+  
+  if (filters.value.sortBy.includes('-desc')) {
+    return 'arrow_downward';
+  }
+  return 'arrow_upward';
+};
+
+// Get sort icon class
+const getSortIconClass = () => {
+  if (!filters.value.sortBy) return '';
+  
+  if (filters.value.sortBy.includes('-desc')) {
+    return 'sort-desc';
+  }
+  return 'sort-asc';
+};
+
+// Get display name based on current sorting
+const getDisplayName = (user) => {
+  if (!user || !user.firstName || !user.lastName) {
+    return `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
+  }
+  
+  // If sorting by last name, show "Last Name, First Name"
+  if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
+    return `${user.lastName}, ${user.firstName}`;
+  }
+  
+  // Default: show "First Name Last Name"
+  return `${user.firstName} ${user.lastName}`;
 };
 
 const togglePagination = () => {
@@ -2190,6 +2535,10 @@ const handleUpdateUser = async () => {
     // Handle role-specific fields
     if (updateData.role === 'student') {
       updateData.section = updateData.section ? updateData.section.toUpperCase() : '';
+      // Convert empty grade level to null for Prisma
+      updateData.gradeLevel = updateData.gradeLevel === '' ? null : updateData.gradeLevel;
+      // Convert empty section to null for Prisma
+      updateData.section = updateData.section === '' ? null : updateData.section;
     }
     
     if (updateData.role === 'teacher') {
@@ -2275,6 +2624,105 @@ const openEditModal = async (user) => {
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   return new Date(dateString).toLocaleString();
+};
+
+// Row-based inline editing state and functions
+const inlineEditing = ref({});
+const inlineEditData = ref({});
+const inlineProfileFiles = ref({});
+
+const toggleRowEdit = (user) => {
+  if (inlineEditing.value[user.id]) {
+    // Already editing, do nothing (or could toggle off)
+    return;
+  }
+  
+  // Start editing this row
+  inlineEditing.value[user.id] = true;
+  inlineEditData.value[user.id] = { ...user };
+};
+
+const isRowEditing = (userId) => {
+  return inlineEditing.value[userId];
+};
+
+const cancelRowEdit = (userId) => {
+  // Exit editing mode
+  inlineEditing.value[userId] = false;
+  
+  // Reset data to original values
+  if (inlineEditData.value[userId]) {
+    const user = filteredUsers.value.find(u => u.id === userId);
+    if (user) {
+      inlineEditData.value[userId] = { ...user };
+    }
+  }
+  
+  // Clear profile file reference
+  delete inlineProfileFiles.value[userId];
+};
+
+const saveRowEdit = async (user) => {
+  try {
+    const updateData = { ...user };
+    
+    // Update all the fields being edited
+    updateData.firstName = inlineEditData.value[user.id].firstName.toUpperCase();
+    updateData.lastName = inlineEditData.value[user.id].lastName.toUpperCase();
+    updateData.email = inlineEditData.value[user.id].email;
+    
+    if (activeTab.value === 'students') {
+      updateData.lrn = inlineEditData.value[user.id].lrn;
+      updateData.gradeLevel = inlineEditData.value[user.id].gradeLevel === '' ? null : inlineEditData.value[user.id].gradeLevel;
+      updateData.section = inlineEditData.value[user.id].section === '' ? null : inlineEditData.value[user.id].section;
+    }
+    
+    if (activeTab.value === 'teachers') {
+      updateData.department = inlineEditData.value[user.id].department ? inlineEditData.value[user.id].department.toUpperCase() : '';
+      updateData.domain = inlineEditData.value[user.id].domain ? inlineEditData.value[user.id].domain.toUpperCase() : '';
+    }
+    
+    // Handle profile picture update
+    if (inlineProfileFiles.value[user.id]) {
+      const base64 = await fileToBase64(inlineProfileFiles.value[user.id]);
+      const imgRes = await uploadImage(base64);
+      if (imgRes?.imageUrl) {
+        updateData.profilePicture = imgRes.imageUrl;
+      }
+    }
+    
+    // Call the update function
+    await updateUser(user.id, updateData);
+    
+    // Exit editing mode
+    inlineEditing.value[user.id] = false;
+    
+    // Refresh the users list
+    await loadAllUsers();
+    
+    // Clear profile file reference
+    delete inlineProfileFiles.value[user.id];
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Updated Successfully',
+      text: 'User information updated successfully'
+    });
+    
+  } catch (error) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: error.message
+    });
+  }
+};
+
+const onInlineProfileChange = (event, user) => {
+  const file = event.target.files[0];
+  if (file) {
+    inlineProfileFiles.value[user.id] = file;
+  }
 };
 
 // Function removed and replaced with archiveUser functionality
@@ -2574,10 +3022,23 @@ const createBatchItems = async () => {
 
 // Add dropdown state variable and toggle function
 const showAIDropdown = ref(false);
+const showRegisterDropdown = ref(false);
 
 // Function to toggle dropdown
 const toggleAIDropdown = () => {
   showAIDropdown.value = !showAIDropdown.value;
+  // Close register dropdown if open
+  if (showRegisterDropdown.value) {
+    showRegisterDropdown.value = false;
+  }
+};
+
+const toggleRegisterDropdown = () => {
+  showRegisterDropdown.value = !showRegisterDropdown.value;
+  // Close AI dropdown if open
+  if (showAIDropdown.value) {
+    showAIDropdown.value = false;
+  }
 };
 
 // Export functionality
@@ -2606,6 +3067,13 @@ const closeExportOptionsOnClickOutside = (event) => {
   if (showExportOptions.value && !event.target.closest('.export-controls')) {
     showExportOptions.value = false;
   }
+  // Close dropdowns if clicking outside
+  if (showAIDropdown.value && !event.target.closest('.ai-batch-dropdown')) {
+    showAIDropdown.value = false;
+  }
+  if (showRegisterDropdown.value && !event.target.closest('.register-dropdown')) {
+    showRegisterDropdown.value = false;
+  }
 };
 
 // Prepare data for export based on selected options
@@ -2618,7 +3086,7 @@ const getExportData = () => {
     const fields = exportOptions.value.fields;
     
     // Build headers array
-    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.name) headers.push('Name');
     if (fields.email) headers.push('Email');
     if (fields.lrn) headers.push('LRN');
     if (fields.grade) headers.push('Grade Level');
@@ -2628,8 +3096,7 @@ const getExportData = () => {
     dataToExport = filteredUsers.value.map(student => {
       const row = {};
       if (fields.name) {
-        row['First Name'] = student.firstName;
-        row['Last Name'] = student.lastName;
+        row['Name'] = getDisplayName(student);
       }
       if (fields.email) row['Email'] = student.email;
       if (fields.lrn) row['LRN'] = student.lrn || 'N/A';
@@ -2642,7 +3109,7 @@ const getExportData = () => {
     const fields = exportOptions.value.fields;
     
     // Build headers array
-    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.name) headers.push('Name');
     if (fields.email) headers.push('Email');
     if (fields.department) headers.push('Department');
     if (fields.domain) headers.push('Domain');
@@ -2651,8 +3118,7 @@ const getExportData = () => {
     dataToExport = filteredUsers.value.map(teacher => {
       const row = {};
       if (fields.name) {
-        row['First Name'] = teacher.firstName;
-        row['Last Name'] = teacher.lastName;
+        row['Name'] = getDisplayName(teacher);
       }
       if (fields.email) row['Email'] = teacher.email;
       if (fields.department) row['Department'] = teacher.department || 'N/A';
@@ -2664,15 +3130,14 @@ const getExportData = () => {
     const fields = exportOptions.value.fields;
     
     // Build headers array
-    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.name) headers.push('Name');
     if (fields.email) headers.push('Email');
     
     // Build rows
     dataToExport = filteredUsers.value.map(admin => {
       const row = {};
       if (fields.name) {
-        row['First Name'] = admin.firstName;
-        row['Last Name'] = admin.lastName;
+        row['Name'] = getDisplayName(admin);
       }
       if (fields.email) row['Email'] = admin.email;
       return row;
@@ -2698,7 +3163,7 @@ const getExportData = () => {
     const fields = exportOptions.value.fields;
     
     // Build headers array
-    if (fields.name) headers.push('First Name', 'Last Name');
+    if (fields.name) headers.push('Name');
     if (fields.email) headers.push('Email');
     headers.push('Role', 'Archived Date', 'Reason');
     
@@ -2706,8 +3171,7 @@ const getExportData = () => {
     dataToExport = filteredArchivedUsers.value.map(user => {
       const row = {};
       if (fields.name) {
-        row['First Name'] = user.firstName;
-        row['Last Name'] = user.lastName;
+        row['Name'] = getDisplayName(user);
       }
       if (fields.email) row['Email'] = user.email;
       row['Role'] = user.role;
@@ -3265,6 +3729,7 @@ const parseSelectedFile = (file) => {
         const headers = Object.keys(rows[0]);
         bulkPreviewHeaders.value = headers;
         bulkPreviewRows.value = rows;
+        bulkPreviewPage.value = 1; // Reset to first page when new data is loaded
       } catch (err) {
         console.error(err);
         bulkParseError.value = 'Failed to parse file. Please ensure it is a valid CSV/XLSX with headers.';
@@ -3356,6 +3821,13 @@ const availableSectionsForTemplate = computed(() => {
     .map(gs => gs.section);
 });
 
+// Paginated bulk preview rows
+const paginatedBulkPreviewRows = computed(() => {
+  const start = (bulkPreviewPage.value - 1) * bulkPreviewPageSize.value;
+  const end = start + bulkPreviewPageSize.value;
+  return bulkPreviewRows.value.slice(start, end);
+});
+
 const sampleFirstNames = ['JUAN','MARIA','JOSE','ANA','PEDRO','LUIS','CARLA','ROSA','NOAH','EMMA','OLIVIA','LIAM','AVA','SOPHIA'];
 const sampleLastNames = ['DELA CRUZ','SANTOS','REYES','GARCIA','MENDOZA','RAMOS','BAUTISTA','VILLANUEVA','SMITH','JOHNSON','BROWN','WILSON'];
 
@@ -3445,31 +3917,10 @@ const generateAndDownloadTemplate = () => {
 .header-actions {
   display: flex;
   gap: 1rem;
+  align-items: flex-start;
 }
 
-.add-btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.3s ease;
-  color: white;
-}
-
-.add-btn.student { background-color: #4CAF50; }
-.add-btn.teacher { background-color: #2196F3; }
-.add-btn.admin { background-color: #9C27B0; }
-.add-btn.grade-section { background-color: #9C27B0; }
-.add-btn.bulk-upload { background-color: #4CAF50; }
-
-.add-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
+/* Remove old add-btn styles since we're using dropdowns now */
 
 .filters-section {
   background: white;
@@ -4063,13 +4514,7 @@ const generateAndDownloadTemplate = () => {
   justify-content: flex-end;
 }
 
-.add-btn.grade-section {
-  background: #9C27B0;
-}
-
-.add-btn.grade-section:hover {
-  background: #7B1FA2;
-}
+/* Removed old add-btn styles */
 
 /* Add tab styling for sections */
 .tab-btn[data-tab="sections"] {
@@ -4341,17 +4786,7 @@ const generateAndDownloadTemplate = () => {
     gap: 0.5rem;
   }
 
-  .add-btn {
-    padding: 0.5rem;
-    font-size: 0.75rem;
-    min-width: auto;
-    width: 100%;
-    height: 40px;
-  }
-
-  .add-btn .material-icons {
-    font-size: 14px;
-  }
+  /* Removed old add-btn styles */
 
   /* Filter section fixes */
   .filters-section {
@@ -4437,6 +4872,142 @@ const generateAndDownloadTemplate = () => {
     font-size: 16px;
   }
 
+  /* Row-based Inline Editing Styles */
+  .editing-row {
+    background: #f8f9fa !important;
+    border: 2px solid #4CAF50 !important;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+  }
+
+  .editing-row td {
+    background: transparent !important;
+  }
+
+  .inline-input,
+  .inline-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #4CAF50;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+  }
+
+  .inline-input:focus,
+  .inline-select:focus {
+    outline: none;
+    border-color: #2E7D32;
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  }
+
+  .inline-edit-actions {
+    display: flex;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .inline-save-btn,
+  .inline-cancel-btn {
+    padding: 0.25rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .inline-save-btn {
+    background: #4CAF50;
+    color: white;
+  }
+
+  .inline-save-btn:hover {
+    background: #2E7D32;
+  }
+
+  .inline-cancel-btn {
+    background: #f44336;
+    color: white;
+  }
+
+  .inline-cancel-btn:hover {
+    background: #d32f2f;
+  }
+
+  .inline-save-btn .material-icons,
+  .inline-cancel-btn .material-icons {
+    font-size: 16px;
+  }
+
+  .inline-edit-profile {
+    text-align: center;
+  }
+
+  .inline-file-input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .inline-edit-name {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .inline-edit-name .inline-input {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Row Edit Actions */
+  .row-edit-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .row-save-btn,
+  .row-cancel-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+  }
+
+  .row-save-btn {
+    background: #4CAF50;
+    color: white;
+  }
+
+  .row-save-btn:hover {
+    background: #2E7D32;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  }
+
+  .row-cancel-btn {
+    background: #f44336;
+    color: white;
+  }
+
+  .row-cancel-btn:hover {
+    background: #d32f2f;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+  }
+
+  .row-save-btn .material-icons,
+  .row-cancel-btn .material-icons {
+    font-size: 18px;
+  }
+
   /* Table view fixes */
   .users-table {
     margin-top: 0.5rem;
@@ -4446,6 +5017,33 @@ const generateAndDownloadTemplate = () => {
   .users-table th {
     padding: 0.5rem;
     font-size: 0.8rem;
+  }
+  
+  .inline-input,
+  .inline-select {
+    font-size: 0.8rem;
+    padding: 0.4rem;
+  }
+  
+  .inline-edit-actions {
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  
+  .inline-save-btn,
+  .inline-cancel-btn {
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .row-edit-actions {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  
+  .row-save-btn,
+  .row-cancel-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
   }
 
   /* View controls fixes */
@@ -4775,7 +5373,6 @@ const generateAndDownloadTemplate = () => {
 /* AI Batch Creation Styles */
 .ai-batch-dropdown {
   position: relative;
-  margin-bottom: 2rem;
 }
 
 .ai-batch-main-btn {
@@ -4785,24 +5382,58 @@ const generateAndDownloadTemplate = () => {
   gap: 0.5rem;
   padding: 0.85rem 1.5rem;
   border-radius: 10px;
-  border: none;
-  color: white;
+  border: 2px solid #4CAF50;
+  color: #4CAF50;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
   width: 100%;
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.ai-batch-main-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: #4CAF50;
+  transition: left 0.3s ease;
+  z-index: -1;
+}
+
+.ai-batch-main-btn:hover::before {
+  left: 0;
 }
 
 .ai-batch-main-btn.active {
-  background: linear-gradient(135deg, #5E35B1 0%, #4527A0 100%);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  background: #4CAF50;
+  color: white;
 }
 
 .ai-batch-main-btn:hover {
+  color: white;
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.3);
+}
+
+.ai-batch-main-btn .material-icons {
+  transition: color 0.3s ease;
+}
+
+/* AI text responsive display */
+.ai-text-mobile {
+  display: none;
+}
+
+.ai-text {
+  display: inline;
 }
 
 .dropdown-icon {
@@ -4818,13 +5449,15 @@ const generateAndDownloadTemplate = () => {
   position: absolute;
   top: calc(100% + 10px);
   left: 0;
-  right: 0;
   background: white;
   border-radius: 10px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
   z-index: 10;
   overflow: hidden;
   animation: fadeInDown 0.3s ease;
+  min-width: 200px;
+  width: max-content;
+  max-width: 300px;
 }
 
 @keyframes fadeInDown {
@@ -4892,6 +5525,280 @@ const generateAndDownloadTemplate = () => {
   
   .ai-dropdown-item {
     padding: 0.75rem 1rem;
+  }
+}
+
+/* Register Dropdown Styles */
+.register-dropdown {
+  position: relative;
+}
+
+.register-main-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.5rem;
+  border-radius: 10px;
+  border: 2px solid #4CAF50;
+  color: #4CAF50;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: transparent;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.1);
+  position: relative;
+  overflow: hidden;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.register-main-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: #4CAF50;
+  transition: left 0.3s ease;
+  z-index: -1;
+}
+
+.register-main-btn:hover::before {
+  left: 0;
+}
+
+.register-main-btn:hover {
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.register-main-btn.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.register-main-btn .material-icons {
+  transition: color 0.3s ease;
+}
+
+.register-dropdown-content {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  overflow: hidden;
+  animation: fadeInDown 0.3s ease;
+  min-width: 200px;
+  width: max-content;
+  max-width: 300px;
+}
+
+.register-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  width: 100%;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+  color: #333;
+}
+
+.register-dropdown-item:hover {
+  background-color: #f8f9fa;
+  border-left-color: #4CAF50;
+}
+
+.register-dropdown-item .material-icons {
+  font-size: 1.25rem;
+  color: #4CAF50;
+}
+
+/* Responsive styles for register dropdown */
+@media (max-width: 768px) {
+  .register-main-btn {
+    padding: 0.75rem 1rem;
+  }
+  
+  .register-dropdown-item {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Bulk Upload Pagination Styles */
+.bulk-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-weight: 500;
+  color: #666;
+  min-width: 80px;
+  text-align: center;
+}
+
+/* Responsive styles for header actions */
+@media (max-width: 768px) {
+  .page-header {
+    margin-bottom: 1rem;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 0.4rem;
+    width: 100%;
+  }
+  
+  .register-dropdown,
+  .ai-batch-dropdown {
+    width: 100%;
+  }
+  
+  .register-main-btn,
+  .ai-batch-main-btn {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    height: 40px;
+    min-height: 40px;
+    max-height: 40px;
+  }
+  
+  .register-main-btn .material-icons,
+  .ai-batch-main-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .register-dropdown-content,
+  .ai-dropdown-content {
+    min-width: 160px;
+    max-width: 220px;
+  }
+  
+  .register-dropdown-item,
+  .ai-dropdown-item {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Mobile bulk pagination */
+  .bulk-pagination {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .pagination-btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Mobile AI text */
+  .ai-text {
+    display: none;
+  }
+  
+  .ai-text-mobile {
+    display: inline;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  .page-header {
+    margin-bottom: 0.75rem;
+  }
+  
+  .header-actions {
+    gap: 0.3rem;
+  }
+  
+  .register-main-btn,
+  .ai-batch-main-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    height: 36px;
+    min-height: 36px;
+    max-height: 36px;
+  }
+  
+  .register-main-btn .material-icons,
+  .ai-batch-main-btn .material-icons {
+    font-size: 14px;
+  }
+  
+  .register-dropdown-content,
+  .ai-dropdown-content {
+    min-width: 140px;
+    max-width: 200px;
+  }
+  
+  .register-dropdown-item,
+  .ai-dropdown-item {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  /* Extra small screen bulk pagination */
+  .bulk-pagination {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .pagination-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  /* Extra small screen AI text */
+  .ai-text {
+    display: none;
+  }
+  
+  .ai-text-mobile {
+    display: inline;
   }
 }
 
@@ -5508,10 +6415,7 @@ input:checked + .toggle-slider:before {
     gap: 0.35rem;
   }
   
-  .add-btn {
-    padding: 0.45rem;
-    font-size: 0.75rem;
-  }
+  /* Removed old add-btn styles */
 }
 
 /* Add User Profile Header styles for details modal */
@@ -6441,5 +7345,146 @@ input:checked + .toggle-slider:before {
 
 .avatar-btn:hover {
   background: #f5f5f5;
+}
+
+/* Sorting Controls Styles */
+.sorting-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sort-select {
+  padding: 0.75rem;
+  padding-right: 2.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  min-width: 150px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.sort-indicator {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sort-indicator .material-icons {
+  font-size: 18px;
+  color: #2196F3;
+}
+
+.sort-indicator .sort-asc {
+  color: #4CAF50;
+}
+
+.sort-indicator .sort-desc {
+  color: #FF9800;
+}
+
+.sort-select:hover {
+  border-color: #2196F3;
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 3px rgba(33,150,243,0.1);
+}
+
+.clear-sort-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #ffebee;
+  color: #f44336;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.clear-sort-btn:hover {
+  background: #ffcdd2;
+  transform: scale(1.1);
+}
+
+.clear-sort-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Display format indicator */
+.display-format-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #e3f2fd;
+  border: 1px solid #2196F3;
+  border-radius: 6px;
+  color: #1976D2;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.display-format-indicator .material-icons {
+  font-size: 16px;
+  color: #2196F3;
+}
+
+/* Responsive sorting controls */
+@media (max-width: 768px) {
+  .sorting-controls {
+    width: 100%;
+    gap: 0.4rem;
+  }
+  
+  .sort-select-wrapper {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .sort-select {
+    width: 100%;
+    padding: 0.5rem;
+    padding-right: 2.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .sort-indicator .material-icons {
+    font-size: 16px;
+  }
+  
+  .clear-sort-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .clear-sort-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .display-format-indicator {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
 }
 </style>

@@ -1,5 +1,5 @@
-export const BASE_URL = 'http://localhost:3400/auth';
-export const SOCKET_URL = 'http://localhost:3400/';
+export const BASE_URL = 'https://emnmtv.shop/auth';
+export const SOCKET_URL = 'https://emnmtv.shop/';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -3766,6 +3766,202 @@ export const getAttendanceSessionById = async (sessionId) => {
     return await response.json();
   } catch (error) {
     console.error("Error getting attendance session:", error);
+    throw error;
+  }
+};
+
+/**
+ * Archive an exam result for a specific student and exam
+ * @param {number} examId - The ID of the exam
+ * @param {number} studentId - The ID of the student
+ * @param {string} [archiveReason] - Optional reason for archiving
+ * @returns {Promise<Object>} - The archived exam result data
+ */
+export const archiveExamResult = async (examId, studentId, archiveReason) => {
+  try {
+    console.log('AuthService: Archiving exam result', { examId, studentId, archiveReason });
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results/archive`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ examId, studentId, archiveReason })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Archive exam result failed', errorData);
+      throw new Error(errorData.error || "Failed to archive exam result");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam result archived successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Archive exam result error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Restore a previously archived exam result
+ * @param {number} archivedExamResultId - The ID of the archived exam result record
+ * @returns {Promise<Object>} - The restored exam result data
+ */
+export const restoreArchivedExamResult = async (archivedExamResultId) => {
+  try {
+    console.log('AuthService: Restoring archived exam result', { archivedExamResultId });
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results/restore`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ archivedExamResultId })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Restore exam result failed', errorData);
+      throw new Error(errorData.error || "Failed to restore exam result");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam result restored successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Restore exam result error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get a list of all archived exam results
+ * @returns {Promise<Array>} - List of archived exam results
+ */
+export const getArchivedExamResults = async () => {
+  try {
+    console.log('AuthService: Fetching archived exam results');
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Fetch archived exam results failed', errorData);
+      throw new Error(errorData.error || "Failed to fetch archived exam results");
+    }
+
+    const { archivedExamResults } = await response.json();
+    console.log('AuthService: Archived exam results fetched successfully', archivedExamResults);
+    return archivedExamResults;
+  } catch (error) {
+    console.error("AuthService: Fetch archived exam results error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get details of a specific archived exam result
+ * @param {number} archivedExamResultId - The ID of the archived exam result record
+ * @returns {Promise<Object>} - The archived exam result details
+ */
+export const getArchivedExamResultById = async (archivedExamResultId) => {
+  try {
+    console.log('AuthService: Fetching archived exam result details', { archivedExamResultId });
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results/${archivedExamResultId}`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Fetch archived exam result details failed', errorData);
+      throw new Error(errorData.error || "Failed to fetch archived exam result details");
+    }
+
+    const { archivedExamResult } = await response.json();
+    console.log('AuthService: Archived exam result details fetched successfully');
+    return archivedExamResult;
+  } catch (error) {
+    console.error("AuthService: Fetch archived exam result details error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Archive all exam results for a specific exam
+ * @param {number} examId - The ID of the exam
+ * @param {string} [archiveReason] - Optional reason for archiving
+ * @returns {Promise<Object>} - Result containing archived count and total results
+ */
+export const archiveAllExamResults = async (examId, archiveReason) => {
+  try {
+    console.log('AuthService: Archiving all exam results for exam', { examId, archiveReason });
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results/archive-all`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ examId, archiveReason })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Archive all exam results failed', errorData);
+      throw new Error(errorData.error || "Failed to archive all exam results");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: All exam results archived successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Archive all exam results error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Archive all exam results for all exams globally
+ * @param {string} [archiveReason] - Optional reason for archiving
+ * @returns {Promise<Object>} - Result containing archived count and total results
+ */
+export const archiveAllExamResultsGlobally = async (archiveReason) => {
+  try {
+    console.log('AuthService: Archiving all exam results globally', { archiveReason });
+
+    const response = await fetch(`${BASE_URL}/archived-exam-results/archive-all-globally`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${localStorage.getItem("jwtToken")}`
+      },
+      body: JSON.stringify({ archiveReason })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Archive all exam results globally failed', errorData);
+      throw new Error(errorData.error || "Failed to archive all exam results globally");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: All exam results archived globally successfully', result);
+    return result;
+  } catch (error) {
+    console.error("AuthService: Archive all exam results globally error:", error);
     throw error;
   }
 };

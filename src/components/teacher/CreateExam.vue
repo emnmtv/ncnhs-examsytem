@@ -1,5 +1,18 @@
 <template>
   <div class="create-exam-container">
+    <!-- Add back button for edit mode -->
+    <div v-if="isEditing" class="back-button-container">
+      <button 
+        type="button" 
+        class="back-button"
+        @click="goBack"
+        title="Go back to previous page"
+      >
+        <span class="material-icons">arrow_back</span>
+        <span class="back-text">Back</span>
+      </button>
+    </div>
+
     <div class="header-container">
       <div class="header-content">
         <h1>{{ isEditing ? 'Edit Exam' : 'Create New Exam' }}<span class="material-icons">assignment_add</span></h1>
@@ -947,6 +960,10 @@ export default {
       if (aiService.setPreferredModel && selectedAiModel.value) {
         aiService.setPreferredModel(selectedAiModel.value);
       }
+    };
+
+    const goBack = () => {
+      router.go(-1);
     };
 
     const triggerFileUpload = () => {
@@ -2069,7 +2086,8 @@ export default {
       processTextInput,
       availableAiModels,
       selectedAiModel,
-      updatePreferredModel
+      updatePreferredModel,
+      goBack
     };
   }
 };
@@ -5144,5 +5162,50 @@ small {
   .settings-toggles {
     gap: 6px;
   }
+  
+  .back-button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .back-button .material-icons {
+    font-size: 18px;
+  }
+}
+
+/* Back button styling */
+.back-button-container {
+  margin-bottom: 20px;
+  z-index: 1000;
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.back-button:hover {
+  background: linear-gradient(135deg, #e0e0e0, #d0d0d0);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.back-button .material-icons {
+  font-size: 20px;
+}
+
+.back-text {
+  font-weight: 500;
 }
 </style>

@@ -85,16 +85,86 @@
         <div class="exam-header">
           <div class="texture-layer"></div>
           <h2>{{ exam.examTitle }}</h2>
-          <div class="exam-meta">
-            <span class="exam-meta-item">
-              <i class="fas fa-chalkboard"></i> {{ exam.classCode || 'No Class' }}
-            </span>
-            <span class="exam-meta-item">
-              <i class="fas fa-key"></i> {{ exam.testCode }}
-            </span>
-            <span class="exam-meta-item" :class="'status-' + exam.status">
-              <i class="fas fa-circle"></i> {{ formatStatus(exam.status) }}
-            </span>
+          <div class="exam-meta-container">
+            <div class="exam-meta">
+              <span class="exam-meta-item">
+                <i class="fas fa-chalkboard"></i> {{ exam.classCode || 'No Class' }}
+              </span>
+              <span class="exam-meta-item">
+                <i class="fas fa-key"></i> {{ exam.testCode }}
+              </span>
+              <span class="exam-meta-item" :class="'status-' + exam.status">
+                <i class="fas fa-circle"></i> {{ formatStatus(exam.status) }}
+              </span>
+            </div>
+            <div class="exam-actions-dropdown">
+              <button class="dropdown-toggle" @click="toggleDropdown($event)">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              <div class="dropdown-menu" @click.stop>
+                <button 
+                  v-if="!exam.scores.length"
+                  @click="editExam(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Edit exam"
+                >
+                  <i class="fas fa-edit"></i> Edit
+                </button>
+                <button 
+                  @click="previewExam(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Preview exam"
+                >
+                  <i class="fas fa-eye"></i> Preview
+                </button>
+                <button 
+                  @click="exportExam(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Export exam"
+                >
+                  <i class="fas fa-file-export"></i> Export
+                </button>
+                <button 
+                  @click="openAccessModal(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Manage access"
+                >
+                  <span class="material-icons-round">security</span>
+                  Access
+                </button>
+                <button 
+                  @click="viewPrintableExam(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="View printable exam"
+                >
+                  <i class="fas fa-file-alt"></i> Paper
+                </button>
+                <button 
+                  v-if="activeTab === 'active' && exam.status !== 'started' && !exam.scores.length"
+                  @click="confirmDelete(exam); closeAllDropdowns()" 
+                  class="dropdown-item delete"
+                  title="Delete exam"
+                >
+                  <i class="fas fa-trash"></i> Delete
+                </button>
+                <button 
+                  v-if="activeTab === 'active'"
+                  @click="confirmArchive(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Archive exam"
+                >
+                  <i class="fas fa-archive"></i> Archive
+                </button>
+                <button 
+                  v-if="activeTab === 'archived'"
+                  @click="confirmUnarchive(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Unarchive exam"
+                >
+                  <i class="fas fa-box-open"></i> Unarchive
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -126,23 +196,6 @@
 
         <div class="exam-actions">
           <button 
-            v-if="!exam.scores.length"
-            @click="editExam(exam)" 
-            class="action-btn edit-btn"
-            title="Edit exam"
-          >
-            <i class="fas fa-edit"></i> Edit
-          </button>
-
-          <button 
-            @click="previewExam(exam)" 
-            class="action-btn preview-btn"
-            title="Preview exam"
-          >
-            <i class="fas fa-eye"></i> Preview
-          </button>
-
-          <button 
             v-if="exam.status === 'pending' || exam.status === 'stopped'"
             @click="startExam(exam.testCode)" 
             class="action-btn start-btn"
@@ -161,64 +214,12 @@
           </button>
 
           <button 
-            v-if="activeTab === 'active' && exam.status !== 'started' && !exam.scores.length"
-            @click="confirmDelete(exam)" 
-            class="action-btn delete-btn"
-            title="Delete exam"
-          >
-            <i class="fas fa-trash"></i> Delete
-          </button>
-
-          <button 
-            v-if="activeTab === 'active'"
-            @click="confirmArchive(exam)" 
-            class="action-btn archive-btn"
-            title="Archive exam"
-          >
-            <i class="fas fa-archive"></i> Archive
-          </button>
-
-          <button 
-            v-if="activeTab === 'archived'"
-            @click="confirmUnarchive(exam)" 
-            class="action-btn unarchive-btn"
-            title="Unarchive exam"
-          >
-            <i class="fas fa-box-open"></i> Unarchive
-          </button>
-
-          <button 
             @click="viewResults(exam)" 
             class="action-btn results-btn"
             title="View results"
             :disabled="!exam.scores.length"
           >
             <i class="fas fa-chart-bar"></i> Results
-          </button>
-
-          <button 
-            @click="exportExam(exam)" 
-            class="action-btn export-btn"
-            title="Export exam"
-          >
-            <i class="fas fa-file-export"></i> Export
-          </button>
-
-          <button 
-            @click="openAccessModal(exam)" 
-            class="action-btn access-btn"
-            title="Manage access"
-          >
-            <span class="material-icons-round">security</span>
-            Access
-          </button>
-
-          <button 
-            @click="viewPrintableExam(exam)" 
-            class="action-btn paper-btn"
-            title="View printable exam"
-          >
-            <i class="fas fa-file-alt"></i> Paper
           </button>
 
           <button 
@@ -483,6 +484,67 @@ export default {
   name: 'ManageExams',
   
   setup() {
+    const toggleDropdown = (event) => {
+      event.stopPropagation();
+      
+      // Close all other open dropdowns first
+      document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        const parentDropdown = menu.closest('.exam-actions-dropdown');
+        const currentDropdown = event.target.closest('.exam-actions-dropdown');
+        if (parentDropdown !== currentDropdown) {
+          menu.classList.remove('show');
+        }
+      });
+      
+      // Toggle the clicked dropdown
+      const dropdownContainer = event.target.closest('.exam-actions-dropdown');
+      const dropdown = dropdownContainer.querySelector('.dropdown-menu');
+      const isCurrentlyOpen = dropdown.classList.contains('show');
+      
+      if (isCurrentlyOpen) {
+        dropdown.classList.remove('show');
+        return;
+      }
+      
+      dropdown.classList.add('show');
+      
+      // Reset any previous positioning styles
+      dropdown.style.position = '';
+      dropdown.style.top = '';
+      dropdown.style.right = '';
+      dropdown.style.left = '';
+      
+      // Check if dropdown would overflow and adjust position
+      setTimeout(() => {
+        const dropdownRect = dropdown.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        
+        if (dropdownRect.right > viewportWidth - 10) {
+          dropdown.style.left = '-150px';
+          dropdown.style.right = 'auto';
+        }
+      }, 10);
+      
+      // Add click outside listener to close dropdown
+      const closeDropdownHandler = (e) => {
+        if (!dropdown.contains(e.target) && !dropdownContainer.contains(e.target)) {
+          dropdown.classList.remove('show');
+          document.removeEventListener('click', closeDropdownHandler);
+        }
+      };
+      
+      // Delay adding the event listener to prevent immediate closing
+      setTimeout(() => {
+        document.addEventListener('click', closeDropdownHandler);
+      }, 100);
+    };
+    
+    const closeAllDropdowns = () => {
+      document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+      });
+    };
+    
     const router = useRouter();
     const exams = ref([]);
     const archivedExams = ref([]);
@@ -1060,6 +1122,8 @@ export default {
     });
 
     return {
+      toggleDropdown,
+      closeAllDropdowns,
       exams,
       archivedExams,
       activeTab,
@@ -1355,6 +1419,7 @@ export default {
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .exam-card:hover {
@@ -1366,7 +1431,8 @@ export default {
   background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   padding: 20px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  border-radius: 16px 16px 0 0;
 }
 
 /* Main paint swipe */
@@ -1436,6 +1502,14 @@ export default {
   font-size: 1.5rem;
   position: relative;
   z-index: 1;
+}
+
+.exam-meta-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 2;
 }
 
 .exam-meta {
@@ -2089,6 +2163,84 @@ input:checked + .slider:before {
   background: #43A047;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Dropdown styles */
+.exam-actions-dropdown {
+  position: relative;
+  z-index: 999;
+  margin-left: 10px;
+}
+
+.dropdown-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  min-width: 180px;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  margin-top: 5px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu.show {
+  display: flex;
+}
+
+.dropdown-item {
+  padding: 10px 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #333;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item.delete {
+  color: #f44336;
+}
+
+.dropdown-item.delete:hover {
+  background: #ffebee;
 }
 
 /* Responsive styles for the modal */
