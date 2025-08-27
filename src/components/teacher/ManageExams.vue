@@ -133,6 +133,14 @@
                   Access
                 </button>
                 <button 
+                  @click="openSettingsModal(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Update exam settings"
+                >
+                  <span class="material-icons-round">settings</span>
+                  Settings
+                </button>
+                <button 
                   @click="viewPrintableExam(exam); closeAllDropdowns()" 
                   class="dropdown-item"
                   title="View printable exam"
@@ -455,6 +463,124 @@
         </div>
       </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div v-if="showSettingsModal" class="modal-backdrop" @click.self="closeSettingsModal">
+      <div class="settings-modal" :class="{ 'modal-closing': isSettingsClosing }">
+        <div class="modal-handle"></div>
+        
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons-round">settings</span>
+            Update Exam Settings
+          </h2>
+          <button @click="closeSettingsModal" class="close-btn">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Exam Info Card -->
+          <div class="settings-exam-info">
+            <h3>{{ selectedExamForSettings.examTitle }}</h3>
+            <div class="exam-meta">
+              <span class="meta-item">
+                <span class="material-icons-round">code</span>
+                Test Code: {{ selectedExamForSettings.testCode }}
+              </span>
+              <span class="meta-item">
+                <span class="material-icons-round">class</span>
+                Class: {{ selectedExamForSettings.classCode }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Settings Form -->
+          <form @submit.prevent="saveExamSettings" class="settings-form">
+            <div class="form-section">
+              <h4>Timer</h4>
+              <div class="form-group">
+                <label for="durationMinutes">Time Limit (minutes)</label>
+                <input 
+                  id="durationMinutes"
+                  v-model="settingsForm.durationMinutes" 
+                  type="number" 
+                  class="form-input"
+                  placeholder="e.g., 60 (leave empty for no limit)"
+                  min="1"
+                />
+                <small class="form-help">Set a time limit for completing the exam. Leave empty for unlimited time.</small>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Schedule</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="startDateTime">Start Date & Time</label>
+                  <input 
+                    id="startDateTime"
+                    v-model="settingsForm.startDateTime" 
+                    type="datetime-local" 
+                    class="form-input"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="endDateTime">End Date & Time</label>
+                  <input 
+                    id="endDateTime"
+                    v-model="settingsForm.endDateTime" 
+                    type="datetime-local" 
+                    class="form-input"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>Attempts</h4>
+              <div class="form-group">
+                <label for="maxAttempts">Maximum Attempts</label>
+                <input 
+                  id="maxAttempts"
+                  v-model="settingsForm.maxAttempts" 
+                  type="number" 
+                  class="form-input"
+                  placeholder="Enter max attempts"
+                  min="1"
+                />
+              </div>
+            </div>
+
+            <div class="form-section">
+              <h4>History</h4>
+              <div class="form-group">
+                <div class="toggle-wrapper">
+                  <label class="switch">
+                    <input type="checkbox" v-model="settingsForm.studentExamHistory">
+                    <span class="slider round"></span>
+                  </label>
+                  <span class="toggle-state">{{ settingsForm.studentExamHistory ? 'Enabled' : 'Disabled' }}</span>
+                </div>
+                <small class="form-help">Allow students to view their previous attempts</small>
+              </div>
+            </div>
+          </form>
+        </div>
+        
+        <div class="modal-footer">
+          <button @click="closeSettingsModal" class="cancel-btn">
+            <span class="material-icons-round">close</span>
+            Cancel
+          </button>
+          <button @click="saveExamSettings" class="save-btn" :disabled="isSaving">
+            <span v-if="isSaving" class="material-icons-round rotating">sync</span>
+            <span v-else class="material-icons-round">save</span>
+            {{ isSaving ? 'Saving...' : 'Save Settings' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -474,7 +600,8 @@ import {
   setExamAccess,
   getExamAccess,
   setExamUserAccess,
-  fetchStudents
+  fetchStudents,
+  updateExamSettings
 } from '../../services/authService';
 import Swal from 'sweetalert2';
 import socketManager from '@/utils/socketManager';
@@ -566,6 +693,19 @@ export default {
     const studentSearchResults = ref([]);
     const isSearchingStudents = ref(false);
     const isClosing = ref(false);
+    
+    // Settings modal variables
+    const showSettingsModal = ref(false);
+    const selectedExamForSettings = ref(null);
+    const isSettingsClosing = ref(false);
+    const isSaving = ref(false);
+    const settingsForm = ref({
+      durationMinutes: null,
+      startDateTime: '',
+      endDateTime: '',
+      maxAttempts: null,
+      studentExamHistory: false
+    });
 
     // Initialize socket connection
     onMounted(() => {
@@ -815,6 +955,104 @@ export default {
       
       // Load current access settings for this exam
       await loadExamAccess(exam.id);
+    };
+
+    const openSettingsModal = (exam) => {
+      selectedExamForSettings.value = exam;
+      
+      // Populate form with current exam settings
+      settingsForm.value = {
+        durationMinutes: exam.durationMinutes || null,
+        startDateTime: exam.startDateTime ? formatDateTimeForInput(exam.startDateTime) : '',
+        endDateTime: exam.endDateTime ? formatDateTimeForInput(exam.endDateTime) : '',
+        maxAttempts: exam.maxAttempts || null,
+        studentExamHistory: exam.studentExamHistory || false
+      };
+      
+      showSettingsModal.value = true;
+    };
+
+    const closeSettingsModal = () => {
+      isSettingsClosing.value = true;
+      setTimeout(() => {
+        showSettingsModal.value = false;
+        isSettingsClosing.value = false;
+        // Reset form
+        settingsForm.value = {
+          durationMinutes: null,
+          startDateTime: '',
+          endDateTime: '',
+          maxAttempts: null,
+          studentExamHistory: false
+        };
+      }, 300);
+    };
+
+    const formatDateTimeForInput = (dateTimeString) => {
+      if (!dateTimeString) return '';
+      const date = new Date(dateTimeString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const saveExamSettings = async () => {
+      try {
+        isSaving.value = true;
+        
+        // Validate dates if both are provided
+        if (settingsForm.value.startDateTime && settingsForm.value.endDateTime) {
+          const startDate = new Date(settingsForm.value.startDateTime);
+          const endDate = new Date(settingsForm.value.endDateTime);
+          if (startDate >= endDate) {
+            throw new Error('Start date must be before end date');
+          }
+        }
+
+        // Validate numeric fields - allow null/empty for unlimited
+        if (settingsForm.value.durationMinutes && settingsForm.value.durationMinutes < 1) {
+          throw new Error('Duration must be at least 1 minute');
+        }
+        if (settingsForm.value.maxAttempts && settingsForm.value.maxAttempts !== null && settingsForm.value.maxAttempts < 1) {
+          throw new Error('Maximum attempts must be at least 1');
+        }
+
+        // Prepare data for API
+        const settingsData = {
+          durationMinutes: settingsForm.value.durationMinutes || null,
+          startDateTime: settingsForm.value.startDateTime ? new Date(settingsForm.value.startDateTime) : null,
+          endDateTime: settingsForm.value.endDateTime ? new Date(settingsForm.value.endDateTime) : null,
+          maxAttempts: settingsForm.value.maxAttempts || null,
+          studentExamHistory: settingsForm.value.studentExamHistory
+        };
+
+        // Call API to update settings
+        await updateExamSettings(selectedExamForSettings.value.id, settingsData);
+        
+        // Refresh exams list
+        await loadExams();
+        
+        // Show success message
+        Swal.fire({
+          icon: 'success',
+          title: 'Settings Updated',
+          text: 'Exam settings have been updated successfully'
+        });
+        
+        closeSettingsModal();
+      } catch (error) {
+        console.error('Error updating exam settings:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: error.message || 'Failed to update exam settings'
+        });
+      } finally {
+        isSaving.value = false;
+      }
     };
 
     const closeAccessModal = () => {
@@ -1173,7 +1411,16 @@ export default {
       removeSpecificStudent,
       toggleSpecificStudent,
       viewPrintableExam,
-      viewMPS
+      viewMPS,
+      // Settings modal
+      showSettingsModal,
+      selectedExamForSettings,
+      isSettingsClosing,
+      isSaving,
+      settingsForm,
+      openSettingsModal,
+      closeSettingsModal,
+      saveExamSettings
     };
   }
 };
@@ -1725,6 +1972,147 @@ export default {
 
 /* Modal styles remain the same */
 
+/* Settings Modal Styles */
+.settings-modal {
+  background: white;
+  border-radius: 16px;
+  max-width: 800px;
+  width: 95%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  padding: 0;
+  animation: modalFadeIn 0.3s ease;
+  z-index: 1001;
+}
+
+.settings-exam-info {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.settings-exam-info h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.form-section h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-section h4::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: #159750;
+  border-radius: 2px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s;
+  background: white;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
+}
+
+.form-input::placeholder {
+  color: #999;
+}
+
+.form-help {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #333;
+  position: relative;
+}
+
+.form-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  height: 20px;
+  width: 20px;
+  background-color: #fff;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 5px;
+  height: 10px;
+  border: solid #159750;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.form-checkbox:checked ~ .checkmark {
+  background-color: #159750;
+  border-color: #159750;
+}
+
+.form-checkbox:checked ~ .checkmark:after {
+  display: block;
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -2197,13 +2585,13 @@ input:checked + .slider:before {
   background: white;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  min-width: 180px;
+  min-width: 160px;
   display: none;
   flex-direction: column;
   overflow: hidden;
   z-index: 1000;
   margin-top: 5px;
-  max-height: 300px;
+  max-height: 280px;
   overflow-y: auto;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
@@ -2213,17 +2601,17 @@ input:checked + .slider:before {
 }
 
 .dropdown-item {
-  padding: 10px 15px;
+  padding: 9px 14px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   background: none;
   border: none;
   text-align: left;
   cursor: pointer;
   transition: all 0.2s;
   color: #333;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -2239,6 +2627,11 @@ input:checked + .slider:before {
   color: #f44336;
 }
 
+.dropdown-item i,
+.dropdown-item .material-icons-round {
+  font-size: 0.95rem;
+}
+
 .dropdown-item.delete:hover {
   background: #ffebee;
 }
@@ -2248,7 +2641,8 @@ input:checked + .slider:before {
   .manage-exams {
     padding: 10px 5px; /* Further reduce padding on mobile */
   }
-  .access-modal {
+  .access-modal,
+  .settings-modal {
     width: 95%;
     max-height: 90vh;
   }

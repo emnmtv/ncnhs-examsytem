@@ -997,6 +997,47 @@ export default {
           } : null
         });
         
+        // Validate that attempts are properly filtered by student
+        if (scores && scores.length > 0) {
+          console.log('Validating attempt data structure...');
+          let hasMixedAttempts = false;
+          
+          scores.forEach((score, index) => {
+            if (score.exam && score.exam.attempts) {
+              console.log(`Score ${index}: Student ${score.user.id} has ${score.exam.attempts.length} attempts`);
+              
+              // Check if this student has attempts from other students
+              const otherStudentAttempts = score.exam.attempts.filter(attempt => attempt.userId !== score.user.id);
+              if (otherStudentAttempts.length > 0) {
+                hasMixedAttempts = true;
+                console.warn(`WARNING: Student ${score.user.id} has ${otherStudentAttempts.length} attempts from other students!`);
+                otherStudentAttempts.forEach(attempt => {
+                  console.warn(`  Foreign attempt: ${attempt.attemptNumber} belongs to user ${attempt.userId}`);
+                });
+              }
+              
+              score.exam.attempts.forEach(attempt => {
+                console.log(`  Attempt ${attempt.attemptNumber}: userId=${attempt.userId}, hasRecords=${!!attempt.records}`);
+              });
+            }
+          });
+          
+          if (hasMixedAttempts) {
+            console.error('CRITICAL: Backend is returning mixed attempts! This needs to be fixed.');
+          }
+        }
+        
+        // Clean up the data to ensure attempts are properly filtered by student
+        if (scores && scores.length > 0) {
+          scores.forEach(score => {
+            if (score.exam && score.exam.attempts) {
+              // Filter attempts to only include those belonging to the current student
+              score.exam.attempts = score.exam.attempts.filter(attempt => attempt.userId === score.user.id);
+              console.log(`Cleaned up: Student ${score.user.id} now has ${score.exam.attempts.length} attempts`);
+            }
+          });
+        }
+        
         results.value = scores;
         
         // Process attempts by student
@@ -1057,28 +1098,40 @@ export default {
         }
         
         // NEW STRUCTURE: Process nested attempt records from exam.attempts
+        // IMPORTANT: Only process attempts that belong to the current student
         if (result.exam && result.exam.attempts && Array.isArray(result.exam.attempts)) {
+          console.log(`Processing attempts for student ${studentId}:`, result.exam.attempts.length, 'total attempts');
+          
           result.exam.attempts.forEach(attempt => {
-            // Process records within each attempt
-            if (attempt.records && Array.isArray(attempt.records)) {
-              attempt.records.forEach(record => {
-                // Only add records that aren't duplicates
-                if (!attemptsByStudent[studentId].some(a => a.id === record.id)) {
-                  attemptsByStudent[studentId].push({
-                    id: record.id,
-                    attemptId: attempt.id, // Link to parent attempt
-                    attemptNumber: attempt.attemptNumber,
-                    startedAt: record.startedAt || attempt.startedAt,
-                    completedAt: record.completedAt || attempt.completedAt,
-                    timeSpent: record.timeSpent || attempt.timeSpent,
-                    resultId: result.id,
-                    score: record.score || 0,
-                    total: record.total || result.total,
-                    percentage: record.percentage || 0,
-                    isHistoricalRecord: true
-                  });
-                }
-              });
+            console.log(`Attempt ${attempt.attemptNumber} belongs to user ${attempt.userId}, current student: ${studentId}`);
+            
+            // Only process attempts that belong to the current student
+            if (attempt.userId === studentId) {
+              console.log(`Processing attempt ${attempt.attemptNumber} for student ${studentId}`);
+              
+              // Process records within each attempt
+              if (attempt.records && Array.isArray(attempt.records)) {
+                attempt.records.forEach(record => {
+                  // Only add records that aren't duplicates
+                  if (!attemptsByStudent[studentId].some(a => a.id === record.id)) {
+                    attemptsByStudent[studentId].push({
+                      id: record.id,
+                      attemptId: attempt.id, // Link to parent attempt
+                      attemptNumber: attempt.attemptNumber,
+                      startedAt: record.startedAt || attempt.startedAt,
+                      completedAt: record.completedAt || attempt.completedAt,
+                      timeSpent: record.timeSpent || attempt.timeSpent,
+                      resultId: result.id,
+                      score: record.score || 0,
+                      total: record.total || result.total,
+                      percentage: record.percentage || 0,
+                      isHistoricalRecord: true
+                    });
+                  }
+                });
+              }
+            } else {
+              console.log(`Skipping attempt ${attempt.attemptNumber} - belongs to different user (${attempt.userId})`);
             }
           });
         }
@@ -1761,9 +1814,9 @@ export default {
       
       // Check for exam.attempts.records structure
       if (student.exam && student.exam.attempts) {
-        // Check if any attempt has records
+        // Check if any attempt has records for this specific student
         for (const attempt of student.exam.attempts) {
-          if (attempt.records && attempt.records.length > 0) {
+          if (attempt.userId === userId && attempt.records && attempt.records.length > 0) {
             return true;
           }
         }
@@ -1782,14 +1835,62 @@ export default {
           return;
         }
         
-        // Get records from exam.attempts
+        // Get records from exam.attempts - IMPORTANT: Only get attempts for this specific student
         let records = [];
         
         if (student.exam && student.exam.attempts) {
-          // Extract records from nested structure
+          console.log(`Found ${student.exam.attempts.length} total attempts for exam, filtering for student ${userId}`);
+          
+          // Extract records from nested structure, but only for the current student
           student.exam.attempts.forEach(attempt => {
+            console.log(`Checking attempt ${attempt.attemptNumber} - userId: ${attempt.userId}, target userId: ${userId}`);
+            
+            // Only process attempts that belong to the current student
+            if (attempt.userId === userId) {
+              console.log(`Processing attempt ${attempt.attemptNumber} for student ${userId}`);
+              
+              if (attempt.records && Array.isArray(attempt.records)) {
+                console.log(`Found ${attempt.records.length} records in attempt ${attempt.attemptNumber}`);
+                
+                // Add all records with attempt number
+                attempt.records.forEach(record => {
+                  records.push({
+                    ...record,
+                    attemptNumber: attempt.attemptNumber
+                  });
+                });
+              }
+            } else {
+              console.log(`Skipping attempt ${attempt.attemptNumber} - belongs to different user (${attempt.userId})`);
+            }
+          });
+        }
+        
+        // Alternative: Use the processed attempts from allAttempts if available
+        if (records.length === 0 && allAttempts.value[userId]) {
+          console.log(`Using fallback: allAttempts for student ${userId}`);
+          records = allAttempts.value[userId]
+            .filter(attempt => attempt.isHistoricalRecord)
+            .map(attempt => ({
+              id: attempt.id,
+              attemptNumber: attempt.attemptNumber,
+              score: attempt.score,
+              total: attempt.total,
+              percentage: attempt.percentage,
+              startedAt: attempt.startedAt,
+              completedAt: attempt.completedAt,
+              timeSpent: attempt.timeSpent
+            }));
+        }
+        
+        // Final fallback: Manually filter attempts from the exam data
+        if (records.length === 0 && student.exam && student.exam.attempts) {
+          console.log(`Using final fallback: manually filtering attempts for student ${userId}`);
+          const filteredAttempts = student.exam.attempts.filter(attempt => attempt.userId === userId);
+          console.log(`Filtered ${filteredAttempts.length} attempts for student ${userId} out of ${student.exam.attempts.length} total`);
+          
+          filteredAttempts.forEach(attempt => {
             if (attempt.records && Array.isArray(attempt.records)) {
-              // Add all records with attempt number
               attempt.records.forEach(record => {
                 records.push({
                   ...record,
@@ -1801,13 +1902,21 @@ export default {
         }
         
         if (records.length > 0) {
+          // Sort records by attempt number and completion date
+          records.sort((a, b) => {
+            if (a.attemptNumber !== b.attemptNumber) {
+              return a.attemptNumber - b.attemptNumber;
+            }
+            return new Date(b.completedAt) - new Date(a.completedAt);
+          });
+          
           attemptRecordsModalData.value = {
             studentId: userId,
             student: student.user,
             records: records
           };
           showAttemptModal.value = true;
-          console.log('Showing attempt records modal with records:', records);
+          console.log(`Showing attempt records modal for student ${userId} with ${records.length} records:`, records);
         } else {
           console.log('No attempt records found for student ID:', userId);
         }

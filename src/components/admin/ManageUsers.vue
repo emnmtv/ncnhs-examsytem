@@ -411,6 +411,12 @@
       </div>
       
       <div class="export-controls">
+        <!-- Quick Add Button -->
+        <button @click="quickAddUser" class="quick-add-btn" :title="`Quick Add ${activeTab === 'students' ? 'Student' : activeTab === 'teachers' ? 'Teacher' : activeTab === 'admins' ? 'Admin' : activeTab === 'sections' ? 'Grade Section' : 'User'}`">
+          <span class="material-icons">add</span>
+          <span class="quick-add-text">Quick Add</span>
+        </button>
+        
         <button @click="toggleExportOptions" class="export-main-btn">
           <span class="material-icons">download</span>
           Export
@@ -1956,6 +1962,32 @@ const openModal = (type) => {
   modalType.value = type;
   formData.value = getInitialFormData(type);
   showModal.value = true;
+};
+
+// Quick add function for the + button
+const quickAddUser = () => {
+  // Check if we're on the sections tab
+  if (activeTab.value === 'sections') {
+    // Open grade section modal for quick add
+    openGradeSectionModal();
+    return;
+  }
+  
+  // Determine the user type based on active tab
+  let userType = '';
+  if (activeTab.value === 'students') {
+    userType = 'student';
+  } else if (activeTab.value === 'teachers') {
+    userType = 'teacher';
+  } else if (activeTab.value === 'admins') {
+    userType = 'admin';
+  } else {
+    // Default to student if no valid tab is selected
+    userType = 'student';
+  }
+  
+  // Open the modal with the determined user type
+  openModal(userType);
 };
 
 const getInitialFormData = (type) => {
@@ -4598,19 +4630,82 @@ const generateAndDownloadTemplate = () => {
 /* Export controls */
 .export-controls {
   position: relative;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Quick Add Button */
+.quick-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid #4CAF50;
+  border-radius: 10px;
+  background: #4CAF50;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+  position: relative;
+  overflow: hidden;
+  height: 44px; /* Match export button height */
+  box-sizing: border-box;
+  min-width: 120px; /* Ensure consistent width */
+}
+
+.quick-add-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  transition: left 0.3s ease;
+  z-index: -1;
+}
+
+.quick-add-btn:hover::before {
+  left: 0;
+}
+
+.quick-add-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  background: #43A047;
+}
+
+.quick-add-btn .material-icons {
+  font-size: 18px;
+  transition: transform 0.3s ease;
+}
+
+.quick-add-btn:hover .material-icons {
+  transform: scale(1.1);
+}
+
+.quick-add-text {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .export-main-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1rem;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
   background: #4CAF50;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
+  height: 44px; /* Match quick add button height */
+  box-sizing: border-box;
+  min-width: 120px; /* Ensure consistent width */
 }
 
 .export-main-btn:hover {
@@ -5066,9 +5161,29 @@ const generateAndDownloadTemplate = () => {
     flex: 1;
   }
   
+  /* Export controls mobile fixes */
+  .export-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  .quick-add-btn,
   .export-main-btn {
     width: 100%;
     justify-content: center;
+    padding: 0.6rem 1rem;
+    height: 40px; /* Slightly smaller height on mobile */
+    box-sizing: border-box;
+  }
+  
+  .quick-add-btn .material-icons,
+  .export-main-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .quick-add-text {
+    font-size: 0.85rem;
   }
   
   .export-dropdown {
@@ -5799,6 +5914,24 @@ const generateAndDownloadTemplate = () => {
   
   .ai-text-mobile {
     display: inline;
+  }
+  
+  /* Extra small screen quick add button */
+  .quick-add-btn,
+  .export-main-btn {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    height: 36px; /* Even smaller height on extra small screens */
+    box-sizing: border-box;
+  }
+  
+  .quick-add-btn .material-icons,
+  .export-main-btn .material-icons {
+    font-size: 14px;
+  }
+  
+  .quick-add-text {
+    font-size: 0.8rem;
   }
 }
 

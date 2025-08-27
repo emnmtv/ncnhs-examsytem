@@ -477,6 +477,7 @@ export default {
           createExamAttempt(this.exam.id).then(result => {
             this.currentAttemptId = result.id;
             console.log('Created new exam attempt:', result);
+            console.log(`Attempt ID: ${result.id}, Attempt Number: ${result.attemptNumber}`);
             Swal.close();
             this.showExamSession = true;
           }).catch(err => {
@@ -555,6 +556,7 @@ export default {
           this.testCode = '';
           this.currentTestCode = null;
           this.hasExamInProgress = false;
+          this.currentAttemptId = null;
           
           Swal.fire(
             'Left Exam',
@@ -571,8 +573,9 @@ export default {
       // Store the score for reference
       this.examScore = scoreResult;
       
-      // DON'T reset anything here - let the user view their results
-      // The user will explicitly call quitExam when they're ready
+      // Reset the attempt state since the exam is now completed
+      this.currentAttemptId = null;
+      this.hasExamInProgress = false;
       
       // Just show a small notification that submission was successful
       const Toast = Swal.mixin({
@@ -686,6 +689,9 @@ export default {
       // Reset exam progress flag
       this.hasExamInProgress = false;
       
+      // Reset attempt state
+      this.currentAttemptId = null;
+      
       // Also reset the students array to ensure it's freshly populated
       this.students = [];
     },
@@ -748,6 +754,10 @@ export default {
                         (response.attempts ? response.attempts.length : 0),
           nextAttemptNumber: response.nextAttemptNumber
         };
+        
+        console.log('Eligibility info mapped:', this.eligibilityInfo);
+        console.log(`Next attempt number: ${this.eligibilityInfo.nextAttemptNumber}`);
+        console.log(`Total attempts: ${this.eligibilityInfo.totalAttempts}`);
         
         // If exam is not active but has a valid ID, fetch attempts separately
         // This ensures we show correct attempt counts for inactive exams

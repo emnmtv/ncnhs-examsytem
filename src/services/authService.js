@@ -1,5 +1,8 @@
-export const BASE_URL = 'https://emnmtv.shop/auth';
-export const SOCKET_URL = 'https://emnmtv.shop/';
+export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+// export const BASE_URL = 'http://localhost:3300/auth';
+// export const SOCKET_URL = 'http://localhost:3300/';
+
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -916,6 +919,42 @@ export const updateExam = async (examId, examData) => {
     return await response.json();
   } catch (error) {
     console.error("AuthService: Exam update error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update exam settings only (without modifying questions)
+ * This function is specifically for updating exam configuration like duration, scheduling, and attempt limits
+ */
+export const updateExamSettings = async (examId, settingsData) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/settings`, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        durationMinutes: settingsData.durationMinutes,
+        startDateTime: settingsData.startDateTime,
+        endDateTime: settingsData.endDateTime,
+        maxAttempts: settingsData.maxAttempts,
+        studentExamHistory: settingsData.studentExamHistory
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to update exam settings");
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("AuthService: Exam settings update error:", error);
     throw error;
   }
 };
