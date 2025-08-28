@@ -50,7 +50,7 @@
             <span class="score-percentage">{{ scoreResult.percentage }}%</span>
           </div>
           <div class="score-details">
-            <p>You got <strong>{{ scoreResult.score }}</strong> out of <strong>{{ scoreResult.total }}</strong> questions correct.</p>
+            <p>You earned <strong>{{ scoreResult.score }}</strong> out of <strong>{{ scoreResult.total }}</strong> points.</p>
             <p class="score-message">{{ getScoreMessage(scoreResult.percentage) }}</p>
           </div>
         </div>
@@ -104,7 +104,35 @@
             </div>
           </div>
           
-          <!-- Text Input for Short Answer -->
+          <!-- Essay Question -->
+          <div v-else-if="currentQuestion.questionType === 'essay'" class="essay-answer-container">
+            <div class="essay-info">
+              <div class="essay-notice">
+                <span class="material-icons-round">description</span>
+                <div>
+                  <p><strong>Essay Question</strong></p>
+                  <p>Provide a detailed written response. This will be manually graded by your teacher.</p>
+                </div>
+              </div>
+            </div>
+            <textarea 
+              v-model="answers[currentQuestion.questionId]" 
+              placeholder="Write your essay response here..."
+              class="essay-answer-input"
+              rows="10"
+              @input="handleEssayInput(currentQuestion.questionId)"
+            ></textarea>
+            <div class="essay-meta">
+              <span class="word-count">
+                Words: {{ getWordCount(answers[currentQuestion.questionId] || '') }}
+              </span>
+              <span class="points-info" v-if="currentQuestion.points">
+                Worth {{ currentQuestion.points }} point{{ currentQuestion.points !== 1 ? 's' : '' }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Text Input for Short Answer/Enumeration -->
           <div v-else class="text-answer-container">
             <input 
               type="text" 
@@ -248,6 +276,15 @@ export default {
       link.id = 'fontawesome-css';
       link.rel = 'stylesheet';
       link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css';
+      document.head.appendChild(link);
+    }
+    
+    // Load Material Icons if not already loaded
+    if (!document.getElementById('material-icons-css')) {
+      const link = document.createElement('link');
+      link.id = 'material-icons-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://fonts.googleapis.com/icon?family=Material+Icons+Round';
       document.head.appendChild(link);
     }
   },
@@ -745,6 +782,21 @@ export default {
         this.saveExamState();
         this.emitProgress();
       }
+    },
+
+    handleEssayInput(questionId) {
+      // Save essay answer without uppercase transformation
+      // Ensure the answer exists in our answers object
+      if (this.answers[questionId] !== undefined) {
+        this.saveExamState();
+        this.emitProgress();
+      }
+    },
+
+    getWordCount(text) {
+      if (!text || typeof text !== 'string') return 0;
+      // Remove extra whitespace and count words
+      return text.trim().split(/\s+/).filter(word => word.length > 0).length;
     },
 
     openFullscreenImage(imageUrl) {
@@ -1394,5 +1446,125 @@ export default {
   0% { opacity: 1; }
   50% { opacity: 0.7; }
   100% { opacity: 1; }
+}
+
+/* Essay Answer Styles */
+.essay-answer-container {
+  margin-top: 12px;
+}
+
+.essay-info {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.essay-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.essay-notice .material-icons-round {
+  color: #666;
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.essay-notice div p {
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.essay-notice div p:first-child {
+  font-weight: 600;
+  color: #444;
+  font-size: 1rem;
+}
+
+.essay-notice div p:last-child {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.essay-answer-input {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  color: #333;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 200px;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.essay-answer-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.essay-answer-input::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+.essay-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.word-count {
+  font-weight: 500;
+}
+
+.points-info {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+/* Mobile responsiveness for essay components */
+@media (max-width: 600px) {
+  .essay-info {
+    padding: 12px;
+  }
+  
+  .essay-notice {
+    gap: 10px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 18px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.95rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.85rem;
+  }
+  
+  .essay-answer-input {
+    padding: 12px;
+    font-size: 16px; /* Prevent zoom on iOS */
+    min-height: 150px;
+  }
+  
+  .essay-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 </style> 

@@ -1,9 +1,64 @@
 <template>
   <div class="student-answer-details">
     <div class="header">
-      <div class="back-button" @click="handleBack">
-        <span class="material-icons">arrow_back</span>
-        Back to Results
+      <div class="header-left">
+        <div class="back-button" @click="handleBack">
+          <span class="material-icons">arrow_back</span>
+          Back to Results
+        </div>
+        
+        <!-- Filter and Search Controls -->
+        <div class="controls-row">
+          <div class="filter-controls">
+            <button 
+              class="filter-btn"
+              :class="{ active: showEssayOnly }"
+              @click="toggleEssayFilter"
+            >
+              <span class="material-icons">description</span>
+              Essay Only
+            </button>
+          </div>
+          
+          <div class="search-control">
+            <div class="search-box">
+              <span class="material-icons">search</span>
+              <input 
+                v-model="searchQuery" 
+                type="text" 
+                placeholder="Search questions..."
+                class="search-input"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="header-center">
+        <!-- Student Navigation -->
+        <div class="student-navigation">
+          <button 
+            class="nav-btn prev-student"
+            @click="navigateStudent('prev')"
+            :disabled="!canNavigatePrev"
+          >
+            <span class="material-icons">chevron_left</span>
+            Previous
+          </button>
+          
+          <div class="student-counter">
+            {{ currentStudentIndex + 1 }} of {{ totalStudents }}
+          </div>
+          
+          <button 
+            class="nav-btn next-student"
+            @click="navigateStudent('next')"
+            :disabled="!canNavigateNext"
+          >
+            Next
+            <span class="material-icons">chevron_right</span>
+          </button>
+        </div>
       </div>
       
       <div v-if="details" class="student-info">
@@ -231,9 +286,10 @@
         
         <div 
           v-else
-          v-for="answer in details.answers" 
+          v-for="answer in filteredAnswers" 
           :key="answer.id || answer.questionId"
           class="answer-item"
+          :class="{ 'essay-question': isEssayQuestion(answer) }"
           :data-correct="answer.isCorrect"
         >
           <div class="question-section">
@@ -269,44 +325,106 @@
           </div>
 
           <div class="answer-section">
-            <div class="answer-details">
-              <div class="answer-label">Student's Answer:</div>
-              <div class="student-answer" 
-                :class="{ 
-                  'no-answer': !answer.userAnswer,
-                  'correct': answer.isCorrect,
-                  'incorrect': !answer.isCorrect && answer.userAnswer
-                }"
-              >
-                {{ answer.userAnswer || 'No answer provided' }}
+            <!-- Essay Question Handling -->
+            <div v-if="isEssayQuestion(answer)" class="essay-answer-section">
+              <div class="essay-response">
+                <div class="answer-label">Student's Essay Response:</div>
+                <div class="essay-text" :class="{ 'no-answer': !answer.userAnswer }">
+                  {{ answer.userAnswer || 'No response provided' }}
+                </div>
+                <div v-if="answer.userAnswer" class="essay-meta">
+                  <span class="word-count">Words: {{ getWordCount(answer.userAnswer) }}</span>
+                  <span class="char-count">Characters: {{ answer.userAnswer.length }}</span>
+                </div>
               </div>
               
-              <div class="correct-answer">
-                <span class="answer-label">Correct Answer:</span>
-                <span>{{ getCorrectAnswer(answer) }}</span>
-              </div>
+                              <!-- Essay Scoring -->
+                <div class="essay-scoring">
+                  <div class="essay-score-input">
+                    <label>Score:</label>
+                    <input 
+                      type="number" 
+                      v-model.number="answer.essayScore"
+                      :min="0"
+                      :max="getQuestionPoints(answer)"
+                      class="score-input-field"
+                    />
+                    <span class="max-points">/ {{ getQuestionPoints(answer) }} points</span>
+                  </div>
+                  
+                  <!-- Teacher Feedback -->
+                  <div class="essay-feedback">
+                    <label>Teacher Feedback:</label>
+                    <textarea 
+                      v-model="answer.teacherFeedback"
+                      placeholder="Provide feedback for the student's response..."
+                      class="feedback-textarea"
+                      rows="3"
+                    ></textarea>
+                  </div>
+                  
+                  <!-- Grade Button -->
+                  <div class="essay-actions">
+                    <button 
+                      @click="saveEssayGrade(answer)"
+                      :disabled="isUpdating"
+                      class="grade-btn"
+                      :class="{ 'graded': answer.isGraded }"
+                    >
+                      <span v-if="isUpdating" class="material-icons spinning">sync</span>
+                      <span v-else class="material-icons">{{ answer.isGraded ? 'check_circle' : 'grade' }}</span>
+                      {{ answer.isGraded ? 'Update Grade' : 'Save Grade' }}
+                    </button>
+                    
+                    <div v-if="answer.isGraded" class="grade-status">
+                      <span class="material-icons">check_circle</span>
+                      Graded
+                    </div>
+                  </div>
+                </div>
             </div>
+            
+            <!-- Regular Question Handling -->
+            <div v-else class="regular-answer-section">
+              <div class="answer-details">
+                <div class="answer-label">Student's Answer:</div>
+                <div class="student-answer" 
+                  :class="{ 
+                    'no-answer': !answer.userAnswer,
+                    'correct': answer.isCorrect,
+                    'incorrect': !answer.isCorrect && answer.userAnswer
+                  }"
+                >
+                  {{ answer.userAnswer || 'No answer provided' }}
+                </div>
+                
+                <div class="correct-answer">
+                  <span class="answer-label">Correct Answer:</span>
+                  <span>{{ getCorrectAnswer(answer) }}</span>
+                </div>
+              </div>
 
-            <div class="answer-actions">
-              <div class="correctness-toggle">
-                <button 
-                  class="toggle-btn correct"
-                  :class="{ active: answer.isCorrect }"
-                  @click="updateAnswerCorrectness(answer.id, true)"
-                  :disabled="isUpdating"
-                >
-                  <span class="material-icons">check_circle</span>
-                  Correct
-                </button>
-                <button 
-                  class="toggle-btn incorrect"
-                  :class="{ active: !answer.isCorrect }"
-                  @click="updateAnswerCorrectness(answer.id, false)"
-                  :disabled="isUpdating"
-                >
-                  <span class="material-icons">cancel</span>
-                  Incorrect
-                </button>
+              <div class="answer-actions">
+                <div class="correctness-toggle">
+                  <button 
+                    class="toggle-btn correct"
+                    :class="{ active: answer.isCorrect }"
+                    @click="updateAnswerCorrectness(answer.id, true)"
+                    :disabled="isUpdating"
+                  >
+                    <span class="material-icons">check_circle</span>
+                    Correct
+                  </button>
+                  <button 
+                    class="toggle-btn incorrect"
+                    :class="{ active: !answer.isCorrect }"
+                    @click="updateAnswerCorrectness(answer.id, false)"
+                    :disabled="isUpdating"
+                  >
+                    <span class="material-icons">cancel</span>
+                    Incorrect
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -319,7 +437,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore, getFullImageUrl, restoreAttemptScore } from '../../services/authService';
+import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore, getFullImageUrl, restoreAttemptScore, scoreEssayQuestion, getEssayScores } from '../../services/authService';
 
 export default {
   name: 'StudentAnswerDetails',
@@ -339,6 +457,13 @@ export default {
     const originalScore = ref(null);
     const originalAnswers = ref(null);
     const isAttemptHistoryOpen = ref(true);
+    
+    // New properties for enhanced functionality
+    const showEssayOnly = ref(false);
+    const searchQuery = ref('');
+    const currentStudentIndex = ref(0);
+    const totalStudents = ref(1);
+    const studentList = ref([]);
 
     const isManualScoreValid = computed(() => {
       if (!details.value) return false;
@@ -408,6 +533,37 @@ export default {
       return attemptRecords.value.length > 0;
     });
 
+    const filteredAnswers = computed(() => {
+      if (!details.value?.answers) return [];
+      
+      let answers = details.value.answers;
+      
+      // Filter by essay only
+      if (showEssayOnly.value) {
+        answers = answers.filter(answer => isEssayQuestion(answer));
+      }
+      
+      // Filter by search query
+      if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase();
+        answers = answers.filter(answer => {
+          const questionText = (answer.question?.questionText || answer.questionText || '').toLowerCase();
+          const userAnswer = (answer.userAnswer || '').toLowerCase();
+          return questionText.includes(query) || userAnswer.includes(query);
+        });
+      }
+      
+      return answers;
+    });
+
+    const canNavigatePrev = computed(() => {
+      return currentStudentIndex.value > 0;
+    });
+
+    const canNavigateNext = computed(() => {
+      return currentStudentIndex.value < totalStudents.value - 1;
+    });
+
     const loadAnswers = async () => {
       try {
         loading.value = true;
@@ -431,6 +587,23 @@ export default {
           
           details.value = response;
           manualScore.value = response.score?.score || 0;
+          
+          // Initialize essay grading status for each answer (after details is set)
+          details.value.answers.forEach(answer => {
+            const questionType = getQuestionType(answer);
+            if (questionType === 'essay') {
+              // Initialize essay scoring data
+              answer.essayScore = answer.essayScore || 0;
+              answer.teacherFeedback = answer.teacherFeedback || '';
+              answer.isGraded = !!(answer.essayScore > 0 || answer.teacherFeedback);
+            }
+          });
+          
+          // Load existing essay scores from the backend
+          await loadEssayScores();
+          
+          // Update total score display after loading essay scores
+          updateTotalScoreDisplay();
           
           // Find the latest attempt with answers (most likely the last attempt)
           if (response.attempts && response.attempts.length > 0) {
@@ -740,6 +913,220 @@ export default {
       isAttemptHistoryOpen.value = !isAttemptHistoryOpen.value;
     };
 
+    // New methods for enhanced functionality
+    const isEssayQuestion = (answer) => {
+      const questionType = getQuestionType(answer);
+      return questionType === 'essay';
+    };
+
+    const getWordCount = (text) => {
+      if (!text || typeof text !== 'string') return 0;
+      return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    };
+
+    const getQuestionPoints = (answer) => {
+      return answer.question?.points || answer.points || 1;
+    };
+
+    const toggleEssayFilter = () => {
+      showEssayOnly.value = !showEssayOnly.value;
+    };
+
+    const navigateStudent = (direction) => {
+      if (direction === 'prev' && canNavigatePrev.value) {
+        const prevStudentId = studentList.value[currentStudentIndex.value - 1];
+        currentStudentIndex.value--;
+        router.push({
+          name: 'StudentAnswerDetails',
+          params: {
+            examId: route.params.examId,
+            studentId: prevStudentId
+          }
+        });
+      } else if (direction === 'next' && canNavigateNext.value) {
+        const nextStudentId = studentList.value[currentStudentIndex.value + 1];
+        currentStudentIndex.value++;
+        router.push({
+          name: 'StudentAnswerDetails',
+          params: {
+            examId: route.params.examId,
+            studentId: nextStudentId
+          }
+        });
+      }
+    };
+
+    const saveEssayGrade = async (answer) => {
+      try {
+        isUpdating.value = true;
+        const userId = parseInt(route.params.studentId);
+        const examId = parseInt(route.params.examId);
+        const questionId = answer.questionId;
+        const score = answer.essayScore || 0;
+        const maxScore = getQuestionPoints(answer);
+        const feedback = answer.teacherFeedback || '';
+
+        // Validate score
+        if (score < 0 || score > maxScore) {
+          const Swal = require('sweetalert2');
+          Swal.fire({
+            icon: 'error',
+            title: 'Invalid Score',
+            text: `Score must be between 0 and ${maxScore} points.`,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            toast: true
+          });
+          return;
+        }
+
+        // Get attempt ID if available
+        const attemptId = latestAttempt.value?.id || null;
+        
+        const result = await scoreEssayQuestion(userId, examId, questionId, score, maxScore, feedback, attemptId);
+        
+        // Mark as graded
+        answer.isGraded = true;
+        
+        // Show success message with Sweet Alert
+        const Swal = require('sweetalert2');
+        Swal.fire({
+          icon: 'success',
+          title: 'Essay Graded!',
+          text: `Score: ${score}/${maxScore} points`,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3000,
+          timerProgressBar: true,
+          toast: true
+        });
+        
+        console.log('Essay scoring result:', result);
+        
+        // Reload essay scores to ensure UI is updated
+        await loadEssayScores();
+        
+        // Reload the main answers to get updated score
+        await loadAnswers();
+      } catch (err) {
+        console.error('Error saving essay grade:', err);
+        const Swal = require('sweetalert2');
+        Swal.fire({
+          icon: 'error',
+          title: 'Save Failed',
+          text: 'Failed to save essay grade: ' + (err.message || 'Unknown error'),
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 4000,
+          timerProgressBar: true,
+          toast: true
+        });
+      } finally {
+        isUpdating.value = false;
+      }
+    };
+
+    const loadEssayScores = async () => {
+      try {
+        const examId = parseInt(route.params.examId);
+        const userId = parseInt(route.params.studentId);
+        
+        // Get essay scores for this specific user and exam
+        const essayScores = await getEssayScores(examId, userId);
+        
+        if (essayScores && Array.isArray(essayScores)) {
+          // Update answer objects with essay score data
+          details.value.answers.forEach(answer => {
+            if (getQuestionType(answer) === 'essay') {
+              const essayScore = essayScores.find(score => 
+                score.questionId === answer.questionId && score.userId === userId
+              );
+              
+              if (essayScore) {
+                answer.essayScore = essayScore.score;
+                answer.teacherFeedback = essayScore.feedback || '';
+                answer.isGraded = true;
+                console.log(`Loaded essay score for question ${answer.questionId}:`, essayScore);
+              }
+            }
+          });
+          
+          // Calculate and update the total score display
+          updateTotalScoreDisplay();
+        }
+      } catch (err) {
+        console.error('Error loading essay scores:', err);
+        // Don't show error to user for this background operation
+      }
+    };
+
+    const updateTotalScoreDisplay = () => {
+      if (!details.value?.answers) return;
+      
+      // Calculate regular question points (non-essay)
+      const regularQuestions = details.value.answers.filter(answer => 
+        getQuestionType(answer) !== 'essay'
+      );
+      const regularPointsEarned = regularQuestions.filter(answer => answer.isCorrect).length;
+      const regularPointsPossible = regularQuestions.length;
+      
+      // Calculate essay points
+      const essayQuestions = details.value.answers.filter(answer => 
+        getQuestionType(answer) === 'essay'
+      );
+      const essayPointsEarned = essayQuestions.reduce((total, answer) => 
+        total + (answer.essayScore || 0), 0
+      );
+      const essayPointsPossible = essayQuestions.reduce((total, answer) => 
+        total + getQuestionPoints(answer), 0
+      );
+      
+      // Calculate combined totals
+      const totalPointsEarned = regularPointsEarned + essayPointsEarned;
+      const totalPointsPossible = regularPointsPossible + essayPointsPossible;
+      const totalPercentage = totalPointsPossible > 0 
+        ? Math.round((totalPointsEarned / totalPointsPossible) * 100 * 10) / 10 
+        : 0;
+      
+      // Update the score display
+      if (details.value.score) {
+        details.value.score.score = totalPointsEarned;
+        details.value.score.total = totalPointsPossible;
+        details.value.score.percentage = totalPercentage;
+      }
+      
+      // Update manual score input
+      manualScore.value = totalPointsEarned;
+      
+      console.log(`Updated total score display: ${totalPointsEarned}/${totalPointsPossible} (${totalPercentage}%)`);
+    };
+
+    const initializeNavigation = () => {
+      // Get student list from route state or localStorage
+      const state = router.currentRoute.value.state;
+      if (state && state.studentList) {
+        studentList.value = state.studentList;
+        totalStudents.value = state.studentList.length;
+        const currentStudentId = parseInt(route.params.studentId);
+        currentStudentIndex.value = state.studentList.findIndex(id => id === currentStudentId);
+      } else {
+        // Fallback: try to get from localStorage or set defaults
+        const savedStudentList = localStorage.getItem('examStudentList');
+        if (savedStudentList) {
+          try {
+            studentList.value = JSON.parse(savedStudentList);
+            totalStudents.value = studentList.value.length;
+            const currentStudentId = parseInt(route.params.studentId);
+            currentStudentIndex.value = studentList.value.findIndex(id => id === currentStudentId);
+          } catch (e) {
+            console.error('Error parsing saved student list:', e);
+          }
+        }
+      }
+    };
+
     // Add watcher to help with debugging
     watch(details, (newVal) => {
       console.log('Details updated:', {
@@ -751,6 +1138,7 @@ export default {
 
     onMounted(() => {
       console.log('Component mounted, loading initial answers');
+      initializeNavigation();
       loadAnswers();
     });
 
@@ -787,6 +1175,24 @@ export default {
       originalAnswers,
       isAttemptHistoryOpen,
       toggleAttemptHistory,
+      // New properties and methods
+      showEssayOnly,
+      searchQuery,
+      currentStudentIndex,
+      totalStudents,
+      studentList,
+      filteredAnswers,
+      canNavigatePrev,
+      canNavigateNext,
+      isEssayQuestion,
+      getWordCount,
+      getQuestionPoints,
+      toggleEssayFilter,
+      navigateStudent,
+      saveEssayGrade,
+      loadEssayScores,
+      updateTotalScoreDisplay,
+      initializeNavigation,
     };
   }
 };
@@ -805,10 +1211,135 @@ export default {
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 30px;
   padding-bottom: 20px;
   border-bottom: 1px solid #e0e0e0;
+  gap: 20px;
+}
+
+.header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1;
+}
+
+.header-center {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+}
+
+.controls-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.filter-btn:hover {
+  background: #e8f5e9;
+  border-color: #4CAF50;
+  color: #2e7d32;
+}
+
+.filter-btn.active {
+  background: #e8f5e9;
+  border-color: #4CAF50;
+  color: #2e7d32;
+}
+
+.search-control {
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box .material-icons {
+  position: absolute;
+  left: 12px;
+  color: #666;
+  font-size: 20px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 16px 10px 45px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.student-navigation {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #388E3C;
+  transform: translateY(-2px);
+}
+
+.nav-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.student-counter {
+  font-weight: 600;
+  color: #159750;
+  font-size: 1.1rem;
 }
 
 .back-button {
@@ -1195,6 +1726,12 @@ export default {
   box-shadow: 0 2px 5px rgba(123, 31, 162, 0.1);
 }
 
+.question-type.essay {
+  background: #fff3e0;
+  color: #ef6c00;
+  box-shadow: 0 2px 5px rgba(239, 108, 0, 0.1);
+}
+
 .question-text {
   margin: 16px 0;
   color: #333;
@@ -1258,6 +1795,201 @@ export default {
 
 .answer-section {
   padding: 25px;
+}
+
+/* Essay-specific styles */
+.answer-item.essay-question {
+  border-left-color: #ef6c00;
+  background: linear-gradient(to right, rgba(239, 108, 0, 0.05), white);
+}
+
+.essay-answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.essay-response {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.essay-text {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 10px 0;
+  min-height: 100px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-family: 'Inter', sans-serif;
+}
+
+.essay-text.no-answer {
+  color: #999;
+  font-style: italic;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.essay-meta {
+  display: flex;
+  gap: 20px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.word-count, .char-count {
+  background: #f5f5f5;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.essay-scoring {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+}
+
+.essay-score-input {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.essay-score-input label {
+  font-weight: 600;
+  color: #444;
+  min-width: 60px;
+}
+
+.score-input-field {
+  width: 80px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.score-input-field:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.max-points {
+  color: #666;
+  font-weight: 500;
+}
+
+.essay-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.essay-feedback label {
+  font-weight: 600;
+  color: #444;
+}
+
+.feedback-textarea {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.feedback-textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.feedback-textarea::placeholder {
+  color: #999;
+}
+
+.essay-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.grade-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+}
+
+.grade-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.grade-btn:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.grade-btn.graded {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+}
+
+.grade-btn.graded:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F57C00 0%, #E65100 100%);
+  box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+}
+
+.grade-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #4CAF50;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.grade-status .material-icons {
+  font-size: 18px;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .answer-details {
@@ -1670,6 +2402,51 @@ export default {
     gap: 15px;
   }
   
+  .header-left {
+    order: 1;
+  }
+  
+  .header-center {
+    order: 2;
+    margin: 10px 0;
+  }
+  
+  .student-info {
+    order: 3;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .controls-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .filter-controls {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .search-control {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .student-navigation {
+    flex-direction: row;
+    padding: 10px 15px;
+    gap: 10px;
+  }
+  
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .student-counter {
+    font-size: 1rem;
+  }
+  
   .back-button {
     padding: 8px 12px;
     font-size: 0.9rem;
@@ -1828,6 +2605,69 @@ export default {
   
   .attempt-dropdown {
     max-width: none;
+  }
+  
+  /* Essay mobile styles */
+  .essay-answer-section {
+    gap: 20px;
+  }
+  
+  .essay-response {
+    padding: 15px;
+  }
+  
+  .essay-text {
+    padding: 12px;
+    min-height: 80px;
+  }
+  
+  .essay-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .essay-scoring {
+    padding: 15px;
+  }
+  
+  .essay-score-input {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .essay-score-input label {
+    min-width: auto;
+  }
+  
+  .score-input-field {
+    width: 100%;
+    max-width: 120px;
+    align-self: center;
+  }
+  
+  .feedback-textarea {
+    padding: 12px;
+    min-height: 60px;
+  }
+  
+  .essay-actions {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+    margin-top: 15px;
+    padding-top: 15px;
+  }
+  
+  .grade-btn {
+    padding: 14px 20px;
+    font-size: 1rem;
+    justify-content: center;
+  }
+  
+  .grade-status {
+    justify-content: center;
   }
 }
 

@@ -1,7 +1,7 @@
-export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
-// export const BASE_URL = 'http://localhost:3300/auth';
-// export const SOCKET_URL = 'http://localhost:3300/';
+// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+export const BASE_URL = 'http://localhost:3300/auth';
+export const SOCKET_URL = 'http://localhost:3300/';
 
 const decodeToken = (token) => {
   try {
@@ -299,19 +299,25 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
 
     // Validate each question
     const validatedQuestions = questions.map(q => {
-      if (!q.questionText || !q.questionType || !q.correctAnswer) {
-        throw new Error('Each question must have questionText, questionType, and correctAnswer');
+      if (!q.questionText || !q.questionType) {
+        throw new Error('Each question must have questionText and questionType');
       }
 
-      // Ensure options is always an array
-      const options = Array.isArray(q.options) ? q.options : [];
+      // Essay questions don't need correctAnswer, but other types do
+      if (q.questionType !== 'essay' && !q.correctAnswer) {
+        throw new Error('Non-essay questions must have correctAnswer');
+      }
+
+      // Ensure options is always an array for non-essay questions
+      const options = q.questionType === 'essay' ? [] : (Array.isArray(q.options) ? q.options : []);
 
       return {
         questionText: q.questionText,
         questionType: q.questionType,
         options: options,
-        correctAnswer: q.correctAnswer,
-        imageUrl: q.imageUrl || null  // Include imageUrl in the question data
+        correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
+        imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
+        points: q.points || 1  // Include points, default to 1 if not specified
       };
     });
 
@@ -904,9 +910,10 @@ export const updateExam = async (examId, examData) => {
         questions: examData.questions.map(q => ({
           questionText: q.questionText,
           questionType: q.questionType,
-          options: q.questionType === 'enumeration' ? [] : (q.options || []),
-          correctAnswer: q.correctAnswer,
-          imageUrl: q.imageUrl || null  // Include imageUrl in the question data
+          options: q.questionType === 'enumeration' || q.questionType === 'essay' ? [] : (q.options || []),
+          correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
+          imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
+          points: q.points || 1  // Include points, default to 1 if not specified
         }))
       })
     });
@@ -4003,4 +4010,395 @@ export const archiveAllExamResultsGlobally = async (archiveReason) => {
     console.error("AuthService: Archive all exam results globally error:", error);
     throw error;
   }
+};
+
+// Essay Scoring Functions
+
+/**
+ * Get essay questions that need scoring for an exam
+ * @param {number} examId - The ID of the exam
+ * @returns {Promise<Object>} - Essay questions and submissions data
+ */
+export const getEssayQuestionsForScoring = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching essay questions for scoring', { examId });
+
+    const response = await fetch(`${BASE_URL}/exams/${examId}/essay-questions`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to fetch essay questions for scoring', errorData);
+      throw new Error(errorData.error || "Failed to fetch essay questions for scoring");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Essay questions for scoring fetched successfully', result);
+    return result.data;
+  } catch (error) {
+    console.error("AuthService: Get essay questions for scoring error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Score an essay question manually
+ * @param {number} userId - The ID of the student
+ * @param {number} examId - The ID of the exam
+ * @param {number} questionId - The ID of the question
+ * @param {number} score - The score to assign
+ * @param {number} maxScore - The maximum possible score
+ * @param {string} [feedback] - Optional feedback for the student
+ * @param {number} [attemptId] - Optional attempt ID
+ * @returns {Promise<Object>} - The scored essay data
+ */
+export const scoreEssayQuestion = async (userId, examId, questionId, score, maxScore, feedback = null, attemptId = null) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Scoring essay question', { 
+      userId, 
+      examId, 
+      questionId, 
+      score, 
+      maxScore, 
+      feedback: feedback ? '[provided]' : '[none]',
+      attemptId 
+    });
+
+    // Validate required parameters
+    if (!userId || !examId || !questionId || score === undefined || !maxScore) {
+      throw new Error('Missing required parameters for essay scoring');
+    }
+
+    // Validate score range
+    if (score < 0 || score > maxScore) {
+      throw new Error(`Score must be between 0 and ${maxScore}`);
+    }
+
+    const response = await fetch(`${BASE_URL}/essays/score`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        userId,
+        examId,
+        questionId,
+        score,
+        maxScore,
+        feedback,
+        attemptId
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to score essay question', errorData);
+      throw new Error(errorData.error || "Failed to score essay question");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Essay question scored successfully', result);
+    return result.data;
+  } catch (error) {
+    console.error("AuthService: Score essay question error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get essay scores for an exam
+ * @param {number} examId - The ID of the exam
+ * @param {number} [userId] - Optional user ID to filter by specific student
+ * @returns {Promise<Array>} - List of essay scores
+ */
+export const getEssayScores = async (examId, userId = null) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching essay scores', { examId, userId });
+
+    // Build URL with optional userId query parameter
+    let url = `${BASE_URL}/exams/${examId}/essay-scores`;
+    if (userId) {
+      url += `?userId=${userId}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to fetch essay scores', errorData);
+      throw new Error(errorData.error || "Failed to fetch essay scores");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Essay scores fetched successfully', result);
+    return result.data;
+  } catch (error) {
+    console.error("AuthService: Get essay scores error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Calculate total score including essay scores for a student's exam
+ * @param {number} userId - The ID of the student
+ * @param {number} examId - The ID of the exam
+ * @param {number} [attemptId] - Optional attempt ID
+ * @returns {Promise<Object>} - Combined score data including regular and essay scores
+ */
+export const calculateTotalScoreWithEssays = async (userId, examId, attemptId = null) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Calculating total score with essays', { userId, examId, attemptId });
+
+    // Build URL with optional attemptId query parameter
+    let url = `${BASE_URL}/users/${userId}/exams/${examId}/total-score`;
+    if (attemptId) {
+      url += `?attemptId=${attemptId}`;
+    }
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('AuthService: Failed to calculate total score with essays', errorData);
+      throw new Error(errorData.error || "Failed to calculate total score with essays");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Total score with essays calculated successfully', result);
+    return result.data;
+  } catch (error) {
+    console.error("AuthService: Calculate total score with essays error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get essay submissions for grading (alternative method)
+ * @param {number} examId - The ID of the exam
+ * @returns {Promise<Object>} - Essay submissions with scoring status
+ */
+export const getEssaySubmissionsForGrading = async (examId) => {
+  try {
+    const result = await getEssayQuestionsForScoring(examId);
+    
+    // Process the data to provide a more convenient format for grading interfaces
+    const submissionsByQuestion = {};
+    
+    if (result.submissions) {
+      result.submissions.forEach(submission => {
+        const questionId = submission.questionId;
+        if (!submissionsByQuestion[questionId]) {
+          submissionsByQuestion[questionId] = {
+            question: submission.question,
+            submissions: []
+          };
+        }
+        submissionsByQuestion[questionId].submissions.push({
+          ...submission,
+          isScored: !!submission.essayScore,
+          score: submission.essayScore?.score || null,
+          feedback: submission.essayScore?.feedback || null
+        });
+      });
+    }
+    
+    return {
+      ...result,
+      submissionsByQuestion
+    };
+  } catch (error) {
+    console.error("AuthService: Get essay submissions for grading error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update multiple essay scores in batch
+ * @param {Array} scoreUpdates - Array of score update objects
+ * @returns {Promise<Array>} - Array of results from each scoring operation
+ */
+export const batchScoreEssayQuestions = async (scoreUpdates) => {
+  try {
+    console.log('AuthService: Batch scoring essay questions', { count: scoreUpdates.length });
+    
+    const results = [];
+    const errors = [];
+    
+    // Process scores sequentially to avoid overwhelming the server
+    for (const update of scoreUpdates) {
+      try {
+        const result = await scoreEssayQuestion(
+          update.userId,
+          update.examId,
+          update.questionId,
+          update.score,
+          update.maxScore,
+          update.feedback,
+          update.attemptId
+        );
+        results.push({ success: true, data: result, update });
+      } catch (error) {
+        console.error(`Failed to score essay for user ${update.userId}, question ${update.questionId}:`, error);
+        errors.push({ success: false, error: error.message, update });
+      }
+    }
+    
+    console.log('AuthService: Batch scoring completed', { 
+      successful: results.length, 
+      failed: errors.length 
+    });
+    
+    return {
+      successful: results,
+      failed: errors,
+      totalProcessed: scoreUpdates.length
+    };
+  } catch (error) {
+    console.error("AuthService: Batch score essay questions error:", error);
+    throw error;
+  }
+};
+
+// Essay Utility Functions
+
+/**
+ * Validate essay question data
+ * @param {Object} question - Question object to validate
+ * @returns {Object} - Validation result with isValid and errors
+ */
+export const validateEssayQuestion = (question) => {
+  const errors = [];
+  
+  if (!question) {
+    errors.push('Question object is required');
+    return { isValid: false, errors };
+  }
+  
+  if (!question.questionText || question.questionText.trim() === '') {
+    errors.push('Question text is required');
+  }
+  
+  if (question.questionType !== 'essay') {
+    errors.push('Question type must be "essay"');
+  }
+  
+  if (question.points && (isNaN(question.points) || question.points < 1)) {
+    errors.push('Points must be a positive number');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Validate essay score data
+ * @param {Object} scoreData - Score data to validate
+ * @returns {Object} - Validation result with isValid and errors
+ */
+export const validateEssayScore = (scoreData) => {
+  const errors = [];
+  
+  if (!scoreData) {
+    errors.push('Score data is required');
+    return { isValid: false, errors };
+  }
+  
+  if (!scoreData.userId || isNaN(scoreData.userId)) {
+    errors.push('Valid user ID is required');
+  }
+  
+  if (!scoreData.examId || isNaN(scoreData.examId)) {
+    errors.push('Valid exam ID is required');
+  }
+  
+  if (!scoreData.questionId || isNaN(scoreData.questionId)) {
+    errors.push('Valid question ID is required');
+  }
+  
+  if (scoreData.score === undefined || scoreData.score === null || isNaN(scoreData.score)) {
+    errors.push('Valid score is required');
+  } else if (scoreData.score < 0) {
+    errors.push('Score cannot be negative');
+  }
+  
+  if (!scoreData.maxScore || isNaN(scoreData.maxScore) || scoreData.maxScore <= 0) {
+    errors.push('Valid maximum score is required');
+  }
+  
+  if (scoreData.score !== undefined && scoreData.maxScore !== undefined && 
+      scoreData.score > scoreData.maxScore) {
+    errors.push('Score cannot exceed maximum score');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
+/**
+ * Check if a question is an essay question
+ * @param {Object} question - Question object to check
+ * @returns {boolean} - True if it's an essay question
+ */
+export const isEssayQuestion = (question) => {
+  return question && question.questionType === 'essay';
+};
+
+/**
+ * Format essay submission data for display
+ * @param {Object} submission - Raw submission data
+ * @returns {Object} - Formatted submission data
+ */
+export const formatEssaySubmissionForDisplay = (submission) => {
+  if (!submission) return null;
+  
+  return {
+    id: submission.id,
+    userId: submission.userId,
+    studentName: submission.user ? `${submission.user.lastName}, ${submission.user.firstName}` : 'Unknown Student',
+    studentLRN: submission.user?.lrn || 'N/A',
+    gradeSection: submission.user ? `Grade ${submission.user.gradeLevel}-${submission.user.section}` : 'N/A',
+    questionText: submission.question?.questionText || '',
+    userAnswer: submission.userAnswer || '',
+    submittedAt: submission.submittedAt ? new Date(submission.submittedAt).toLocaleString() : 'Unknown',
+    questionPoints: submission.question?.points || 1,
+    isScored: !!submission.essayScore,
+    currentScore: submission.essayScore?.score || null,
+    currentFeedback: submission.essayScore?.feedback || null,
+    scoredBy: submission.essayScore?.scorer ? 
+      `${submission.essayScore.scorer.firstName} ${submission.essayScore.scorer.lastName}` : null,
+    scoredAt: submission.essayScore?.scoredAt ? 
+      new Date(submission.essayScore.scoredAt).toLocaleString() : null,
+    attemptId: submission.attemptId
+  };
 };

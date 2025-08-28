@@ -110,6 +110,7 @@ const toggleNav = () => {
 
 const navigationItems = {
   admin: [
+    // {name:'Dashboard', path:'/admin-dashboard', icon:'dashboard'},
     { name: 'Manage Users', path: '/manage-users', icon: 'group' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },

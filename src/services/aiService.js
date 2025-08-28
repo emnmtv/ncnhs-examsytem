@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const OPENROUTER_API_KEY = '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';
+export const OPENROUTER_API_KEY = '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';
 export const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Define available models in order of preference

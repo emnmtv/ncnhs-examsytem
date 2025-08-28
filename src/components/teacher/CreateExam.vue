@@ -296,9 +296,10 @@
                       title="AI will analyze your question and suggest the most appropriate answer"
                     >
                       <span class="material-icons">auto_fix_high</span>
-                      {{ question.type === 'multipleChoice' ? 'AI: Detect Answer & Options' : 
-                         question.type === 'true_false' ? 'AI: Detect True/False' : 
-                         question.type === 'enumeration' ? 'AI: Detect Items' : 'AI: Analyze Question' }}
+                      {{ question.type === 'multipleChoice' ? 'AI: Generate Options' : 
+                         question.type === 'true_false' ? 'AI: Detect Answer' : 
+                         question.type === 'enumeration' ? 'AI: Detect Answer' :
+                         question.type === 'essay' ? 'AI: Improve Question' : 'AI: Analyze Question' }}
                     </button>
                   </div>
                 </div>
@@ -367,7 +368,31 @@
                       <span class="material-icons-round">format_list_numbered</span>
                       Enumeration
                     </button>
+                    
+                    <button 
+                      type="button"
+                      class="type-button"
+                      :class="{ active: question.type === 'essay' }"
+                      @click="setQuestionType(question, 'essay')"
+                    >
+                      <span class="material-icons-round">description</span>
+                      Essay
+                    </button>
                   </div>
+                </div>
+                
+                <!-- Question Points -->
+                <div class="form-group points-section">
+                  <label>Points</label>
+                  <input 
+                    v-model.number="question.points" 
+                    type="number" 
+                    min="1"
+                    max="100"
+                    placeholder="Enter points for this question"
+                    required
+                  />
+                  <small>Number of points this question is worth (1-100)</small>
                 </div>
                 
                 <!-- Multiple Choice Options -->
@@ -466,6 +491,19 @@
                       class="uppercase-input"
                     />
                     <small>Case-insensitive, exact match required for grading (automatically uppercase)</small>
+                  </div>
+                </div>
+                
+                <!-- Essay Section -->
+                <div v-if="question.type === 'essay'" class="essay-section">
+                  <div class="essay-info">
+                    <div class="essay-notice">
+                      <span class="material-icons-round">info</span>
+                      <div>
+                        <p><strong>Essay Question</strong></p>
+                        <p>This question will require manual scoring by the teacher. Students will provide written responses that cannot be automatically graded.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -927,7 +965,8 @@ export default {
               type: q.questionType,
               options: Array.isArray(q.options) ? q.options : [],
               correctAnswer: q.correctAnswer,
-              imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null // Fix image URL format
+              imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null, // Fix image URL format
+              points: q.points || 1 // Include points, default to 1 if not present
             }));
           }
         } catch (error) {
@@ -1084,7 +1123,8 @@ export default {
           type: extractedQuestion.type,
           options: extractedQuestion.options || [],
           correctAnswer: extractedQuestion.correctAnswer,
-          imageUrl: null
+          imageUrl: null,
+          points: extractedQuestion.points || 1
         });
       });
 
@@ -1286,10 +1326,11 @@ export default {
           questionText: q.text,
           questionType: q.type,
           options: q.type === 'true_false' ? ['true', 'false'] : 
-                   q.type === 'enumeration' ? [] : 
+                   q.type === 'enumeration' || q.type === 'essay' ? [] : 
                    q.options,
-          correctAnswer: q.correctAnswer,
-          imageUrl: q.imageUrl // Include imageUrl in formatted questions
+          correctAnswer: q.type === 'essay' ? '' : q.correctAnswer, // Essay questions don't need correct answers
+          imageUrl: q.imageUrl, // Include imageUrl in formatted questions
+          points: q.points || 1 // Include points
         }));
 
         if (isEditing.value) {
@@ -1362,12 +1403,24 @@ export default {
     };
 
     const validateQuestion = (question) => {
-      if (!question.text || !question.type || !question.correctAnswer) {
+      if (!question.text || !question.type) {
         return false;
       }
+      
+      // Essay questions don't need correct answers
+      if (question.type !== 'essay' && !question.correctAnswer) {
+        return false;
+      }
+      
       if (question.type === 'multipleChoice' && (!question.options || question.options.length < 2)) {
         return false;
       }
+      
+      // Check if points is valid
+      if (!question.points || question.points < 1) {
+        return false;
+      }
+      
       return true;
     };
 
@@ -1385,6 +1438,9 @@ export default {
       } else if (question.type === 'enumeration') {
         question.options = [];
         question.correctAnswer = '';
+      } else if (question.type === 'essay') {
+        question.options = [];
+        question.correctAnswer = ''; // Essay questions don't need correct answers
       } else if (question.type === 'multipleChoice' && 
                  (!Array.isArray(question.options) || question.options.join(',') === 'true,false')) {
         // Only reset multiple choice options if coming from true/false or if options are invalid
@@ -1399,7 +1455,8 @@ export default {
         type: 'multipleChoice',
         options: ['', ''],
         correctAnswer: '',
-        imageUrl: null
+        imageUrl: null,
+        points: 1
       });
     };
 
@@ -1586,7 +1643,8 @@ export default {
           type: q.questionType,
           options: q.options,
           correctAnswer: q.correctAnswer,
-          imageUrl: q.imageUrl
+          imageUrl: q.imageUrl,
+          points: q.points || 1
         });
       });
 
@@ -1608,7 +1666,8 @@ export default {
         multiple_choice: 'Multiple Choice',
         multipleChoice: 'Multiple Choice',
         true_false: 'True/False',
-        enumeration: 'Enumeration'
+        enumeration: 'Enumeration',
+        essay: 'Essay'
       };
       return types[type] || type;
     };
@@ -1677,6 +1736,7 @@ export default {
                   <option value="multiple_choice" selected>Multiple Choice</option>
                   <option value="true_false">True/False</option>
                   <option value="enumeration">Enumeration</option>
+                  <option value="essay">Essay</option>
                 </select>
               </div>
             </div>
@@ -1766,10 +1826,12 @@ export default {
           const newQuestion = {
             text: q.questionText || q.text || "Generated question",
             type: formValues.type === 'multiple_choice' ? 'multipleChoice' : 
-                  formValues.type === 'true_false' ? 'true_false' : 'enumeration',
+                  formValues.type === 'true_false' ? 'true_false' : 
+                  formValues.type === 'essay' ? 'essay' : 'enumeration',
             options: Array.isArray(q.options) ? q.options.filter(opt => opt) : [],
             correctAnswer: q.correctAnswer || "",
-            imageUrl: null
+            imageUrl: null,
+            points: q.points || 1
           };
           
           // Make sure all fields are defined to prevent trim() errors
@@ -2009,6 +2071,31 @@ export default {
               timer: 3500,
               showConfirmButton: false
             });
+          } else if (result.questionType === 'essay' || question.type === 'essay') {
+            // For essay questions, enhance the question text if AI provides improvement
+            if (result.improvedQuestion && result.improvedQuestion !== question.text) {
+              questions.value[index].text = result.improvedQuestion;
+              
+              Swal.fire({
+                icon: 'success',
+                title: 'Essay Question Enhanced!',
+                html: `
+                  <p>The AI has improved your essay question for better clarity and depth.</p>
+                `,
+                timer: 2500,
+                showConfirmButton: false
+              });
+            } else {
+              Swal.fire({
+                icon: 'info',
+                title: 'Essay Question Analyzed',
+                html: `
+                  <p>Your essay question looks good! No improvements needed.</p>
+                `,
+                timer: 2000,
+              showConfirmButton: false
+            });
+            }
           }
         } else {
           throw new Error('Failed to analyze question');
@@ -2561,6 +2648,70 @@ small {
   padding-top: 20px;
 }
 
+/* Essay Section Styling */
+.essay-section {
+  margin-top: 20px;
+  border-top: 1px dashed #e0e0e0;
+  padding-top: 20px;
+}
+
+.essay-info {
+  background-color: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.essay-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.essay-notice .material-icons-round {
+  color: #666;
+  font-size: 20px;
+  margin-top: 2px;
+}
+
+.essay-notice div p {
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+}
+
+.essay-notice div p:first-child {
+  font-weight: 600;
+  color: #444;
+  font-size: 1rem;
+}
+
+.essay-notice div p:last-child {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Points Section Styling */
+.points-section {
+  margin-bottom: 20px;
+}
+
+.points-section label {
+  color: #444;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.points-section input {
+  width: 120px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.points-section small {
+  color: #757575;
+  font-size: 0.85rem;
+}
+
 /* Badge */
 .badge {
   display: inline-block;
@@ -3004,12 +3155,21 @@ small {
   /* Question type buttons */
   .type-button {
     height: 38px;
-    padding: 0 10px;
-    font-size: 0.85rem;
+    padding: 0 8px;
+    font-size: 0.8rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .type-button .material-icons-round {
-    font-size: 18px;
+    font-size: 16px;
+  }
+  
+  /* Make question type buttons stack in 2x2 grid on very small screens */
+  .type-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   /* Question input with detect button */
@@ -3065,6 +3225,38 @@ small {
   .material-icons,
   .material-icons-round {
     font-size: 20px;
+  }
+  
+  /* Points section mobile adjustments */
+  .points-section input {
+    width: 100px;
+    font-size: 1rem;
+  }
+  
+  /* Essay section mobile adjustments */
+  .essay-section {
+    margin-top: 15px;
+    padding-top: 15px;
+  }
+  
+  .essay-info {
+    padding: 12px;
+  }
+  
+  .essay-notice {
+    gap: 10px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 18px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.95rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.85rem;
   }
 }
 
