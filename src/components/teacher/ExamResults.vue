@@ -15,6 +15,11 @@
           Archive All Results
         </button>
         
+        <button @click="viewPartResults" class="part-results-btn">
+          <span class="material-icons">assessment</span>
+          Part Results
+        </button>
+        
         <!-- Update export button with FontAwesome icons -->
         <div class="export-container">
           <button @click="toggleExportOptions" class="export-btn">
@@ -1529,6 +1534,19 @@ export default {
       });
     };
 
+    const viewPartResults = () => {
+      router.push({
+        name: 'ExamPartResults',
+        params: {
+          examId: route.params.examId
+        },
+        query: {
+          testCode: route.query.testCode,
+          title: route.query.title
+        }
+      });
+    };
+
     // Toggle export options dropdown
     const toggleExportOptions = () => {
       showExportOptions.value = !showExportOptions.value;
@@ -2121,6 +2139,7 @@ export default {
       showAnalysisPagination,
       isMobile,
       viewStudentAnswers,
+      viewPartResults,
       // Add export-related functionality to returned object
       showExportOptions,
       exportOptions,
@@ -2231,6 +2250,27 @@ export default {
   background: #f57c00;
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+}
+
+.part-results-btn {
+  padding: 10px 18px;
+  background: #2196f3;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
+  transition: all 0.2s;
+}
+
+.part-results-btn:hover {
+  background: #1976d2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
 }
 
 .header-actions {
@@ -3872,7 +3912,7 @@ tr:hover {
     justify-content: space-between;
   }
 
-  .back-btn, .export-btn, .bulk-archive-btn {
+  .back-btn, .export-btn, .bulk-archive-btn, .part-results-btn {
     padding: 8px 12px;
     font-size: 0.9rem;
   }

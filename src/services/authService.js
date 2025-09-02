@@ -1,7 +1,7 @@
-// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
-export const BASE_URL = 'http://localhost:3300/auth';
-export const SOCKET_URL = 'http://localhost:3300/';
+export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+// export const BASE_URL = 'http://localhost:3300/auth';
+// export const SOCKET_URL = 'http://localhost:3300/';
 
 const decodeToken = (token) => {
   try {
@@ -74,6 +74,13 @@ export const loginUser = async (email, lrn, password) => {
       // Store interval ID for cleanup on logout
       localStorage.setItem("heartbeatInterval", heartbeatInterval);
       
+      // Notify app about auth change
+      try {
+        window.dispatchEvent(new Event('auth-changed'));
+      } catch (e) {
+        console.warn('Auth change event dispatch failed', e);
+      }
+
       // Return both token and decoded info
       return {
         token,
@@ -283,7 +290,7 @@ export const bulkUploadUsers = async (file) => {
 
 
 // Exam management functions with token-based auth
-export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false, durationMinutes, startDateTime, endDateTime, maxAttempts, attemptSpacing) => {
+export const createExam = async (testCode, classCode, examTitle, questions, userId, isDraft = false, durationMinutes, startDateTime, endDateTime, maxAttempts, attemptSpacing, studentExamHistory, parts) => {
   try {
     console.log('AuthService: Creating exam', testCode);
     
@@ -317,7 +324,8 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
         options: options,
         correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
         imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
-        points: q.points || 1  // Include points, default to 1 if not specified
+        points: q.points || 1,  // Include points, default to 1 if not specified
+        partId: q.partId || null  // Include partId if specified
       };
     });
 
@@ -338,7 +346,9 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
         startDateTime,
         endDateTime,
         maxAttempts,
-        attemptSpacing
+        attemptSpacing,
+        studentExamHistory,
+        parts  // Include parts if provided
       }),
     });
 
@@ -496,6 +506,11 @@ export const logout = () => {
       localStorage.clear();
       
       console.log('AuthService: User logged out successfully');
+      try {
+        window.dispatchEvent(new Event('auth-changed'));
+      } catch (e) {
+        console.warn('Auth change event dispatch failed', e);
+      }
     }, 500);
   } catch (error) {
     console.error('AuthService: Error during logout:', error);
@@ -907,13 +922,16 @@ export const updateExam = async (examId, examData) => {
         endDateTime: examData.endDateTime,
         maxAttempts: examData.maxAttempts,
         attemptSpacing: examData.attemptSpacing,
+        // Include parts if provided
+        parts: examData.parts || null,
         questions: examData.questions.map(q => ({
           questionText: q.questionText,
           questionType: q.questionType,
           options: q.questionType === 'enumeration' || q.questionType === 'essay' ? [] : (q.options || []),
           correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
           imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
-          points: q.points || 1  // Include points, default to 1 if not specified
+          points: q.points || 1,  // Include points, default to 1 if not specified
+          partId: q.partId || null  // Include partId if specified
         }))
       })
     });
@@ -4153,6 +4171,39 @@ export const getEssayScores = async (examId, userId = null) => {
     return result.data;
   } catch (error) {
     console.error("AuthService: Get essay scores error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get scores per part for all students in an exam
+ * @param {number} examId - The ID of the exam
+ * @returns {Promise<Object>} - Scores per part for all students
+ */
+export const getExamScoresPerPart = async (examId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching exam scores per part', { examId });
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/scores-per-part`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch exam scores per part");
+    }
+
+    const result = await response.json();
+    console.log('AuthService: Exam scores per part fetched successfully', result);
+    return result.data;
+  } catch (error) {
+    console.error("AuthService: Get exam scores per part error:", error);
     throw error;
   }
 };

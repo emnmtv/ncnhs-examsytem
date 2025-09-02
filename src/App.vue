@@ -6,6 +6,11 @@
     <div class="content" :class="{ 'full-width': !showSidebar, 'with-topbar': showSidebar }">
       <router-view />
     </div>
+    <div v-if="updateAvailable" class="update-banner">
+      <span>New version available.</span>
+      <button class="update-btn" @click="refreshApp">Update</button>
+      <button class="dismiss-btn" @click="dismissUpdate">Dismiss</button>
+    </div>
   </div>
 </template>
 
@@ -13,7 +18,7 @@
 import Sidenav from "./components/SideNav.vue";
 import TopBar from "./components/TopBar.vue";
 import { useRoute } from "vue-router";
-import { computed, ref, provide } from "vue";
+import { computed, ref, provide, onMounted, onBeforeUnmount } from "vue";
 
 export default {
   components: {
@@ -23,14 +28,15 @@ export default {
   setup() {
     const route = useRoute();
     const isNavCollapsed = ref(window.innerWidth <= 768);
+    const isAuthenticated = ref(!!localStorage.getItem('jwtToken'));
     const clickEffectType = ref('none');
 
     // Define routes where sidebar should NOT be shown
     const authRoutes = ["/", "/forbidden", "/404"];
 
-    // Show sidebar if NOT on auth routes (login & register) or error pages
+    // Show sidebar only when user is authenticated and not on auth/error pages
     const showSidebar = computed(() => {
-      return !authRoutes.includes(route.path) && !route.name?.includes('NotFound');
+      return isAuthenticated.value && !authRoutes.includes(route.path) && !route.name?.includes('NotFound');
     });
 
     const handleNavToggle = (collapsed) => {
@@ -69,12 +75,58 @@ export default {
 
     provide('setClickEffectType', setClickEffectType);
 
+    const handleAuthChanged = () => {
+      isAuthenticated.value = !!localStorage.getItem('jwtToken');
+    };
+
+    onMounted(() => {
+      window.addEventListener('auth-changed', handleAuthChanged);
+      window.addEventListener('storage', handleAuthChanged);
+      // Listen for service worker update events dispatched from registerServiceWorker.js
+      document.addEventListener('swUpdated', (event) => {
+        swRegistration.value = event.detail;
+        updateAvailable.value = true;
+      });
+    });
+
+    onBeforeUnmount(() => {
+      window.removeEventListener('auth-changed', handleAuthChanged);
+      window.removeEventListener('storage', handleAuthChanged);
+      document.removeEventListener('swUpdated', () => {});
+    });
+
+    // SW update handling
+    const updateAvailable = ref(false);
+    const swRegistration = ref(null);
+    const refreshApp = () => {
+      const registration = swRegistration.value;
+      if (!registration || !registration.waiting) {
+        window.location.reload();
+        return;
+      }
+      const waitingSW = registration.waiting;
+      // Reload when the new SW takes control
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      }, { once: true });
+      waitingSW.postMessage({ type: 'SKIP_WAITING' });
+      updateAvailable.value = false;
+    };
+
+    const dismissUpdate = () => {
+      updateAvailable.value = false;
+    };
+
     return {
       showSidebar,
       isNavCollapsed,
       handleNavToggle,
       handleClick,
       handleMouseMove,
+      isAuthenticated,
+      updateAvailable,
+      refreshApp,
+      dismissUpdate,
     };
   },
 };
@@ -225,5 +277,39 @@ body {
   padding-top: 20px; /* Slightly increased padding for better spacing */
   
 }
+}
+
+.update-banner {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 16px;
+  background: #111827;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10000;
+}
+
+.update-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dismiss-btn {
+  background: transparent;
+  color: #e5e7eb;
+  border: 1px solid #4b5563;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 </style>

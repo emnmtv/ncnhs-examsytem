@@ -226,6 +226,73 @@
         </div>
       </div>
       
+      <!-- Parts Section -->
+      <div class="card exam-parts-card">
+        <div class="card-header">
+          <h2><i class="fas fa-layer-group"></i> Exam Parts</h2>
+        </div>
+        <div class="card-body">
+          <div class="parts-section">
+            <div class="parts-header">
+              <p class="parts-description">Organize questions into sections. Optional but recommended for structured exams.</p>
+              <button 
+                type="button" 
+                class="add-part-btn"
+                @click="addPart"
+              >
+                <span class="material-icons-round">add_circle</span>
+                Add Part
+              </button>
+            </div>
+            
+            <div v-if="parts.length === 0" class="no-parts">
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <i class="fas fa-layer-group"></i>
+                </div>
+                <p>No parts defined</p>
+                <p class="empty-subtext">Optional - questions can exist without parts</p>
+              </div>
+            </div>
+            
+            <transition-group name="part-transition" tag="div" class="parts-list">
+              <div 
+                v-for="(part, index) in parts" 
+                :key="index" 
+                class="part-item"
+              >
+                <div class="part-header">
+                  <span class="part-number">Part {{ index + 1 }}</span>
+                  <div class="part-actions">
+                    <button 
+                      type="button" 
+                      class="action-btn remove-btn" 
+                      @click="removePart(index)"
+                      title="Remove part"
+                    >
+                      <span class="material-icons-round">delete</span>
+                    </button>
+                  </div>
+                </div>
+                
+                <div class="part-content">
+                  <div class="form-group">
+                    <label>Part Label</label>
+                    <input 
+                      v-model="part.label" 
+                      type="text" 
+                      placeholder="e.g., Part I: Multiple Choice"
+                      required
+                    />
+                    <small>Descriptive label for this part (e.g., "Multiple Choice", "Problem Solving")</small>
+                  </div>
+                </div>
+              </div>
+            </transition-group>
+          </div>
+        </div>
+      </div>
+      
       <!-- Questions Section -->
       <div class="card exam-questions-card">
         <div class="card-header">
@@ -381,18 +448,38 @@
                   </div>
                 </div>
                 
-                <!-- Question Points -->
-                <div class="form-group points-section">
-                  <label>Points</label>
-                  <input 
-                    v-model.number="question.points" 
-                    type="number" 
-                    min="1"
-                    max="100"
-                    placeholder="Enter points for this question"
-                    required
-                  />
-                  <small>Number of points this question is worth (1-100)</small>
+                <!-- Question Points and Part Assignment -->
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Points</label>
+                    <input 
+                      v-model.number="question.points" 
+                      type="number" 
+                      min="1"
+                      max="100"
+                      placeholder="Enter points for this question"
+                      required
+                    />
+                    <small>Number of points this question is worth (1-100)</small>
+                  </div>
+                  
+                  <div class="form-group" v-if="parts.length > 0">
+                    <label>Assign to Part</label>
+                    <select 
+                      v-model="question.partId" 
+                      class="part-select"
+                    >
+                      <option value="">No Part (Standalone)</option>
+                      <option 
+                        v-for="(part, partIndex) in parts" 
+                        :key="partIndex" 
+                        :value="partIndex + 1"
+                      >
+                        {{ part.label }}
+                      </option>
+                    </select>
+                    <small>Optional: Assign this question to a specific part</small>
+                  </div>
                 </div>
                 
                 <!-- Multiple Choice Options -->
@@ -900,6 +987,7 @@ export default {
       activeSettingsTab.value = activeSettingsTab.value === tab ? null : tab;
     };
     const questions = ref([]);
+    const parts = ref([]);
     const loading = ref(false);
     const error = ref(null);
     const showQuestionBankModal = ref(false);
@@ -966,8 +1054,17 @@ export default {
               options: Array.isArray(q.options) ? q.options : [],
               correctAnswer: q.correctAnswer,
               imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null, // Fix image URL format
-              points: q.points || 1 // Include points, default to 1 if not present
+              points: q.points || 1, // Include points, default to 1 if not present
+              partId: q.partId || '' // Include partId if present
             }));
+            
+            // Load parts if they exist
+            if (exam.parts && Array.isArray(exam.parts)) {
+              parts.value = exam.parts.map(p => ({
+                label: p.label,
+                order: p.order
+              }));
+            }
           }
         } catch (error) {
           console.error('Error loading exam:', error);
@@ -1124,7 +1221,8 @@ export default {
           options: extractedQuestion.options || [],
           correctAnswer: extractedQuestion.correctAnswer,
           imageUrl: null,
-          points: extractedQuestion.points || 1
+          points: extractedQuestion.points || 1,
+          partId: ''
         });
       });
 
@@ -1171,6 +1269,11 @@ export default {
       saveProgressToLocalStorage();
     }, { deep: true });
 
+    // Watch for changes in parts array to save progress
+    watch(parts, () => {
+      saveProgressToLocalStorage();
+    }, { deep: true });
+
     // Save exam creation progress to local storage
     const saveProgressToLocalStorage = () => {
       if (isEditing.value) return; // Don't save if editing an existing exam
@@ -1183,7 +1286,8 @@ export default {
       
       const progress = {
         examData: examData.value,
-        questions: questions.value
+        questions: questions.value,
+        parts: parts.value
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     };
@@ -1196,6 +1300,7 @@ export default {
           const progress = JSON.parse(savedProgress);
           examData.value = progress.examData;
           questions.value = progress.questions;
+          parts.value = progress.parts || [];
           return true;
         } catch (e) {
           console.error('Error parsing saved progress:', e);
@@ -1330,7 +1435,8 @@ export default {
                    q.options,
           correctAnswer: q.type === 'essay' ? '' : q.correctAnswer, // Essay questions don't need correct answers
           imageUrl: q.imageUrl, // Include imageUrl in formatted questions
-          points: q.points || 1 // Include points
+          points: q.points || 1, // Include points
+          partId: q.partId || null // Include partId if assigned
         }));
 
         if (isEditing.value) {
@@ -1346,7 +1452,8 @@ export default {
             endDateTime: examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
             maxAttempts: examData.value.maxAttempts,
             attemptSpacing: examData.value.attemptSpacing,
-            studentExamHistory: examData.value.studentExamHistory
+            studentExamHistory: examData.value.studentExamHistory,
+            parts: parts.value.length > 0 ? parts.value : null
           });
         } else {
           await createExam(
@@ -1361,7 +1468,8 @@ export default {
             examData.value.endDateTime ? new Date(examData.value.endDateTime) : undefined,
             examData.value.maxAttempts,
             examData.value.attemptSpacing,
-            examData.value.studentExamHistory
+            examData.value.studentExamHistory,
+            parts.value.length > 0 ? parts.value : null
           );
         }
 
@@ -1449,6 +1557,32 @@ export default {
       }
     };
 
+    const addPart = () => {
+      parts.value.push({
+        label: '',
+        order: parts.value.length + 1
+      });
+    };
+
+    const removePart = (index) => {
+      // Remove the part
+      parts.value.splice(index, 1);
+      
+      // Update order for remaining parts
+      parts.value.forEach((part, idx) => {
+        part.order = idx + 1;
+      });
+      
+      // Remove partId from questions that were assigned to this part
+      questions.value.forEach(question => {
+        if (question.partId === index + 1) {
+          question.partId = '';
+        } else if (question.partId > index + 1) {
+          question.partId = question.partId - 1;
+        }
+      });
+    };
+
     const addQuestion = () => {
       questions.value.push({
         text: '',
@@ -1456,7 +1590,8 @@ export default {
         options: ['', ''],
         correctAnswer: '',
         imageUrl: null,
-        points: 1
+        points: 1,
+        partId: ''
       });
     };
 
@@ -1557,6 +1692,7 @@ export default {
         studentExamHistory: true
       };
       questions.value = [];
+      parts.value = [];
       
       // Clear saved progress when form is reset
       clearLocalStorageProgress();
@@ -2154,6 +2290,9 @@ export default {
       activeSettingsTab,
       toggleSettingsTab,
       error,
+      parts,
+      addPart,
+      removePart,
       // Document upload related
       documentFileInput,
       documentFile,
@@ -5399,5 +5538,221 @@ small {
 
 .back-text {
   font-weight: 500;
+}
+
+/* Parts Section Styling */
+.exam-parts-card {
+  margin-bottom: 20px;
+}
+
+.parts-section {
+  padding: 15px 0;
+}
+
+.parts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.parts-description {
+  color: #666;
+  font-size: 0.85rem;
+  margin: 0;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.add-part-btn {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+}
+
+.add-part-btn:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(76, 175, 80, 0.4);
+}
+
+.add-part-btn .material-icons-round {
+  font-size: 16px;
+}
+
+.no-parts {
+  text-align: center;
+  padding: 25px 15px;
+}
+
+.no-parts .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.no-parts .empty-icon {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+}
+
+.no-parts .empty-icon i {
+  font-size: 18px;
+}
+
+.no-parts p {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.no-parts .empty-subtext {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.parts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.part-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.3s ease;
+}
+
+.part-item:hover {
+  border-color: #159750;
+  box-shadow: 0 2px 8px rgba(21, 151, 80, 0.1);
+}
+
+.part-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.part-number {
+  background: linear-gradient(135deg, #159750, #0bcc4e);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.part-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.part-content .form-group {
+  margin-bottom: 0;
+}
+
+.part-content input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.part-content input:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 2px rgba(21, 151, 80, 0.1);
+}
+
+.part-content small {
+  display: block;
+  margin-top: 6px;
+  color: #666;
+  font-size: 0.75rem;
+}
+
+/* Part Assignment Dropdown */
+.part-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.part-select:hover {
+  border-color: #159750;
+}
+
+.part-select:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
+}
+
+/* Part Transitions */
+.part-transition-enter-active,
+.part-transition-leave-active {
+  transition: all 0.3s ease;
+}
+
+.part-transition-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.part-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Responsive adjustments for parts */
+@media (max-width: 768px) {
+  .parts-header {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .add-part-btn {
+    align-self: flex-start;
+  }
+  
+  .part-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .part-actions {
+    justify-content: flex-end;
+  }
 }
 </style>

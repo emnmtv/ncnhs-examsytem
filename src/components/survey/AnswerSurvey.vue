@@ -179,7 +179,8 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { fetchSurvey, submitSurveyResponse } from '@/services/authService';
 import Swal from 'sweetalert2';
 
@@ -187,6 +188,7 @@ export default {
   name: 'AnswerSurvey',
   
   setup() {
+    const route = useRoute();
     const surveyCode = ref('');
     const survey = ref(null);
     const loading = ref(false);
@@ -257,6 +259,15 @@ export default {
         loading.value = false;
       }
     };
+
+    // Prefill survey code from route if available and auto-load
+    onMounted(async () => {
+      const codeFromRoute = route.params.code;
+      if (typeof codeFromRoute === 'string' && codeFromRoute.trim().length > 0) {
+        surveyCode.value = codeFromRoute;
+        await loadSurvey();
+      }
+    });
 
     const selectOption = (questionId, option) => {
       answers.value[questionId] = option;

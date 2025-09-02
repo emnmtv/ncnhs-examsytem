@@ -136,7 +136,7 @@
 <script>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { fetchUserSurveys } from '@/services/authService';
+import { fetchUserSurveys, SOCKET_URL } from '@/services/authService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -173,33 +173,59 @@ export default {
     };
 
     const shareSurvey = async (survey) => {
-      const surveyUrl = `${window.location.origin}/answer-survey/${survey.code}`;
+      const base = (SOCKET_URL || '').replace(/\/$/, '');
+      const surveyUrl = `${base}/answer-survey/${survey.code}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(surveyUrl)}`;
       
       await Swal.fire({
         title: 'Share Survey',
         html: `
-          <div style="text-align: left;">
-            <p><strong>Survey Code:</strong> ${survey.code}</p>
-            <p><strong>Survey Link:</strong></p>
-            <input 
-              value="${surveyUrl}" 
-              readonly 
-              style="width: 100%; padding: 8px; margin-top: 8px;"
-            >
+          <div style="text-align:left;">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;">
+              <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+                <div style="text-align:center;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px;box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+                  <img src="${qrUrl}" alt="Survey QR" style="width:220px;height:220px;border-radius:8px;display:block;" />
+                  <div style="font-size:12px;color:#64748b;margin-top:8px;">Scan QR to open survey</div>
+                </div>
+                <div style="flex:1;min-width:260px;">
+                  <div style="margin-bottom:10px;color:#334155;font-size:14px;">Survey Code</div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                    <div style="font-weight:700;font-size:20px;background:#e8f5e9;color:#2e7d32;padding:8px 12px;border-radius:8px;letter-spacing:1px;">${survey.code}</div>
+                    <button id="copySurveyCodeBtn" style="padding:8px 10px;background:#2e7d32;color:#fff;border:none;border-radius:8px;cursor:pointer;">Copy Code</button>
+                  </div>
+                  <div style="margin-bottom:6px;color:#334155;font-size:14px;">Survey Link</div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input id="surveyShareInput" value="${surveyUrl}" readonly style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#0f172a;" />
+                    <button id="copySurveyLinkBtn" style="padding:10px 12px;background:#4CAF50;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;">Copy Link</button>
+                  </div>
+                  <div style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                    <a id="downloadQrBtn" href="${qrUrl}" download="survey-${survey.code}-qr.png" style="padding:10px 12px;background:#2196F3;color:#fff;border:none;border-radius:8px;cursor:pointer;text-decoration:none;">Download QR</a>
+                    <a href="${surveyUrl}" target="_blank" style="padding:10px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;cursor:pointer;text-decoration:none;">Open Link</a>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         `,
-        confirmButtonText: 'Copy Link',
+        showConfirmButton: false,
         showCancelButton: true,
-        cancelButtonText: 'Close'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          navigator.clipboard.writeText(surveyUrl);
-          Swal.fire({
-            title: 'Copied!',
-            text: 'Survey link copied to clipboard',
-            icon: 'success',
-            timer: 1500,
-            showConfirmButton: false
+        cancelButtonText: 'Close',
+        didOpen: () => {
+          const copyLinkBtn = document.getElementById('copySurveyLinkBtn');
+          copyLinkBtn?.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(`${surveyUrl}`);
+              Swal.showValidationMessage('Link copied!');
+              setTimeout(() => Swal.resetValidationMessage(), 1200);
+            } catch (e) { console.warn('Failed to copy link', e); }
+          });
+          const copyCodeBtn = document.getElementById('copySurveyCodeBtn');
+          copyCodeBtn?.addEventListener('click', async () => {
+            try {
+              await navigator.clipboard.writeText(`${survey.code}`);
+              Swal.showValidationMessage('Code copied!');
+              setTimeout(() => Swal.resetValidationMessage(), 1200);
+            } catch (e) { console.warn('Failed to copy code', e); }
           });
         }
       });

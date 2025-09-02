@@ -20,9 +20,8 @@ if (process.env.NODE_ENV === 'production') {
     },
     updated (registration) {
       console.log('New content is available; please refresh.')
-      document.dispatchEvent(
-        new CustomEvent('swUpdated', { detail: registration })
-      )
+      // Notify the app a new SW is waiting
+      document.dispatchEvent(new CustomEvent('swUpdated', { detail: registration }))
     },
     offline () {
       console.log('No internet connection found. App is running in offline mode.')
@@ -30,5 +29,13 @@ if (process.env.NODE_ENV === 'production') {
     error (error) {
       console.error('Error during service worker registration:', error)
     }
+  })
+
+  // Listen for user-accepted update to trigger skipWaiting on the waiting SW
+  let refreshing = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return
+    refreshing = true
+    window.location.reload()
   })
 }

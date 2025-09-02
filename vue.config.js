@@ -3,6 +3,7 @@ const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   transpileDependencies: true,
   productionSourceMap: false,
+  filenameHashing: true,
   // Set the title consistently for webpack
   chainWebpack: config => {
     config.plugin('html').tap(args => {

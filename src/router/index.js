@@ -129,7 +129,7 @@ const routes = [
     meta: { requiresAuth: true, roles: ['teacher', 'admin'] }
   },
   { 
-    path: '/answer-survey', 
+    path: '/answer-survey/:code?', 
     component: AnswerSurvey,
     meta: { requiresAuth: false } // Anyone can answer a survey with the code
   },
@@ -306,6 +306,12 @@ const routes = [
     name: 'NotFound',
     component: NotFound,
     meta: { requiresAuth: false }
+  },
+  {
+    path: '/exam/:examId/parts',
+    name: 'ExamPartResults',
+    component: () => import('@/components/teacher/ExamPartResults.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
   }
 ];
 
@@ -315,10 +321,33 @@ const router = createRouter({
   routes,
 });
 
-// Navigation guard to check authentication and roles
+// Navigation guard to check authentication, token expiry and roles
 router.beforeEach((to, from, next) => {
   const jwtToken = localStorage.getItem('jwtToken');
   const userRole = localStorage.getItem('userRole');
+
+  // Helper: check JWT expiry if it's a JWT (base64 parts)
+  const isTokenExpired = (token) => {
+    try {
+      const parts = token?.split('.') || [];
+      if (parts.length !== 3) return false; // not a JWT we issued; skip strict check
+      const payload = JSON.parse(atob(parts[1]));
+      if (!payload?.exp) return false;
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      return payload.exp <= nowInSeconds;
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // Auto-logout if token exists but is expired
+  if (jwtToken && isTokenExpired(jwtToken)) {
+    localStorage.removeItem('jwtToken');
+    localStorage.removeItem('userRole');
+    // remove any other auth-related storage if used
+    next('/');
+    return;
+  }
   
   // If route requires auth and user is not authenticated
   if (to.meta.requiresAuth && !jwtToken) {
