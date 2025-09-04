@@ -426,6 +426,7 @@
         <div v-if="showExportOptions" class="export-dropdown">
           <div class="export-options-header">
             <h3>Export Options</h3>
+            <p class="export-note">CSV export matches bulk upload format exactly</p>
           </div>
           
           <div class="export-data-selection">
@@ -433,7 +434,7 @@
             <div class="export-checkboxes">
               <label v-if="activeTab === 'students'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name (with current sort format)
+                Name
               </label>
               <label v-if="activeTab === 'students'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -454,7 +455,7 @@
               
               <label v-if="activeTab === 'teachers'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name (with current sort format)
+                Name
               </label>
               <label v-if="activeTab === 'teachers'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -471,7 +472,7 @@
               
               <label v-if="activeTab === 'admins'">
                 <input type="checkbox" v-model="exportOptions.fields.name" checked>
-                Name (with current sort format)
+                Name
               </label>
               <label v-if="activeTab === 'admins'">
                 <input type="checkbox" v-model="exportOptions.fields.email">
@@ -490,6 +491,10 @@
           </div>
           
           <div class="export-actions">
+            <button @click="exportToCSV" class="export-btn csv">
+              <span class="material-icons">table_chart</span>
+              CSV (Bulk Upload Format)
+            </button>
             <button @click="exportToExcel" class="export-btn excel">
               <span class="material-icons">description</span>
               Excel
@@ -3117,76 +3122,121 @@ const getExportData = () => {
   if (activeTab.value === 'students') {
     const fields = exportOptions.value.fields;
     
-    // Build headers array
-    if (fields.name) headers.push('Name');
-    if (fields.email) headers.push('Email');
-    if (fields.lrn) headers.push('LRN');
-    if (fields.grade) headers.push('Grade Level');
-    if (fields.section) headers.push('Section');
+    // Build headers array - use exact same names as bulk upload template
+    if (fields.name) headers.push('firstName', 'lastName');
+    if (fields.email) headers.push('email');
+    if (fields.lrn) headers.push('lrn');
+    if (fields.grade) headers.push('gradeLevel');
+    if (fields.section) headers.push('section');
+    // Always include address for bulk upload compatibility
+    headers.push('address');
     
     // Build rows
     dataToExport = filteredUsers.value.map(student => {
       const row = {};
       if (fields.name) {
-        row['Name'] = getDisplayName(student);
+        // Split the display name back into firstName and lastName
+        const displayName = getDisplayName(student);
+        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
+          // If sorting by last name, format is "Last Name, First Name"
+          const nameParts = displayName.split(', ');
+          row['lastName'] = nameParts[0] || '';
+          row['firstName'] = nameParts[1] || '';
+        } else {
+          // Default format is "First Name Last Name"
+          const nameParts = displayName.split(' ');
+          row['firstName'] = nameParts[0] || '';
+          row['lastName'] = nameParts.slice(1).join(' ') || '';
+        }
       }
-      if (fields.email) row['Email'] = student.email;
-      if (fields.lrn) row['LRN'] = student.lrn || 'N/A';
-      if (fields.grade) row['Grade Level'] = student.gradeLevel || 'N/A';
-      if (fields.section) row['Section'] = student.section || 'N/A';
+      if (fields.email) row['email'] = student.email;
+      if (fields.lrn) row['lrn'] = student.lrn || '';
+      if (fields.grade) row['gradeLevel'] = student.gradeLevel || '';
+      if (fields.section) row['section'] = student.section || '';
+      row['address'] = student.address || '';
       return row;
     });
   } 
   else if (activeTab.value === 'teachers') {
     const fields = exportOptions.value.fields;
     
-    // Build headers array
-    if (fields.name) headers.push('Name');
-    if (fields.email) headers.push('Email');
-    if (fields.department) headers.push('Department');
-    if (fields.domain) headers.push('Domain');
+    // Build headers array - use exact same names as bulk upload template
+    if (fields.name) headers.push('firstName', 'lastName');
+    if (fields.email) headers.push('email');
+    if (fields.department) headers.push('department');
+    if (fields.domain) headers.push('domain');
+    // Always include address for bulk upload compatibility
+    headers.push('address');
     
     // Build rows
     dataToExport = filteredUsers.value.map(teacher => {
       const row = {};
       if (fields.name) {
-        row['Name'] = getDisplayName(teacher);
+        // Split the display name back into firstName and lastName
+        const displayName = getDisplayName(teacher);
+        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
+          // If sorting by last name, format is "Last Name, First Name"
+          const nameParts = displayName.split(', ');
+          row['lastName'] = nameParts[0] || '';
+          row['firstName'] = nameParts[1] || '';
+        } else {
+          // Default format is "First Name Last Name"
+          const nameParts = displayName.split(' ');
+          row['firstName'] = nameParts[0] || '';
+          row['lastName'] = nameParts.slice(1).join(' ') || '';
+        }
       }
-      if (fields.email) row['Email'] = teacher.email;
-      if (fields.department) row['Department'] = teacher.department || 'N/A';
-      if (fields.domain) row['Domain'] = teacher.domain || 'N/A';
+      if (fields.email) row['email'] = teacher.email;
+      if (fields.department) row['department'] = teacher.department || '';
+      if (fields.domain) row['domain'] = teacher.domain || '';
+      row['address'] = teacher.address || '';
       return row;
     });
   } 
   else if (activeTab.value === 'admins') {
     const fields = exportOptions.value.fields;
     
-    // Build headers array
-    if (fields.name) headers.push('Name');
-    if (fields.email) headers.push('Email');
+    // Build headers array - use exact same names as bulk upload template
+    if (fields.name) headers.push('firstName', 'lastName');
+    if (fields.email) headers.push('email');
+    // Always include address for bulk upload compatibility
+    headers.push('address');
     
     // Build rows
     dataToExport = filteredUsers.value.map(admin => {
       const row = {};
       if (fields.name) {
-        row['Name'] = getDisplayName(admin);
+        // Split the display name back into firstName and lastName
+        const displayName = getDisplayName(admin);
+        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
+          // If sorting by last name, format is "Last Name, First Name"
+          const nameParts = displayName.split(', ');
+          row['lastName'] = nameParts[0] || '';
+          row['firstName'] = nameParts[1] || '';
+        } else {
+          // Default format is "First Name Last Name"
+          const nameParts = displayName.split(' ');
+          row['firstName'] = nameParts[0] || '';
+          row['lastName'] = nameParts.slice(1).join(' ') || '';
+        }
       }
-      if (fields.email) row['Email'] = admin.email;
+      if (fields.email) row['email'] = admin.email;
+      row['address'] = admin.address || '';
       return row;
     });
   } 
   else if (activeTab.value === 'sections') {
     const fields = exportOptions.value.fields;
     
-    // Build headers array
-    if (fields.grade) headers.push('Grade');
-    if (fields.section) headers.push('Section');
+    // Build headers array - use exact same names as bulk upload template
+    if (fields.grade) headers.push('gradeLevel');
+    if (fields.section) headers.push('section');
     
     // Build rows
     dataToExport = gradeSections.value.map(gs => {
       const row = {};
-      if (fields.grade) row['Grade'] = gs.grade;
-      if (fields.section) row['Section'] = gs.section;
+      if (fields.grade) row['gradeLevel'] = gs.grade;
+      if (fields.section) row['section'] = gs.section;
       return row;
     });
   }
@@ -3194,26 +3244,97 @@ const getExportData = () => {
   else if (activeTab.value === 'archived') {
     const fields = exportOptions.value.fields;
     
-    // Build headers array
-    if (fields.name) headers.push('Name');
-    if (fields.email) headers.push('Email');
-    headers.push('Role', 'Archived Date', 'Reason');
+    // Build headers array - use exact same names as bulk upload template
+    if (fields.name) headers.push('firstName', 'lastName');
+    if (fields.email) headers.push('email');
+    headers.push('role', 'archivedAt', 'archiveReason');
     
     // Build rows
     dataToExport = filteredArchivedUsers.value.map(user => {
       const row = {};
       if (fields.name) {
-        row['Name'] = getDisplayName(user);
+        // Split the display name back into firstName and lastName
+        const displayName = getDisplayName(user);
+        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
+          // If sorting by last name, format is "Last Name, First Name"
+          const nameParts = displayName.split(', ');
+          row['lastName'] = nameParts[0] || '';
+          row['firstName'] = nameParts[1] || '';
+        } else {
+          // Default format is "First Name Last Name"
+          const nameParts = displayName.split(' ');
+          row['firstName'] = nameParts[0] || '';
+          row['lastName'] = nameParts.slice(1).join(' ') || '';
+        }
       }
-      if (fields.email) row['Email'] = user.email;
-      row['Role'] = user.role;
-      row['Archived Date'] = formatDate(user.archivedAt);
-      row['Reason'] = user.archiveReason || 'N/A';
+      if (fields.email) row['email'] = user.email;
+      row['role'] = user.role;
+      row['archivedAt'] = formatDate(user.archivedAt);
+      row['archiveReason'] = user.archiveReason || '';
       return row;
     });
   }
   
   return { headers, data: dataToExport };
+};
+
+// Export to CSV (Bulk Upload Format)
+const exportToCSV = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Create CSV content with exact bulk upload format
+    const lines = [];
+    lines.push(headers.join(','));
+    
+    for (const row of data) {
+      const vals = headers.map(h => {
+        const v = row[h] !== undefined && row[h] !== null ? String(row[h]) : '';
+        // Properly escape CSV values (handle commas, quotes, newlines)
+        return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+      });
+      lines.push(vals.join(','));
+    }
+    
+    const csv = lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    // Generate filename that indicates it's in bulk upload format
+    const fileName = `NCNHS_${activeTab.value}_bulk_upload_format_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'CSV Export Complete',
+      text: `Data exported to CSV in bulk upload format as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to CSV error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to CSV. Please try again.'
+    });
+  }
 };
 
 // Export to Excel
@@ -4743,6 +4864,13 @@ const generateAndDownloadTemplate = () => {
   color: #333;
 }
 
+.export-note {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+
 .export-data-selection {
   padding: 1rem;
   border-bottom: 1px solid #e0e0e0;
@@ -4753,6 +4881,8 @@ const generateAndDownloadTemplate = () => {
   font-size: 0.9rem;
   color: #555;
 }
+
+
 
 .export-checkboxes {
   display: grid;
@@ -4774,6 +4904,8 @@ const generateAndDownloadTemplate = () => {
   height: 16px;
   cursor: pointer;
 }
+
+
 
 .export-actions {
   display: flex;
@@ -4825,6 +4957,14 @@ const generateAndDownloadTemplate = () => {
 
 .export-btn.print:hover {
   background: #5a6a6b;
+}
+
+.export-btn.csv {
+  background: #27AE60;
+}
+
+.export-btn.csv:hover {
+  background: #1E8449;
 }
 
 /* Add table styling */

@@ -4453,3 +4453,51 @@ export const formatEssaySubmissionForDisplay = (submission) => {
     attemptId: submission.attemptId
   };
 };
+
+// Admin Analytics Functions
+
+/**
+ * Get comprehensive admin analytics data
+ * @param {Object} filters - Optional filters for analytics
+ * @param {string} filters.startDate - Start date for filtering (YYYY-MM-DD)
+ * @param {string} filters.endDate - End date for filtering (YYYY-MM-DD)
+ * @param {number} filters.gradeLevel - Filter by grade level
+ * @param {string} filters.section - Filter by section
+ * @returns {Promise<Object>} Analytics data including overview, student performance, exam analytics, etc.
+ */
+export const getAdminAnalytics = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.gradeLevel) queryParams.append('gradeLevel', filters.gradeLevel.toString());
+    if (filters.section) queryParams.append('section', filters.section);
+
+    const url = `${BASE_URL}/admin/analytics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching admin analytics:', error);
+    throw error;
+  }
+};
