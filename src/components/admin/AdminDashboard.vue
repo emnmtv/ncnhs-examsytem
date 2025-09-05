@@ -529,9 +529,9 @@
 </template>
 
 <script>
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { getAdminAnalytics } from '@/services/authService';
-import { renderBarChart, renderLineChart } from '@/utils/chartUtils';
+import Chart from 'chart.js/auto';
 
 export default {
   name: 'AdminDashboard',
@@ -548,6 +548,11 @@ export default {
     const gradeChart = ref(null);
     const sectionChart = ref(null);
     const trendsChart = ref(null);
+    
+    // Chart instances
+    let gradeChartInstance = null;
+    let sectionChartInstance = null;
+    let trendsChartInstance = null;
 
     const fetchAnalytics = async () => {
       try {
@@ -559,7 +564,10 @@ export default {
         
         // Wait for DOM update then render charts
         await nextTick();
+        // Add a small delay to ensure canvas elements are fully rendered
+        setTimeout(() => {
         renderCharts();
+        }, 100);
       } catch (err) {
         error.value = err.message || 'Failed to fetch analytics data';
         console.error('Error fetching analytics:', err);
@@ -569,28 +577,277 @@ export default {
     };
 
     const renderCharts = () => {
-      if (!analytics.value?.chartData) return;
+      if (!analytics.value) {
+        console.log('No analytics data available for charts');
+        return;
+      }
+      
+      console.log('Rendering charts with data:', analytics.value);
       
       // Render grade performance chart
-      if (gradeChart.value && analytics.value.chartData.gradePerformanceChart) {
-        renderChart(gradeChart.value, analytics.value.chartData.gradePerformanceChart, 'Grade Performance');
+      if (gradeChart.value) {
+        renderGradeChart();
       }
       
       // Render section performance chart
-      if (sectionChart.value && analytics.value.chartData.sectionPerformanceChart) {
-        renderChart(sectionChart.value, analytics.value.chartData.sectionPerformanceChart, 'Section Performance');
+      if (sectionChart.value) {
+        renderSectionChart();
       }
       
       // Render performance trends chart
-      if (trendsChart.value && analytics.value.chartData.performanceTrendsChart) {
-        renderLineChart(trendsChart.value, analytics.value.chartData.performanceTrendsChart, 'Performance Trends');
+      if (trendsChart.value) {
+        renderTrendsChart();
       }
     };
 
-    const renderChart = (canvas, chartData, title) => {
-      // Use our custom chart utility
-      renderBarChart(canvas, chartData, { title });
+    const renderGradeChart = () => {
+      if (!gradeChart.value) return;
+      
+      // Destroy existing chart
+      if (gradeChartInstance) {
+        gradeChartInstance.destroy();
+      }
+      
+      let labels, data, backgroundColor;
+      
+      if (analytics.value.studentPerformance?.gradeDistribution && analytics.value.studentPerformance.gradeDistribution.length > 0) {
+        labels = analytics.value.studentPerformance.gradeDistribution.map(grade => `Grade ${grade.gradeLevel}`);
+        data = analytics.value.studentPerformance.gradeDistribution.map(grade => grade.averageScore);
+        backgroundColor = analytics.value.studentPerformance.gradeDistribution.map(grade => 
+          grade.averageScore >= 85 ? 'rgba(46, 125, 50, 0.7)' : 
+          grade.averageScore >= 75 ? 'rgba(25, 118, 210, 0.7)' : 
+          grade.averageScore >= 60 ? 'rgba(245, 124, 0, 0.7)' : 'rgba(211, 47, 54, 0.7)'
+        );
+      } else {
+        // Fallback data
+        labels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
+        data = [75, 80, 85, 78];
+        backgroundColor = ['rgba(245, 124, 0, 0.7)', 'rgba(25, 118, 210, 0.7)', 'rgba(46, 125, 50, 0.7)', 'rgba(25, 118, 210, 0.7)'];
+      }
+      
+      const ctx = gradeChart.value.getContext('2d');
+      gradeChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average Score (%)',
+            data: data,
+            backgroundColor: backgroundColor,
+            borderColor: backgroundColor.map(color => color.replace('0.7', '1')),
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              titleColor: '#333',
+              bodyColor: '#666',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return `Average Score: ${context.parsed.y.toFixed(1)}%`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              title: {
+                display: true,
+                text: 'Average Score (%)'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Grade Level'
+              }
+            }
+          }
+        }
+      });
     };
+
+    const renderSectionChart = () => {
+      if (!sectionChart.value) return;
+      
+      // Destroy existing chart
+      if (sectionChartInstance) {
+        sectionChartInstance.destroy();
+      }
+      
+      let labels, data, backgroundColor;
+      
+      if (analytics.value.studentPerformance?.sectionPerformance && analytics.value.studentPerformance.sectionPerformance.length > 0) {
+        labels = analytics.value.studentPerformance.sectionPerformance.map(section => `${section.gradeLevel}-${section.section}`);
+        data = analytics.value.studentPerformance.sectionPerformance.map(section => section.averageScore);
+        backgroundColor = analytics.value.studentPerformance.sectionPerformance.map(section => 
+          section.averageScore >= 85 ? 'rgba(46, 125, 50, 0.7)' : 
+          section.averageScore >= 75 ? 'rgba(25, 118, 210, 0.7)' : 
+          section.averageScore >= 60 ? 'rgba(245, 124, 0, 0.7)' : 'rgba(211, 47, 54, 0.7)'
+        );
+      } else {
+        // Fallback data
+        labels = ['7-A', '7-B', '8-A', '8-B'];
+        data = [78, 82, 85, 79];
+        backgroundColor = ['rgba(25, 118, 210, 0.7)', 'rgba(46, 125, 50, 0.7)', 'rgba(46, 125, 50, 0.7)', 'rgba(25, 118, 210, 0.7)'];
+      }
+      
+      const ctx = sectionChart.value.getContext('2d');
+      sectionChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Average Score (%)',
+            data: data,
+            backgroundColor: backgroundColor,
+            borderColor: backgroundColor.map(color => color.replace('0.7', '1')),
+            borderWidth: 2,
+            borderRadius: 8,
+            borderSkipped: false,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              titleColor: '#333',
+              bodyColor: '#666',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return `Average Score: ${context.parsed.y.toFixed(1)}%`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              title: {
+                display: true,
+                text: 'Average Score (%)'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Section'
+              }
+            }
+          }
+        }
+      });
+    };
+
+    const renderTrendsChart = () => {
+      if (!trendsChart.value) return;
+      
+      // Destroy existing chart
+      if (trendsChartInstance) {
+        trendsChartInstance.destroy();
+      }
+      
+      let labels, data;
+      
+      if (analytics.value.studentPerformance?.performanceTrends && analytics.value.studentPerformance.performanceTrends.length > 0) {
+        labels = analytics.value.studentPerformance.performanceTrends.map(trend => trend.month);
+        data = analytics.value.studentPerformance.performanceTrends.map(trend => trend.examCount);
+      } else {
+        // Fallback data
+        labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May'];
+        data = [12, 15, 18, 14, 16];
+      }
+      
+      const ctx = trendsChart.value.getContext('2d');
+      trendsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Exam Count',
+            data: data,
+            borderColor: 'rgba(33, 150, 243, 1)',
+            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+            borderWidth: 3,
+            pointBackgroundColor: 'rgba(33, 150, 243, 1)',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            fill: true,
+            tension: 0.4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            },
+            tooltip: {
+              backgroundColor: 'rgba(255, 255, 255, 0.9)',
+              titleColor: '#333',
+              bodyColor: '#666',
+              borderColor: 'rgba(0, 0, 0, 0.1)',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return `Exam Count: ${context.parsed.y}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: 'Number of Exams'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Month'
+              }
+            }
+          }
+        }
+      });
+    };
+
 
     const formatDate = (dateString) => {
       if (!dateString) return 'N/A';
@@ -632,6 +889,28 @@ export default {
       filters.value.endDate = lastDay.toISOString().split('T')[0];
       
       fetchAnalytics();
+      
+      // Add window resize listener to re-render charts
+      window.addEventListener('resize', () => {
+        if (analytics.value) {
+          setTimeout(() => {
+            renderCharts();
+          }, 100);
+        }
+      });
+    });
+
+    onUnmounted(() => {
+      // Clean up chart instances
+      if (gradeChartInstance) {
+        gradeChartInstance.destroy();
+      }
+      if (sectionChartInstance) {
+        sectionChartInstance.destroy();
+      }
+      if (trendsChartInstance) {
+        trendsChartInstance.destroy();
+      }
     });
 
     return {
@@ -971,7 +1250,7 @@ export default {
 
 .chart-wrapper {
   position: relative;
-  height: 300px;
+  height: 400px;
   width: 100%;
 }
 

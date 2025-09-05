@@ -288,30 +288,34 @@ class SocketManager {
   // Add this method to the SocketManager class
   setupPageVisibilityHandling() {
     // Handle page visibility changes (tab switching, minimizing)
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Page became visible - checking connection');
-        if (!this.socket?.connected) {
-          console.log('Socket disconnected while page was hidden - reconnecting');
-          this.initialize();
+    if (document && document.addEventListener) {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          console.log('Page became visible - checking connection');
+          if (!this.socket?.connected) {
+            console.log('Socket disconnected while page was hidden - reconnecting');
+            this.initialize();
+          }
+          
+          // Always restore session when page becomes visible
+          this.restoreSession();
         }
-        
-        // Always restore session when page becomes visible
-        this.restoreSession();
-      }
-    });
+      });
+    }
     
     // Handle before unload to properly disconnect
-    window.addEventListener('beforeunload', () => {
-      console.log('Page unloading - storing session state');
-      // We don't actually disconnect here, just store state
-      this.lastTestCode = localStorage.getItem('testCode');
-    });
+    if (window && window.addEventListener) {
+      window.addEventListener('beforeunload', () => {
+        console.log('Page unloading - storing session state');
+        // We don't actually disconnect here, just store state
+        this.lastTestCode = localStorage.getItem('testCode');
+      });
+    }
     
     // Handle page load to restore session
-    if (document.readyState === 'complete') {
+    if (document && document.readyState === 'complete') {
       this.restoreSession();
-    } else {
+    } else if (window && window.addEventListener) {
       window.addEventListener('load', () => {
         this.restoreSession();
       });

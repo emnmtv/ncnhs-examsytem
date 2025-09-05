@@ -80,19 +80,30 @@ export default {
     };
 
     onMounted(() => {
-      window.addEventListener('auth-changed', handleAuthChanged);
-      window.addEventListener('storage', handleAuthChanged);
+      // Add null checks for window and document
+      if (window && window.addEventListener) {
+        window.addEventListener('auth-changed', handleAuthChanged);
+        window.addEventListener('storage', handleAuthChanged);
+      }
+      
       // Listen for service worker update events dispatched from registerServiceWorker.js
-      document.addEventListener('swUpdated', (event) => {
-        swRegistration.value = event.detail;
-        updateAvailable.value = true;
-      });
+      if (document && document.addEventListener) {
+        document.addEventListener('swUpdated', (event) => {
+          swRegistration.value = event.detail;
+          updateAvailable.value = true;
+        });
+      }
     });
 
     onBeforeUnmount(() => {
-      window.removeEventListener('auth-changed', handleAuthChanged);
-      window.removeEventListener('storage', handleAuthChanged);
-      document.removeEventListener('swUpdated', () => {});
+      // Add null checks for cleanup
+      if (window && window.removeEventListener) {
+        window.removeEventListener('auth-changed', handleAuthChanged);
+        window.removeEventListener('storage', handleAuthChanged);
+      }
+      if (document && document.removeEventListener) {
+        document.removeEventListener('swUpdated', () => {});
+      }
     });
 
     // SW update handling
@@ -106,9 +117,11 @@ export default {
       }
       const waitingSW = registration.waiting;
       // Reload when the new SW takes control
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        window.location.reload();
-      }, { once: true });
+      if (navigator.serviceWorker && navigator.serviceWorker.addEventListener) {
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        }, { once: true });
+      }
       waitingSW.postMessage({ type: 'SKIP_WAITING' });
       updateAvailable.value = false;
     };
