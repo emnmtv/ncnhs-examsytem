@@ -380,6 +380,33 @@ const goToSurvey = () => {
   font-size: 0.9rem;
 }
 
+/* Compact survey button for high DPI displays */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .survey-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    bottom: 15px;
+    right: 15px;
+  }
+  
+  .survey-button .material-icons {
+    font-size: 16px;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .survey-button {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    bottom: 12px;
+    right: 12px;
+  }
+  
+  .survey-button .material-icons {
+    font-size: 14px;
+  }
+}
+
 .survey-button.button-visible {
   opacity: 0.8;
   transform: translateY(0);
@@ -417,6 +444,81 @@ const goToSurvey = () => {
   transform: translateY(-100px);
   opacity: 0;
   transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+/* Compact PWA prompt for high DPI displays */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .pwa-install-prompt {
+    width: 280px;
+    top: 15px;
+    right: 15px;
+  }
+  
+  .prompt-content {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .prompt-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
+  }
+  
+  .prompt-icon .material-icons {
+    font-size: 22px;
+  }
+  
+  .prompt-text h3 {
+    font-size: 14px;
+    margin: 0 0 3px;
+  }
+  
+  .prompt-text p {
+    font-size: 12px;
+  }
+  
+  .install-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .pwa-install-prompt {
+    width: 260px;
+    top: 12px;
+    right: 12px;
+  }
+  
+  .prompt-content {
+    padding: 10px;
+    gap: 6px;
+  }
+  
+  .prompt-icon {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 4px;
+  }
+  
+  .prompt-icon .material-icons {
+    font-size: 20px;
+  }
+  
+  .prompt-text h3 {
+    font-size: 13px;
+    margin: 0 0 2px;
+  }
+  
+  .prompt-text p {
+    font-size: 11px;
+  }
+  
+  .install-button {
+    padding: 5px 10px;
+    font-size: 11px;
+  }
 }
 
 .pwa-install-prompt.show-prompt {
@@ -940,7 +1042,309 @@ label {
   margin-bottom: 20px;
 }
 
+/* Responsive modal styles for high DPI displays */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .modal-content {
+    max-width: 500px;
+    max-height: 75vh;
+  }
+  
+  .modal-header {
+    padding: 16px;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.2rem;
+  }
+  
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .policy-section h5 {
+    font-size: 1rem;
+    margin: 12px 0 8px;
+  }
+  
+  .policy-section p, .policy-section li {
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+  
+  .last-updated {
+    font-size: 0.75rem;
+    margin-bottom: 15px;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .modal-content {
+    max-width: 450px;
+    max-height: 70vh;
+  }
+  
+  .modal-header {
+    padding: 14px;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .modal-body {
+    padding: 14px;
+  }
+  
+  .policy-section {
+    margin-bottom: 15px;
+  }
+  
+  .policy-section h5 {
+    font-size: 0.95rem;
+    margin: 10px 0 6px;
+  }
+  
+  .policy-section p, .policy-section li {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+  
+  .last-updated {
+    font-size: 0.7rem;
+    margin-bottom: 12px;
+  }
+}
+
 /* Responsive styles */
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .login-content {
+    height: 100vh;
+  }
+  
+  .welcome-banner {
+    padding: 2rem;
+  }
+  
+  .school-name {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .system-name {
+    font-size: 1.4rem;
+    margin: 1rem 0;
+  }
+  
+  .tagline {
+    font-size: 1rem;
+    margin-top: 1rem;
+  }
+  
+  .deped-logo, .ncnhs-logo {
+    height: 80px;
+  }
+  
+  .logo-container {
+    margin: 1.5rem 0;
+    gap: 2rem;
+  }
+  
+  .login-form-container {
+    padding: 2rem;
+  }
+  
+  .logo {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 1rem;
+  }
+  
+  h2 {
+    font-size: 1.6rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .login-form {
+    gap: 1.4rem;
+    max-width: 350px;
+  }
+  
+  .animated-input {
+    padding: 1rem;
+    font-size: 0.95rem;
+  }
+  
+  .login-button {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+  
+  label {
+    font-size: 1rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .welcome-banner {
+    padding: 1.5rem;
+  }
+  
+  .school-name {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+  }
+  
+  .system-name {
+    font-size: 1.2rem;
+    margin: 0.8rem 0;
+    letter-spacing: 1px;
+  }
+  
+  .tagline {
+    font-size: 0.95rem;
+    margin-top: 0.8rem;
+  }
+  
+  .deped-logo, .ncnhs-logo {
+    height: 70px;
+  }
+  
+  .logo-container {
+    margin: 1rem 0;
+    gap: 1.5rem;
+  }
+  
+  .login-form-container {
+    padding: 1.8rem;
+  }
+  
+  .login-header {
+    margin-bottom: 2rem;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 0.8rem;
+  }
+  
+  h2 {
+    font-size: 1.4rem;
+  }
+  
+  .login-form {
+    gap: 1.2rem;
+    max-width: 320px;
+  }
+  
+  .animated-input {
+    padding: 0.9rem;
+    font-size: 0.9rem;
+  }
+  
+  .login-button {
+    padding: 0.9rem;
+    font-size: 0.95rem;
+    margin-top: 0.8rem;
+  }
+  
+  .login-footer {
+    margin-top: 1.5rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .welcome-banner {
+    padding: 1.2rem;
+  }
+  
+  .school-name {
+    font-size: 1.4rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .system-name {
+    font-size: 1.1rem;
+    margin: 0.6rem 0;
+  }
+  
+  .tagline {
+    font-size: 0.85rem;
+    margin-top: 0.6rem;
+  }
+  
+  .deped-logo, .ncnhs-logo {
+    height: 60px;
+  }
+  
+  .logo-container {
+    margin: 0.8rem 0;
+    gap: 1rem;
+  }
+  
+  .login-form-container {
+    padding: 1.5rem;
+  }
+  
+  .login-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 0.6rem;
+  }
+  
+  h2 {
+    font-size: 1.3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .login-form {
+    gap: 1rem;
+    max-width: 300px;
+  }
+  
+  .animated-input {
+    padding: 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .login-button {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+    margin-top: 0.6rem;
+  }
+  
+  label {
+    font-size: 0.9rem;
+  }
+  
+  .material-icons {
+    font-size: 1rem;
+  }
+  
+  .login-footer {
+    margin-top: 1.2rem;
+  }
+  
+  .policy-link {
+    font-size: 0.8rem;
+  }
+}
+
 @media (max-width: 1024px) {
   .school-name {
     font-size: 2rem;

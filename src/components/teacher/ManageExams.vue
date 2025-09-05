@@ -2636,6 +2636,858 @@ input:checked + .slider:before {
   background: #ffebee;
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .manage-exams {
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .exam-tabs {
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+  }
+  
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 0.95rem;
+  }
+  
+  .header-actions {
+    gap: 0.8rem;
+    margin-bottom: 1.6rem;
+  }
+  
+  .template-btn, .import-btn, .create-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.2rem;
+  }
+  
+  .exam-card {
+    border-radius: 14px;
+  }
+  
+  .exam-header {
+    padding: 16px;
+    border-radius: 14px 14px 0 0;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 8px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.85rem;
+    padding: 3px 8px;
+  }
+  
+  .exam-body {
+    padding: 16px;
+  }
+  
+  .info-item {
+    gap: 10px;
+    padding: 6px 0;
+  }
+  
+  .info-label {
+    font-size: 0.75rem;
+  }
+  
+  .info-value {
+    font-size: 0.95rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1.1rem;
+  }
+  
+  .exam-actions {
+    padding: 12px;
+    gap: 6px;
+  }
+  
+  .action-btn {
+    padding: 6px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .access-modal,
+  .settings-modal {
+    max-width: 900px;
+    border-radius: 14px;
+  }
+  
+  .modal-header {
+    padding: 16px;
+    border-radius: 14px 14px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.3rem;
+    gap: 8px;
+  }
+  
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .access-exam-info,
+  .settings-exam-info {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .access-exam-info h3,
+  .settings-exam-info h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  .form-section {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .form-section h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .form-input {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .form-help {
+    font-size: 0.8rem;
+  }
+  
+  .section-form-card,
+  .section-list-card {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .form-row {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .form-group select {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .add-section-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+  
+  .section-item {
+    padding: 8px 12px;
+  }
+  
+  .modal-footer {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .dropdown-menu {
+    min-width: 140px;
+    max-height: 240px;
+  }
+  
+  .dropdown-item {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-exams {
+    padding: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.7rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .exam-tabs {
+    margin-bottom: 18px;
+    padding-bottom: 6px;
+  }
+  
+  .tab-btn {
+    padding: 6px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .header-actions {
+    gap: 0.7rem;
+    margin-bottom: 1.4rem;
+  }
+  
+  .template-btn, .import-btn, .create-btn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    gap: 0.4rem;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+  }
+  
+  .exam-card {
+    border-radius: 12px;
+  }
+  
+  .exam-header {
+    padding: 14px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 6px;
+  }
+  
+  .exam-meta {
+    gap: 8px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    gap: 4px;
+  }
+  
+  .exam-body {
+    padding: 14px;
+  }
+  
+  .exam-info {
+    gap: 10px;
+  }
+  
+  .info-item {
+    gap: 8px;
+    padding: 4px 0;
+  }
+  
+  .info-label {
+    font-size: 0.7rem;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1rem;
+  }
+  
+  .exam-actions {
+    padding: 10px;
+    gap: 5px;
+  }
+  
+  .action-btn {
+    padding: 5px;
+    font-size: 0.8rem;
+    gap: 3px;
+    min-width: calc(33.333% - 5px);
+  }
+  
+  .loading-state, .error-state, .empty-state {
+    padding: 2rem;
+    border-radius: 12px;
+  }
+  
+  .loading-state .material-icons-round, 
+  .error-state .material-icons-round, 
+  .empty-state .material-icons-round {
+    font-size: 2.5rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .retry-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .access-modal,
+  .settings-modal {
+    max-width: 800px;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 14px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
+    gap: 6px;
+  }
+  
+  .close-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .modal-body {
+    padding: 14px;
+  }
+  
+  .access-exam-info,
+  .settings-exam-info {
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .access-exam-info h3,
+  .settings-exam-info h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  
+  .exam-meta {
+    gap: 12px;
+  }
+  
+  .meta-item {
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .access-control-section {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .access-type-header h4 {
+    font-size: 1rem;
+  }
+  
+  .toggle-state {
+    font-size: 0.85rem;
+  }
+  
+  .switch {
+    width: 45px;
+    height: 22px;
+  }
+  
+  .slider:before {
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+  }
+  
+  .input:checked + .slider:before {
+    transform: translateX(23px);
+  }
+  
+  .access-description {
+    gap: 12px;
+    padding: 12px;
+    margin-top: 12px;
+  }
+  
+  .description-icon {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .form-section {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  
+  .form-section h4 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+  
+  .form-input {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .form-help {
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+  
+  .section-form-card,
+  .section-list-card {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  
+  .form-row {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .form-group label {
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+  }
+  
+  .form-group select {
+    padding: 6px;
+    font-size: 0.85rem;
+  }
+  
+  .add-section-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+  
+  .section-list {
+    gap: 8px;
+    max-height: 250px;
+  }
+  
+  .section-item {
+    padding: 6px 10px;
+  }
+  
+  .section-grade {
+    font-size: 0.9rem;
+  }
+  
+  .section-name {
+    font-size: 0.85rem;
+  }
+  
+  .modal-footer {
+    padding: 14px;
+    gap: 10px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .dropdown-toggle {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .dropdown-menu {
+    min-width: 130px;
+    max-height: 220px;
+  }
+  
+  .dropdown-item {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+  
+  .dropdown-item i,
+  .dropdown-item .material-icons-round {
+    font-size: 0.85rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-exams {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .exam-tabs {
+    margin-bottom: 16px;
+    padding-bottom: 5px;
+  }
+  
+  .tab-btn {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .tab-btn i {
+    font-size: 0.9rem;
+  }
+  
+  .header-actions {
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .template-btn, .import-btn, .create-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    gap: 0.3rem;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.8rem;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 12px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 5px;
+  }
+  
+  .exam-meta {
+    gap: 6px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.75rem;
+    padding: 1px 5px;
+    gap: 3px;
+  }
+  
+  .exam-body {
+    padding: 12px;
+  }
+  
+  .exam-info {
+    gap: 8px;
+  }
+  
+  .info-item {
+    gap: 6px;
+    padding: 3px 0;
+  }
+  
+  .info-label {
+    font-size: 0.65rem;
+  }
+  
+  .info-value {
+    font-size: 0.85rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.9rem;
+  }
+  
+  .exam-actions {
+    padding: 8px;
+    gap: 4px;
+  }
+  
+  .action-btn {
+    padding: 4px;
+    font-size: 0.75rem;
+    gap: 2px;
+    min-width: calc(33.333% - 4px);
+  }
+  
+  .loading-state, .error-state, .empty-state {
+    padding: 1.5rem;
+    border-radius: 10px;
+  }
+  
+  .loading-state .material-icons-round, 
+  .error-state .material-icons-round, 
+  .empty-state .material-icons-round {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .retry-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .access-modal,
+  .settings-modal {
+    max-width: 650px;
+    border-radius: 10px;
+  }
+  
+  .modal-header {
+    padding: 12px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.1rem;
+    gap: 5px;
+  }
+  
+  .close-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .modal-body {
+    padding: 12px;
+  }
+  
+  .access-exam-info,
+  .settings-exam-info {
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .access-exam-info h3,
+  .settings-exam-info h3 {
+    font-size: 0.95rem;
+    margin-bottom: 5px;
+  }
+  
+  .exam-meta {
+    gap: 10px;
+  }
+  
+  .meta-item {
+    font-size: 0.8rem;
+    gap: 3px;
+  }
+  
+  .access-control-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .access-type-header h4 {
+    font-size: 0.95rem;
+  }
+  
+  .toggle-state {
+    font-size: 0.8rem;
+  }
+  
+  .switch {
+    width: 40px;
+    height: 20px;
+  }
+  
+  .slider:before {
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+  }
+  
+  .input:checked + .slider:before {
+    transform: translateX(20px);
+  }
+  
+  .access-description {
+    gap: 10px;
+    padding: 10px;
+    margin-top: 10px;
+  }
+  
+  .description-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .form-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .form-section h4 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .form-input {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .form-help {
+    font-size: 0.7rem;
+    margin-top: 3px;
+  }
+  
+  .section-form-card,
+  .section-list-card {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .list-header h4 {
+    font-size: 0.95rem;
+  }
+  
+  .section-count {
+    font-size: 0.8rem;
+  }
+  
+  .form-row {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .form-group label {
+    margin-bottom: 5px;
+    font-size: 0.85rem;
+  }
+  
+  .form-group select {
+    padding: 5px;
+    font-size: 0.8rem;
+  }
+  
+  .add-section-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+  
+  .section-list {
+    gap: 6px;
+    max-height: 200px;
+  }
+  
+  .section-item {
+    padding: 5px 8px;
+  }
+  
+  .section-grade {
+    font-size: 0.85rem;
+  }
+  
+  .section-name {
+    font-size: 0.8rem;
+  }
+  
+  .grade-badge {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+  
+  .modal-footer {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .dropdown-toggle {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .dropdown-menu {
+    min-width: 120px;
+    max-height: 200px;
+  }
+  
+  .dropdown-item {
+    padding: 5px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  
+  .dropdown-item i,
+  .dropdown-item .material-icons-round {
+    font-size: 0.8rem;
+  }
+}
+
 /* Responsive styles for the modal */
 @media (max-width: 768px) {
   .manage-exams {

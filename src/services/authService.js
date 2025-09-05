@@ -1,7 +1,7 @@
-// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
-export const BASE_URL = 'http://localhost:3300/auth';
-export const SOCKET_URL = 'http://localhost:3300/';
+export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+// export const BASE_URL = 'http://localhost:3300/auth';
+// export const SOCKET_URL = 'http://localhost:3300/';
 // export const BASE_URL = 'https://emnmtv.shop/auth';
 // export const SOCKET_URL = 'https://emnmtv.shop/';
 const decodeToken = (token) => {
@@ -473,50 +473,53 @@ export const stopExam = async (testCode) => {
 
 // Auth helper functions
 export const logout = () => {
-  try {
-    // Get userId before clearing storage
-    const userId = localStorage.getItem("userId");
-    
-    // Clear heartbeat interval
-    const heartbeatInterval = localStorage.getItem("heartbeatInterval");
-    if (heartbeatInterval) {
-      clearInterval(Number(heartbeatInterval));
-    }
-    
-    // Import the socket manager synchronously
-    const socketManager = require('@/utils/socketManager').default;
-    
-    // Emit logout event if we have a userId
-    if (userId) {
-      console.log('Logging out user:', userId);
-      socketManager.emitUserLogout(userId);
-    }
-    
-    // Disconnect the socket
-    socketManager.disconnect();
-    
-    // Add a small delay to ensure the socket events are sent
-    setTimeout(() => {
-      // Clear all authentication-related items from localStorage
-      localStorage.removeItem('jwtToken');
-      localStorage.removeItem('userId');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('testCode');
-      localStorage.removeItem('heartbeatInterval');
-      // Clear any other app-specific storage items
-      localStorage.clear();
+  return new Promise((resolve, reject) => {
+    try {
+      // Get userId before clearing storage
+      const userId = localStorage.getItem("userId");
       
-      console.log('AuthService: User logged out successfully');
-      try {
-        window.dispatchEvent(new Event('auth-changed'));
-      } catch (e) {
-        console.warn('Auth change event dispatch failed', e);
+      // Clear heartbeat interval
+      const heartbeatInterval = localStorage.getItem("heartbeatInterval");
+      if (heartbeatInterval) {
+        clearInterval(Number(heartbeatInterval));
       }
-    }, 500);
-  } catch (error) {
-    console.error('AuthService: Error during logout:', error);
-    throw error;
-  }
+      
+      // Import the socket manager synchronously
+      const socketManager = require('@/utils/socketManager').default;
+      
+      // Emit logout event if we have a userId
+      if (userId) {
+        console.log('Logging out user:', userId);
+        socketManager.emitUserLogout(userId);
+      }
+      
+      // Disconnect the socket
+      socketManager.disconnect();
+      
+      // Add a small delay to ensure the socket events are sent
+      setTimeout(() => {
+        // Clear all authentication-related items from localStorage
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('testCode');
+        localStorage.removeItem('heartbeatInterval');
+        // Clear any other app-specific storage items
+        localStorage.clear();
+        
+        console.log('AuthService: User logged out successfully');
+        try {
+          window.dispatchEvent(new Event('auth-changed'));
+        } catch (e) {
+          console.warn('Auth change event dispatch failed', e);
+        }
+        resolve();
+      }, 500);
+    } catch (error) {
+      console.error('AuthService: Error during logout:', error);
+      reject(error);
+    }
+  });
 };
 
 export const isAuthenticated = () => {

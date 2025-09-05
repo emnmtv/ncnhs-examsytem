@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const OPENROUTER_API_KEY = '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';
+export const OPENROUTER_API_KEY = '*';
 export const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Define available models in order of preference
@@ -344,19 +344,87 @@ function processFallbackQuestions(questions, questionType) {
  * Improves the wording of an existing question
  * @param {string} questionText - The original question text
  * @param {string} subject - The subject of the exam
+ * @param {string} cognitiveLevel - The cognitive level for improvement (knowledge, comprehension, application, analysis, synthesis, evaluation)
  * @returns {Promise<string>} - Improved question text
  */
-export const improveQuestionWording = async (questionText, subject) => {
+export const improveQuestionWording = async (questionText, subject, cognitiveLevel = null) => {
   const systemPrompt = `You are an expert in creating clear and effective exam questions for ${subject}.`;
   
-  const prompt = `Improve this ${subject} exam question while maintaining its meaning and difficulty:
+  let prompt;
   
-  Original: "${questionText}"
-  
-  Provide only the improved version without any explanations or additional text.`;
+  if (cognitiveLevel) {
+    // Map cognitive levels to their descriptions
+    const cognitiveLevelDescriptions = {
+      knowledge: 'Knowledge/Remembering - Focus on recall of facts, terms, basic concepts',
+      comprehension: 'Comprehension/Understanding - Focus on demonstrating understanding by explaining in own words',
+      application: 'Application - Focus on using knowledge in new situations, applying formulas or rules',
+      analysis: 'Analysis - Focus on breaking information into parts, seeing relationships',
+      synthesis: 'Synthesis/Creating - Focus on combining elements into a new whole, creative thinking',
+      evaluation: 'Evaluation - Focus on making judgments, critiquing, justifying decisions'
+    };
+    
+    const levelDescription = cognitiveLevelDescriptions[cognitiveLevel] || cognitiveLevel;
+    
+    prompt = `Improve this ${subject} exam question to align with the ${levelDescription} cognitive level while maintaining its educational value:
+
+    Original: "${questionText}"
+    
+    Cognitive Level: ${levelDescription}
+    
+    Make sure the improved question:
+    1. Clearly targets the specified cognitive level
+    2. Uses appropriate question stems and language for that level
+    3. Maintains the original meaning and subject matter
+    4. Is clear, concise, and educationally sound
+    
+    IMPORTANT: Return ONLY the improved question text. Do not include any explanations, notes, or additional text. Do not include phrases like "Here is the improved question:" or any parenthetical notes.`;
+  } else {
+    prompt = `Improve this ${subject} exam question while maintaining its meaning and difficulty:
+
+    Original: "${questionText}"
+    
+    IMPORTANT: Return ONLY the improved question text. Do not include any explanations, notes, or additional text. Do not include phrases like "Here is the improved question:" or any parenthetical notes.`;
+  }
   
   try {
-    return await callOpenRouterAPI(prompt, systemPrompt);
+    const response = await callOpenRouterAPI(prompt, systemPrompt);
+    
+    // Clean up the response to remove any extra text
+    let cleanedResponse = response.trim();
+    
+    // Remove common prefixes
+    const prefixesToRemove = [
+      'Here is the improved question:',
+      'Improved question:',
+      'The improved question is:',
+      'Here\'s the improved question:',
+      'Here is the question:',
+      'Question:',
+      'Improved version:',
+      'Here\'s the question:'
+    ];
+    
+    for (const prefix of prefixesToRemove) {
+      if (cleanedResponse.toLowerCase().startsWith(prefix.toLowerCase())) {
+        cleanedResponse = cleanedResponse.substring(prefix.length).trim();
+        break;
+      }
+    }
+    
+    // Remove content in parentheses that looks like explanatory notes
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]*Note:[^)]*\)/gi, '');
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]*explanation[^)]*\)/gi, '');
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]*This question[^)]*\)/gi, '');
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]*requiring[^)]*\)/gi, '');
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]*demonstrating[^)]*\)/gi, '');
+    
+    // Remove any remaining parenthetical content that's too long (likely explanatory)
+    cleanedResponse = cleanedResponse.replace(/\s*\([^)]{50,}\)/g, '');
+    
+    // Clean up any remaining extra whitespace
+    cleanedResponse = cleanedResponse.replace(/\s+/g, ' ').trim();
+    
+    return cleanedResponse;
   } catch (error) {
     console.error('Error improving question:', error);
     throw error;

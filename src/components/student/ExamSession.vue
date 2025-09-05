@@ -918,21 +918,21 @@ export default {
 
 <style scoped>
 .exam-session {
-  max-width: 900px;
+  max-width: 750px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 16px;
   font-family: 'Roboto', sans-serif;
 }
 
 .exam-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .exam-header h2 {
   margin-top: 0;
   color: #333;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-weight: 600;
 }
 
@@ -1023,16 +1023,16 @@ export default {
   background-color: white;
   border-radius: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  padding: 24px;
-  margin-bottom: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
 }
 
 .question-text h3 {
   margin-top: 0;
   color: #333;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .question-image {
@@ -1048,13 +1048,13 @@ export default {
 }
 
 .answer-container {
-  margin: 24px 0;
+  margin: 20px 0;
 }
 
 .options-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .option-item {
@@ -1126,7 +1126,7 @@ export default {
 .navigation-buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .nav-btn {
@@ -1177,8 +1177,8 @@ export default {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
-  margin-top: 24px;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 .question-bubble {
@@ -1565,6 +1565,532 @@ export default {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .exam-session {
+    max-width: 650px;
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.4rem;
+    margin-bottom: 12px;
+  }
+  
+  .progress-container {
+    margin-top: 12px;
+  }
+  
+  .progress-bar {
+    height: 5px;
+  }
+  
+  .progress-text {
+    font-size: 0.8rem;
+  }
+  
+  .timer-container {
+    margin-top: 8px;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .question-card {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .question-text h3 {
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }
+  
+  .question-image {
+    margin: 10px 0;
+  }
+  
+  .question-image img {
+    max-height: 200px;
+  }
+  
+  .answer-container {
+    margin: 16px 0;
+  }
+  
+  .options-container {
+    gap: 8px;
+  }
+  
+  .option-item {
+    padding: 8px 12px;
+  }
+  
+  .option-text {
+    font-size: 0.9rem;
+  }
+  
+  .text-answer-input {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .essay-answer-input {
+    padding: 10px;
+    font-size: 0.9rem;
+    min-height: 160px;
+  }
+  
+  .navigation-buttons {
+    margin-top: 16px;
+  }
+  
+  .nav-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .question-bubbles {
+    gap: 6px;
+    margin-top: 16px;
+  }
+  
+  .question-bubble {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .score-result {
+    margin: 20px auto;
+    max-width: 450px;
+  }
+  
+  .score-card {
+    padding: 18px;
+  }
+  
+  .score-card h2 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+  
+  .score-display {
+    margin-bottom: 20px;
+  }
+  
+  .score-circle {
+    width: 90px;
+    height: 90px;
+    font-size: 1.6rem;
+    margin-bottom: 16px;
+  }
+  
+  .score-message {
+    font-size: 1rem;
+    margin-top: 10px;
+  }
+  
+  .return-btn, .view-results-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .action-buttons {
+    gap: 0.6rem;
+    margin-top: 1rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .exam-session {
+    max-width: 580px;
+    padding: 10px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+  }
+  
+  .progress-container {
+    margin-top: 10px;
+  }
+  
+  .progress-bar {
+    height: 4px;
+  }
+  
+  .progress-text {
+    font-size: 0.75rem;
+  }
+  
+  .timer-container {
+    margin-top: 6px;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .question-card {
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .question-text h3 {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  
+  .question-image {
+    margin: 8px 0;
+  }
+  
+  .question-image img {
+    max-height: 180px;
+  }
+  
+  .answer-container {
+    margin: 14px 0;
+  }
+  
+  .options-container {
+    gap: 6px;
+  }
+  
+  .option-item {
+    padding: 6px 10px;
+  }
+  
+  .option-radio {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+  }
+  
+  .radio-inner {
+    width: 8px;
+    height: 8px;
+  }
+  
+  .option-text {
+    font-size: 0.85rem;
+  }
+  
+  .text-answer-input {
+    padding: 6px;
+    font-size: 0.85rem;
+  }
+  
+  .essay-answer-input {
+    padding: 8px;
+    font-size: 0.85rem;
+    min-height: 140px;
+  }
+  
+  .essay-info {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .essay-notice {
+    gap: 6px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 16px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.85rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.75rem;
+  }
+  
+  .essay-meta {
+    margin-top: 5px;
+    font-size: 0.75rem;
+  }
+  
+  .navigation-buttons {
+    margin-top: 14px;
+  }
+  
+  .nav-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    gap: 3px;
+  }
+  
+  .question-bubbles {
+    gap: 5px;
+    margin-top: 14px;
+  }
+  
+  .question-bubble {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+  
+  .score-result {
+    margin: 16px auto;
+    max-width: 400px;
+  }
+  
+  .score-card {
+    padding: 16px;
+  }
+  
+  .score-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+  }
+  
+  .score-display {
+    margin-bottom: 16px;
+  }
+  
+  .score-circle {
+    width: 80px;
+    height: 80px;
+    font-size: 1.4rem;
+    margin-bottom: 14px;
+  }
+  
+  .score-message {
+    font-size: 0.9rem;
+    margin-top: 8px;
+  }
+  
+  .return-btn, .view-results-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .action-buttons {
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .exam-session {
+    max-width: 480px;
+    padding: 8px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+  
+  .progress-container {
+    margin-top: 8px;
+  }
+  
+  .progress-bar {
+    height: 3px;
+  }
+  
+  .progress-text {
+    font-size: 0.7rem;
+  }
+  
+  .timer-container {
+    margin-top: 5px;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+    gap: 3px;
+  }
+  
+  .question-card {
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .question-text h3 {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    margin-top: 0;
+  }
+  
+  .question-image {
+    margin: 6px 0;
+  }
+  
+  .question-image img {
+    max-height: 160px;
+  }
+  
+  .answer-container {
+    margin: 12px 0;
+  }
+  
+  .options-container {
+    gap: 4px;
+  }
+  
+  .option-item {
+    padding: 5px 8px;
+  }
+  
+  .option-radio {
+    width: 14px;
+    height: 14px;
+    margin-right: 6px;
+  }
+  
+  .radio-inner {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .option-text {
+    font-size: 0.8rem;
+  }
+  
+  .text-answer-input {
+    padding: 5px;
+    font-size: 0.8rem;
+  }
+  
+  .essay-answer-input {
+    padding: 6px;
+    font-size: 0.8rem;
+    min-height: 120px;
+  }
+  
+  .essay-info {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .essay-notice {
+    gap: 4px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 14px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.8rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.7rem;
+  }
+  
+  .essay-meta {
+    margin-top: 4px;
+    font-size: 0.7rem;
+  }
+  
+  .navigation-buttons {
+    margin-top: 12px;
+  }
+  
+  .nav-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    gap: 2px;
+  }
+  
+  .question-bubbles {
+    gap: 4px;
+    margin-top: 12px;
+  }
+  
+  .question-bubble {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+  
+  .score-result {
+    margin: 16px auto;
+    max-width: 350px;
+  }
+  
+  .score-card {
+    padding: 14px;
+  }
+  
+  .score-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .score-display {
+    margin-bottom: 16px;
+  }
+  
+  .score-circle {
+    width: 70px;
+    height: 70px;
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .score-message {
+    font-size: 0.85rem;
+    margin-top: 6px;
+  }
+  
+  .return-btn, .view-results-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    margin-top: 10px;
+  }
+  
+  .action-buttons {
+    gap: 0.4rem;
+    margin-top: 0.8rem;
+  }
+  
+  .waiting-container, .loading-container {
+    min-height: 200px;
+  }
+  
+  .loader {
+    width: 35px;
+    height: 35px;
+    border-width: 3px;
+    margin-bottom: 12px;
+  }
+  
+  .waiting-icon {
+    font-size: 2rem;
+    margin-bottom: 12px;
+  }
+  
+  .error-container {
+    padding: 10px;
+    margin: 12px 0;
+  }
+  
+  .error-icon {
+    font-size: 1.2rem;
+    margin-right: 10px;
+  }
+  
+  .fullscreen-image-modal {
+    padding: 12px;
+  }
+  
+  .close-fullscreen-btn {
+    width: 32px;
+    height: 32px;
+    top: -16px;
+    right: -16px;
   }
 }
 </style> 

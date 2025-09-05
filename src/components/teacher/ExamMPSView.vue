@@ -2323,6 +2323,690 @@ th {
   padding: 20px;
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .mps-container {
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 7rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .header-actions {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  
+  .action-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .exam-info-card {
+    padding: 20px;
+    border-radius: 14px;
+  }
+  
+  .exam-title {
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+  
+  .exam-code {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+    margin-bottom: 16px;
+  }
+  
+  .exam-stats {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+  }
+  
+  .stat-item {
+    padding: 14px;
+    min-height: 95px;
+  }
+  
+  .stat-label {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .stat-value {
+    font-size: 1.4rem;
+  }
+  
+  .distribution-card {
+    padding: 20px;
+    border-radius: 14px;
+  }
+  
+  .distribution-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+  }
+  
+  .distribution-grid {
+    gap: 14px;
+  }
+  
+  .dist-label {
+    font-size: 0.9rem;
+  }
+  
+  .view-controls {
+    padding: 14px 20px;
+    border-radius: 14px 14px 0 0;
+  }
+  
+  .view-toggle-btn {
+    padding: 8px 16px;
+    gap: 6px;
+    font-size: 0.9rem;
+  }
+  
+  .chart-container {
+    padding: 20px;
+    border-radius: 0 0 14px 14px;
+  }
+  
+  .chart-container h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .chart-wrapper {
+    height: 350px;
+  }
+  
+  .table-view {
+    padding: 20px;
+  }
+  
+  th, td {
+    padding: 14px;
+  }
+  
+  .settings-card {
+    margin: 16px 0;
+    border-radius: 14px;
+  }
+  
+  .card-header {
+    padding: 14px 20px;
+  }
+  
+  .card-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .settings-content {
+    padding: 16px 20px;
+  }
+  
+  .ai-analysis-panel {
+    margin: 20px 0;
+    border-radius: 14px;
+  }
+  
+  .ai-analysis-panel .card-header {
+    padding: 14px 20px;
+  }
+  
+  .ai-analysis-panel .card-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .ai-panel-content {
+    padding: 20px;
+    min-height: 350px;
+  }
+  
+  .ai-tab {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .mps-container {
+    padding: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    right: 1.5rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .header-actions {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .action-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .exam-info-card {
+    padding: 18px;
+    border-radius: 12px;
+  }
+  
+  .exam-title {
+    font-size: 1.3rem;
+    margin-bottom: 5px;
+  }
+  
+  .exam-code {
+    font-size: 0.8rem;
+    padding: 4px 8px;
+    margin-bottom: 14px;
+  }
+  
+  .exam-stats {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  
+  .stat-item {
+    padding: 12px;
+    min-height: 85px;
+  }
+  
+  .stat-label {
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+  }
+  
+  .stat-value {
+    font-size: 1.3rem;
+  }
+  
+  .distribution-card {
+    padding: 18px;
+    border-radius: 12px;
+  }
+  
+  .distribution-card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 18px;
+  }
+  
+  .distribution-grid {
+    gap: 12px;
+  }
+  
+  .dist-label {
+    font-size: 0.85rem;
+  }
+  
+  .view-controls {
+    padding: 12px 18px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .view-toggle-btn {
+    padding: 6px 14px;
+    gap: 5px;
+    font-size: 0.85rem;
+  }
+  
+  .chart-container {
+    padding: 18px;
+    border-radius: 0 0 12px 12px;
+  }
+  
+  .chart-container h2 {
+    font-size: 1rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .chart-wrapper {
+    height: 320px;
+  }
+  
+  .table-view {
+    padding: 18px;
+  }
+  
+  th, td {
+    padding: 12px;
+  }
+  
+  .settings-card {
+    margin: 14px 0;
+    border-radius: 12px;
+  }
+  
+  .card-header {
+    padding: 12px 18px;
+  }
+  
+  .card-header h2 {
+    font-size: 1rem;
+  }
+  
+  .settings-content {
+    padding: 14px 18px;
+  }
+  
+  .chart-type-buttons {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .chart-type-btn {
+    padding: 8px;
+  }
+  
+  .ai-analysis-panel {
+    margin: 18px 0;
+    border-radius: 12px;
+  }
+  
+  .ai-analysis-panel .card-header {
+    padding: 12px 18px;
+  }
+  
+  .ai-analysis-panel .card-header h2 {
+    font-size: 1rem;
+  }
+  
+  .ai-panel-content {
+    padding: 18px;
+    min-height: 320px;
+  }
+  
+  .ai-tab {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .ai-result h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .insight-item, .rec-item, .improvement-item {
+    padding: 14px;
+  }
+  
+  .insight-title, .rec-title, .improvement-strategy {
+    font-size: 1rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .mps-container {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 1rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .header-actions {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  
+  .action-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .exam-info-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  
+  .exam-title {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+  }
+  
+  .exam-code {
+    font-size: 0.75rem;
+    padding: 3px 6px;
+    margin-bottom: 12px;
+  }
+  
+  .exam-stats {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  
+  .stat-item {
+    padding: 10px;
+    min-height: 75px;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+  }
+  
+  .stat-value {
+    font-size: 1.2rem;
+  }
+  
+  .distribution-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  
+  .distribution-card h2 {
+    font-size: 1rem;
+    margin-bottom: 16px;
+  }
+  
+  .distribution-grid {
+    gap: 10px;
+  }
+  
+  .dist-label {
+    font-size: 0.8rem;
+  }
+  
+  .dist-count {
+    font-size: 0.8rem;
+    padding: 1px 8px;
+  }
+  
+  .view-controls {
+    padding: 10px 16px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .view-toggle-btn {
+    padding: 5px 12px;
+    gap: 4px;
+    font-size: 0.8rem;
+  }
+  
+  .chart-container {
+    padding: 16px;
+    border-radius: 0 0 10px 10px;
+  }
+  
+  .chart-container h2 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .chart-wrapper {
+    height: 280px;
+  }
+  
+  .table-view {
+    padding: 16px;
+  }
+  
+  th, td {
+    padding: 10px;
+  }
+  
+  .section-cell {
+    min-width: 80px;
+  }
+  
+  .mps-cell {
+    font-size: 1rem;
+  }
+  
+  .badge {
+    min-width: 20px;
+    padding: 1px 3px;
+    font-size: 0.8rem;
+  }
+  
+  .settings-card {
+    margin: 12px 0;
+    border-radius: 10px;
+  }
+  
+  .card-header {
+    padding: 10px 16px;
+  }
+  
+  .card-header h2 {
+    font-size: 0.9rem;
+  }
+  
+  .settings-content {
+    padding: 12px 16px;
+  }
+  
+  .settings-section {
+    margin-bottom: 16px;
+  }
+  
+  .settings-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .chart-type-buttons {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 6px;
+  }
+  
+  .chart-type-btn {
+    padding: 6px;
+    border-radius: 6px;
+  }
+  
+  .btn-label {
+    font-size: 0.8rem;
+  }
+  
+  .theme-select {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .options-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  
+  .toggle-option label {
+    font-size: 0.85rem;
+  }
+  
+  .ai-analysis-panel {
+    margin: 16px 0;
+    border-radius: 10px;
+  }
+  
+  .ai-analysis-panel .card-header {
+    padding: 10px 16px;
+  }
+  
+  .ai-analysis-panel .card-header h2 {
+    font-size: 0.9rem;
+  }
+  
+  .ai-panel-content {
+    padding: 16px;
+    min-height: 280px;
+  }
+  
+  .ai-tabs {
+    padding: 0 16px;
+  }
+  
+  .ai-tab {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .ai-loading, .ai-error, .ai-empty {
+    padding: 2rem;
+    height: 250px;
+  }
+  
+  .ai-loading .material-icons,
+  .ai-error .material-icons,
+  .ai-empty .material-icons {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+  }
+  
+  .ai-loading p {
+    font-size: 1.1rem;
+  }
+  
+  .ai-loading-subtitle {
+    font-size: 0.8rem !important;
+  }
+  
+  .ai-result {
+    gap: 20px;
+  }
+  
+  .ai-result h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .ai-summary-card {
+    padding: 16px;
+    border-radius: 10px;
+  }
+  
+  .ai-summary-card p {
+    font-size: 0.9rem;
+  }
+  
+  .insight-item, .rec-item, .improvement-item {
+    padding: 12px;
+    border-radius: 10px;
+  }
+  
+  .insight-title, .rec-title, .improvement-strategy {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  
+  .insight-desc, .rec-desc, 
+  .improvement-implementation, .improvement-outcome {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .section-comparison {
+    padding: 12px;
+    border-radius: 10px;
+  }
+  
+  .section-header {
+    font-size: 0.9rem;
+  }
+  
+  .section-analysis-text {
+    margin-top: 12px;
+    padding-top: 12px;
+    font-size: 0.85rem;
+  }
+  
+  .next-step-item {
+    padding: 12px;
+    gap: 12px;
+    border-radius: 10px;
+  }
+  
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.9rem;
+  }
+  
+  .step-title {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  
+  .step-action, .step-rationale {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .generate-btn {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+  }
+  
+  .back-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+  
+  .back-btn .material-icons {
+    font-size: 16px;
+  }
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
   .mps-container {

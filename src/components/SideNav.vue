@@ -174,8 +174,8 @@ const handleLogout = async () => {
         }
       });
 
-      // Perform logout
-      logout();
+      // Perform logout and wait for completion
+      await logout();
 
       // Show success message
       await Swal.fire({
@@ -727,5 +727,326 @@ watch([userRole], async () => {
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .sidenav {
+    width: 160px;
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
+  }
+  
+  .sidenav.collapsed {
+    width: 70px;
+  }
+  
+  .toggle-btn {
+    right: -45px;
+    width: 40px;
+    height: 40px;
+    top: 25px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 22px;
+  }
+  
+  .user-profile {
+    padding: 20px 6px 14px;
+    margin-bottom: 14px;
+  }
+  
+  .avatar {
+    width: 85px;
+    height: 85px;
+    margin-bottom: 10px;
+    border-width: 2px;
+  }
+  
+  .avatar .material-icons {
+    font-size: 46px;
+  }
+  
+  .logo-avatar {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 10px;
+  }
+  
+  .user-name {
+    font-size: 14px;
+  }
+  
+  .user-role {
+    font-size: 11px;
+  }
+  
+  .nav-links {
+    height: calc(100vh - 160px);
+  }
+  
+  .nav-link {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  
+  .icon-container {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .icon-container .material-icons {
+    font-size: 22px;
+  }
+  
+  .link-text {
+    font-size: 14px;
+  }
+  
+  .logout-btn {
+    margin: 40px auto;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .logout-btn .icon-container .material-icons {
+    font-size: 20px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .sidenav {
+    width: 150px;
+    border-top-right-radius: 14px;
+    border-bottom-right-radius: 14px;
+  }
+  
+  .sidenav.collapsed {
+    width: 65px;
+  }
+  
+  .toggle-btn {
+    right: -40px;
+    width: 36px;
+    height: 36px;
+    top: 22px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 20px;
+  }
+  
+  .user-profile {
+    padding: 18px 5px 12px;
+    margin-bottom: 12px;
+    margin-top: 12px;
+  }
+  
+  .avatar {
+    width: 75px;
+    height: 75px;
+    margin-bottom: 8px;
+    border-width: 2px;
+  }
+  
+  .avatar .material-icons {
+    font-size: 40px;
+  }
+  
+  .logo-avatar {
+    width: 45px;
+    height: 45px;
+    margin-bottom: 8px;
+  }
+  
+  .user-name {
+    font-size: 13px;
+    letter-spacing: 0.3px;
+  }
+  
+  .user-role {
+    font-size: 10px;
+  }
+  
+  .nav-links {
+    height: calc(100vh - 150px);
+  }
+  
+  .nav-link {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  
+  .icon-container {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .icon-container .material-icons {
+    font-size: 20px;
+  }
+  
+  .link-text {
+    font-size: 13px;
+    font-weight: 400;
+  }
+  
+  .logout-btn {
+    margin: 35px auto;
+    width: 34px;
+    height: 34px;
+  }
+  
+  .logout-btn .icon-container .material-icons {
+    font-size: 18px;
+  }
+  
+  .nav-links:after {
+    margin: 10px 20px;
+    height: 1px;
+  }
+  
+  .sidenav.collapsed .user-profile {
+    padding: 10px 0;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .sidenav {
+    width: 140px;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+  
+  .sidenav.collapsed {
+    width: 60px;
+  }
+  
+  .toggle-btn {
+    right: -35px;
+    width: 32px;
+    height: 32px;
+    top: 20px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 18px;
+  }
+  
+  .user-profile {
+    padding: 16px 4px 10px;
+    margin-bottom: 10px;
+    margin-top: 10px;
+  }
+  
+  .avatar {
+    width: 65px;
+    height: 65px;
+    margin-bottom: 6px;
+    border-width: 2px;
+  }
+  
+  .avatar .material-icons {
+    font-size: 34px;
+  }
+  
+  .logo-avatar {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
+  }
+  
+  .user-name {
+    font-size: 12px;
+    letter-spacing: 0.2px;
+  }
+  
+  .user-role {
+    font-size: 9px;
+  }
+  
+  .nav-links {
+    height: calc(100vh - 140px);
+    gap: 0;
+  }
+  
+  .nav-link {
+    padding: 8px 10px;
+    gap: 6px;
+    border-left-width: 2px;
+  }
+  
+  .nav-link:hover {
+    border-left-width: 2px;
+  }
+  
+  .icon-container {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .icon-container .material-icons {
+    font-size: 18px;
+  }
+  
+  .link-text {
+    font-size: 12px;
+    font-weight: 400;
+  }
+  
+  .logout-btn {
+    margin: 30px auto;
+    width: 30px;
+    height: 30px;
+    border-radius: 15%;
+  }
+  
+  .logout-btn .icon-container .material-icons {
+    font-size: 16px;
+  }
+  
+  .nav-links:after {
+    margin: 8px 16px;
+    height: 1px;
+  }
+  
+  .sidenav.collapsed .user-profile {
+    padding: 8px 0;
+  }
+  
+  /* Scrollbar adjustments for compact mode */
+  .nav-links::-webkit-scrollbar {
+    width: 3px;
+  }
+  
+  .nav-links::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 3px;
+  }
+  
+  /* Fire and smoke effects adjustments */
+  :root[data-effect='fire'] .nav-link.router-link-active,
+  :root[data-effect='smoke'] .nav-link.router-link-active,
+  :root[data-effect='real-fire'] .nav-link.router-link-active,
+  :root[data-effect='real-smoke'] .nav-link.router-link-active {
+    padding: 8px 10px;
+  }
+  
+  :root[data-effect='fire'] .nav-link.router-link-active::before,
+  :root[data-effect='smoke'] .nav-link.router-link-active::before,
+  :root[data-effect='real-fire'] .nav-link.router-link-active::before,
+  :root[data-effect='real-smoke'] .nav-link.router-link-active::before {
+    left: 30%;
+    width: 80%;
+  }
+  
+  /* Theme adjustments for compact mode */
+  :root[data-theme='yellow'] .nav-link:hover,
+  :root[data-theme='blue'] .nav-link:hover {
+    border-left-width: 2px;
+  }
 }
 </style>

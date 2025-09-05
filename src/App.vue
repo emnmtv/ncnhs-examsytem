@@ -201,6 +201,57 @@ body {
   margin-left: 0;
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .content {
+    padding: 20px;
+    margin-left: 180px;
+  }
+  
+  .content.with-topbar {
+    margin-top: 85px;
+    padding-top: 50px;
+  }
+  
+  .app-container.nav-collapsed .content {
+    margin-left: 70px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .content {
+    padding: 18px;
+    margin-left: 160px;
+  }
+  
+  .content.with-topbar {
+    margin-top: 75px;
+    padding-top: 45px;
+  }
+  
+  .app-container.nav-collapsed .content {
+    margin-left: 65px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .content {
+    padding: 16px;
+    margin-left: 140px;
+  }
+  
+  .content.with-topbar {
+    margin-top: 65px;
+    padding-top: 40px;
+  }
+  
+  .app-container.nav-collapsed .content {
+    margin-left: 60px;
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .content {
@@ -286,10 +337,9 @@ body {
 /* For mobile screens */
 @media (max-width: 768px) {
   .content.with-topbar {
-  margin-top: 50px; /* Update to match the 100px height of the top bar */
-  padding-top: 20px; /* Slightly increased padding for better spacing */
-  
-}
+    margin-top: 50px;
+    padding-top: 20px;
+  }
 }
 
 .update-banner {

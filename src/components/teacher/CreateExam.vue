@@ -2024,16 +2024,186 @@ export default {
       try {
         const subject = examData.value.title.split(' ').pop() || 'General';
         
+        // Show cognitive level selection modal
+        const { value: cognitiveLevel } = await Swal.fire({
+          title: 'Question Settings (Cognitive Levels)',
+          html: `
+            <div class="cognitive-levels-container">
+              <p class="cognitive-intro">Select the cognitive level for your question improvement:</p>
+              <div class="cognitive-levels-grid">
+                <div class="cognitive-level-card" data-level="knowledge" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">🧠</span>
+                    <h4>Knowledge / Remembering</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Lowest level. Recall facts, terms, basic concepts.</p>
+                    <p class="level-example"><strong>Example:</strong> "What is the capital of the Philippines?"</p>
+                  </div>
+                </div>
+                
+                <div class="cognitive-level-card" data-level="comprehension" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">💭</span>
+                    <h4>Comprehension / Understanding</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Demonstrate understanding by explaining in own words.</p>
+                    <p class="level-example"><strong>Example:</strong> "Summarize the story in three sentences."</p>
+                  </div>
+                </div>
+                
+                <div class="cognitive-level-card" data-level="application" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">🔧</span>
+                    <h4>Application</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Use knowledge in new situations, apply formulas or rules.</p>
+                    <p class="level-example"><strong>Example:</strong> "Solve: 2x + 5 = 15."</p>
+                  </div>
+                </div>
+                
+                <div class="cognitive-level-card" data-level="analysis" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">🔍</span>
+                    <h4>Analysis</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Break information into parts, see relationships.</p>
+                    <p class="level-example"><strong>Example:</strong> "Compare and contrast the characters in the story."</p>
+                  </div>
+                </div>
+                
+                <div class="cognitive-level-card" data-level="synthesis" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">🎨</span>
+                    <h4>Synthesis / Creating</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Combine elements into a new whole, creative thinking.</p>
+                    <p class="level-example"><strong>Example:</strong> "Write an alternate ending to the story."</p>
+                  </div>
+                </div>
+                
+                <div class="cognitive-level-card" data-level="evaluation" style="cursor: pointer;">
+                  <div class="level-header">
+                    <span class="level-icon">⚖️</span>
+                    <h4>Evaluation</h4>
+                  </div>
+                  <div class="level-details" style="opacity: 0; max-height: 0; overflow: hidden; transition: all 0.3s ease;">
+                    <p class="level-description">Make judgments, critique, justify decisions.</p>
+                    <p class="level-example"><strong>Example:</strong> "Do you agree with the character's decision? Why or why not?"</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Improve Question',
+          cancelButtonText: 'Cancel',
+          customClass: {
+            popup: 'cognitive-levels-popup',
+            htmlContainer: 'cognitive-levels-html'
+          },
+          didOpen: () => {
+            // Add click handlers for cognitive level cards
+            const cards = document.querySelectorAll('.cognitive-level-card');
+            cards.forEach(card => {
+              card.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Remove previous selection
+                cards.forEach(c => {
+                  c.classList.remove('selected');
+                  c.style.borderColor = '#e9ecef';
+                  c.style.backgroundColor = '#fff';
+                  
+                  // Hide details for deselected cards
+                  const details = c.querySelector('.level-details');
+                  if (details) {
+                    details.style.opacity = '0';
+                    details.style.maxHeight = '0';
+                  }
+                });
+                
+                // Add selection to clicked card
+                card.classList.add('selected');
+                card.style.borderColor = '#159750';
+                card.style.backgroundColor = '#f8fff9';
+                
+                // Add visual feedback
+                card.style.transform = 'translateY(-3px)';
+                card.style.boxShadow = '0 6px 20px rgba(21, 151, 80, 0.2)';
+                
+                // Show details for selected card
+                const details = card.querySelector('.level-details');
+                if (details) {
+                  details.style.opacity = '1';
+                  details.style.maxHeight = '200px';
+                }
+                
+                // Store the selected level
+                card.dataset.selected = 'true';
+                
+                console.log('Selected cognitive level:', card.dataset.level);
+              });
+              
+              // Add hover effects
+              card.addEventListener('mouseenter', () => {
+                if (!card.classList.contains('selected')) {
+                  card.style.borderColor = '#159750';
+                  card.style.transform = 'translateY(-2px)';
+                  card.style.boxShadow = '0 4px 15px rgba(21, 151, 80, 0.15)';
+                  
+                  // Show details on hover
+                  const details = card.querySelector('.level-details');
+                  if (details) {
+                    details.style.opacity = '1';
+                    details.style.maxHeight = '200px';
+                  }
+                }
+              });
+              
+              card.addEventListener('mouseleave', () => {
+                if (!card.classList.contains('selected')) {
+                  card.style.borderColor = '#e9ecef';
+                  card.style.transform = 'translateY(0)';
+                  card.style.boxShadow = 'none';
+                  
+                  // Hide details on mouse leave (unless selected)
+                  const details = card.querySelector('.level-details');
+                  if (details) {
+                    details.style.opacity = '0';
+                    details.style.maxHeight = '0';
+                  }
+                }
+              });
+            });
+          },
+          preConfirm: () => {
+            const selectedCard = document.querySelector('.cognitive-level-card.selected');
+            if (!selectedCard) {
+              Swal.showValidationMessage('Please select a cognitive level');
+              return false;
+            }
+            return selectedCard.dataset.level;
+          }
+        });
+
+        if (!cognitiveLevel) return;
+
         Swal.fire({
           title: 'Improving Question',
-          text: 'Please wait while the AI improves your question...',
+          text: `Please wait while the AI improves your question for ${cognitiveLevel} level...`,
           allowOutsideClick: false,
           didOpen: () => {
             Swal.showLoading();
           }
         });
 
-        const improvedText = await aiService.improveQuestionWording(question.text, subject);
+        const improvedText = await aiService.improveQuestionWording(question.text, subject, cognitiveLevel);
         
         // Update the question
         questions.value[index].text = improvedText;
@@ -2041,7 +2211,7 @@ export default {
         Swal.fire({
           icon: 'success',
           title: 'Question Improved!',
-          text: 'The AI has improved your question wording.',
+          text: `The AI has improved your question for ${cognitiveLevel} cognitive level.`,
           timer: 1500,
           showConfirmButton: false
         });
@@ -5504,6 +5674,901 @@ small {
   }
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .create-exam-container {
+    padding: 16px;
+  }
+  
+  .exam-form {
+    max-width: 950px;
+    gap: 20px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .card {
+    border-radius: 14px;
+  }
+  
+  .card-header {
+    padding: 16px;
+  }
+  
+  .card-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .card-body {
+    padding: 16px;
+  }
+  
+  .form-row {
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  label {
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+  
+  small {
+    font-size: 0.8rem;
+  }
+  
+  .question-item {
+    border-radius: 14px;
+  }
+  
+  .question-header {
+    padding: 12px 16px;
+  }
+  
+  .question-content {
+    padding: 16px;
+  }
+  
+  .type-buttons {
+    gap: 10px;
+  }
+  
+  .type-button {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+  
+  .options-section,
+  .true-false-section,
+  .short-answer-section,
+  .essay-section {
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+  
+  .option-item {
+    padding: 8px;
+    gap: 8px;
+  }
+  
+  .add-option-btn,
+  .ai-options-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    min-height: 38px;
+  }
+  
+  .add-question-button,
+  .import-question-button,
+  .ai-generate-button,
+  .document-upload-button {
+    padding: 14px;
+    font-size: 0.95rem;
+  }
+  
+  .form-actions {
+    padding: 16px;
+    border-radius: 14px;
+  }
+  
+  .action-buttons {
+    gap: 12px;
+  }
+  
+  .reset-button,
+  .draft-button,
+  .publish-button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+  
+  .side-panel {
+    width: 450px;
+  }
+  
+  .side-panel-header {
+    padding: 16px;
+  }
+  
+  .side-panel-content {
+    padding: 16px;
+  }
+  
+  .filters-section {
+    padding: 12px;
+  }
+  
+  .bank-question-card {
+    padding: 12px;
+  }
+  
+  .settings-toggle {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .toggle-switch {
+    width: 55px;
+    height: 30px;
+  }
+  
+  .toggle-slider:before {
+    height: 22px;
+    width: 22px;
+  }
+  
+  .toggle-input:checked + .toggle-slider:before {
+    transform: translateX(25px) translateY(-50%);
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .create-exam-container {
+    padding: 14px;
+  }
+  
+  .exam-form {
+    max-width: 850px;
+    gap: 18px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 5.5rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .card {
+    border-radius: 12px;
+  }
+  
+  .card-header {
+    padding: 14px;
+  }
+  
+  .card-header h2 {
+    font-size: 1.2rem;
+    gap: 8px;
+  }
+  
+  .card-body {
+    padding: 14px;
+  }
+  
+  .form-row {
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  
+  .form-group {
+    margin-bottom: 14px;
+  }
+  
+  label {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+  
+  textarea {
+    min-height: 70px;
+  }
+  
+  small {
+    font-size: 0.75rem;
+    margin-top: 4px;
+  }
+  
+  .questions-list {
+    gap: 16px;
+  }
+  
+  .question-item {
+    border-radius: 12px;
+  }
+  
+  .question-header {
+    padding: 10px 14px;
+  }
+  
+  .question-content {
+    padding: 14px;
+  }
+  
+  .question-type-selector {
+    margin: 16px 0;
+  }
+  
+  .type-buttons {
+    gap: 8px;
+  }
+  
+  .type-button {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+  
+  .type-button .material-icons-round {
+    font-size: 18px;
+  }
+  
+  .options-section,
+  .true-false-section,
+  .short-answer-section,
+  .essay-section {
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  
+  .options-header {
+    margin-bottom: 14px;
+  }
+  
+  .options-header h4 {
+    font-size: 1rem;
+  }
+  
+  .options-list {
+    gap: 8px;
+  }
+  
+  .option-item {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+  
+  .add-option-btn,
+  .ai-options-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-height: 36px;
+  }
+  
+  .detect-options-btn {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    min-height: 38px;
+  }
+  
+  .image-upload-container {
+    min-height: 130px;
+  }
+  
+  .upload-label .material-icons-round {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+  }
+  
+  .true-false-options {
+    gap: 16px;
+  }
+  
+  .essay-info {
+    padding: 12px;
+  }
+  
+  .essay-notice {
+    gap: 10px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 18px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.95rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.85rem;
+  }
+  
+  .questions-actions {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .add-question-button,
+  .import-question-button,
+  .ai-generate-button,
+  .document-upload-button {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  
+  .material-icons,
+  .material-icons-round {
+    font-size: 18px;
+  }
+  
+  .form-actions {
+    padding: 14px;
+    border-radius: 12px;
+  }
+  
+  .action-buttons {
+    gap: 10px;
+  }
+  
+  .reset-button,
+  .draft-button,
+  .publish-button {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  
+  .side-panel {
+    width: 400px;
+  }
+  
+  .side-panel-header {
+    padding: 14px;
+  }
+  
+  .side-panel-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .side-panel-content {
+    padding: 14px;
+  }
+  
+  .filters-section {
+    padding: 10px;
+    margin-bottom: 16px;
+  }
+  
+  .search-box input {
+    padding: 8px 35px 8px 12px;
+    font-size: 0.9rem;
+  }
+  
+  .filter-group select {
+    padding: 6px;
+    font-size: 0.85rem;
+  }
+  
+  .bank-question-card {
+    padding: 10px;
+  }
+  
+  .bank-question-card .question-text {
+    font-size: 0.9rem;
+  }
+  
+  .difficulty-badge {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .settings-toggles {
+    gap: 8px;
+  }
+  
+  .settings-toggle {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .settings-toggle i {
+    font-size: 14px;
+  }
+  
+  .toggle-switch {
+    width: 50px;
+    height: 28px;
+  }
+  
+  .toggle-slider:before {
+    height: 20px;
+    width: 20px;
+    left: 4px;
+  }
+  
+  .toggle-input:checked + .toggle-slider:before {
+    transform: translateX(22px) translateY(-50%);
+  }
+  
+  .parts-header {
+    margin-bottom: 12px;
+  }
+  
+  .parts-description {
+    font-size: 0.8rem;
+  }
+  
+  .add-part-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .part-item {
+    padding: 12px;
+  }
+  
+  .part-content input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .generate-button {
+    height: 38px;
+    padding: 0 10px;
+  }
+  
+  .input-with-button input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .create-exam-container {
+    padding: 12px;
+  }
+  
+  .exam-form {
+    max-width: 720px;
+    gap: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 5%;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .card {
+    border-radius: 10px;
+  }
+  
+  .card-header {
+    padding: 12px;
+  }
+  
+  .card-header h2 {
+    font-size: 1.1rem;
+    gap: 6px;
+  }
+  
+  .card-body {
+    padding: 12px;
+  }
+  
+  .form-row {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .form-group {
+    margin-bottom: 12px;
+  }
+  
+  label {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="datetime-local"],
+  textarea,
+  select {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    border-radius: 6px;
+  }
+  
+  textarea {
+    min-height: 60px;
+  }
+  
+  small {
+    font-size: 0.7rem;
+    margin-top: 3px;
+  }
+  
+  .questions-list {
+    gap: 14px;
+  }
+  
+  .question-item {
+    border-radius: 10px;
+  }
+  
+  .question-header {
+    padding: 8px 12px;
+  }
+  
+  .question-content {
+    padding: 12px;
+  }
+  
+  .question-type-selector {
+    margin: 14px 0;
+  }
+  
+  .type-buttons {
+    gap: 6px;
+  }
+  
+  .type-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    border-radius: 5px;
+  }
+  
+  .type-button .material-icons-round {
+    font-size: 16px;
+  }
+  
+  .options-section,
+  .true-false-section,
+  .short-answer-section,
+  .essay-section {
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  .options-header {
+    margin-bottom: 12px;
+  }
+  
+  .options-header h4 {
+    font-size: 0.95rem;
+  }
+  
+  .options-list {
+    gap: 6px;
+  }
+  
+  .option-item {
+    padding: 5px 6px;
+    gap: 5px;
+  }
+  
+  .add-option-btn,
+  .ai-options-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    min-height: 32px;
+  }
+  
+  .detect-options-btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-height: 34px;
+  }
+  
+  .image-upload-container {
+    min-height: 110px;
+  }
+  
+  .upload-label .material-icons-round {
+    font-size: 2rem;
+    margin-bottom: 6px;
+  }
+  
+  .true-false-options {
+    gap: 12px;
+  }
+  
+  .essay-info {
+    padding: 10px;
+  }
+  
+  .essay-notice {
+    gap: 8px;
+  }
+  
+  .essay-notice .material-icons-round {
+    font-size: 16px;
+  }
+  
+  .essay-notice div p:first-child {
+    font-size: 0.9rem;
+  }
+  
+  .essay-notice div p:last-child {
+    font-size: 0.8rem;
+  }
+  
+  .questions-actions {
+    padding: 14px;
+    gap: 10px;
+  }
+  
+  .add-question-button,
+  .import-question-button,
+  .ai-generate-button,
+  .document-upload-button {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  .material-icons,
+  .material-icons-round {
+    font-size: 16px;
+  }
+  
+  .form-actions {
+    padding: 12px;
+    border-radius: 10px;
+  }
+  
+  .action-buttons {
+    gap: 8px;
+  }
+  
+  .reset-button,
+  .draft-button,
+  .publish-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+  
+  .side-panel {
+    width: 350px;
+  }
+  
+  .side-panel-header {
+    padding: 12px;
+  }
+  
+  .side-panel-header h2 {
+    font-size: 1rem;
+    gap: 6px;
+  }
+  
+  .side-panel-content {
+    padding: 12px;
+  }
+  
+  .filters-section {
+    padding: 8px;
+    margin-bottom: 14px;
+  }
+  
+  .search-box input {
+    padding: 6px 30px 6px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .filter-group select {
+    padding: 5px;
+    font-size: 0.8rem;
+  }
+  
+  .bank-question-card {
+    padding: 8px;
+  }
+  
+  .bank-question-card .question-text {
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+  }
+  
+  .difficulty-badge {
+    padding: 2px 5px;
+    font-size: 0.7rem;
+  }
+  
+  .settings-toggles {
+    gap: 6px;
+  }
+  
+  .settings-toggle {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .settings-toggle i {
+    font-size: 12px;
+  }
+  
+  .toggle-switch {
+    width: 45px;
+    height: 26px;
+  }
+  
+  .toggle-slider:before {
+    height: 18px;
+    width: 18px;
+    left: 4px;
+  }
+  
+  .toggle-input:checked + .toggle-slider:before {
+    transform: translateX(19px) translateY(-50%);
+  }
+  
+  .parts-header {
+    margin-bottom: 10px;
+  }
+  
+  .parts-description {
+    font-size: 0.75rem;
+  }
+  
+  .add-part-btn {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .add-part-btn .material-icons-round {
+    font-size: 14px;
+  }
+  
+  .part-item {
+    padding: 10px;
+  }
+  
+  .part-number {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .part-content input {
+    padding: 5px 6px;
+    font-size: 0.8rem;
+  }
+  
+  .part-content small {
+    font-size: 0.7rem;
+    margin-top: 4px;
+  }
+  
+  .generate-button {
+    height: 34px;
+    padding: 0 8px;
+  }
+  
+  .generate-button .material-icons {
+    font-size: 18px;
+  }
+  
+  .document-panel {
+    width: 350px;
+  }
+  
+  .document-upload-area {
+    padding: 20px;
+    min-height: 160px;
+  }
+  
+  .large-icon {
+    font-size: 40px;
+  }
+  
+  .model-selection {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .model-selection select {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .document-tabs {
+    margin-bottom: 16px;
+  }
+  
+  .tab-button {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  .tab-button .material-icons {
+    font-size: 18px;
+  }
+  
+  .document-text-input {
+    min-height: 160px;
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  
+  .analyze-text-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
 /* Back button styling */
 .back-button-container {
   margin-bottom: 20px;
@@ -5753,6 +6818,195 @@ small {
   
   .part-actions {
     justify-content: flex-end;
+  }
+}
+
+/* Cognitive Levels Modal Styles */
+.cognitive-levels-popup {
+  max-width: 900px !important;
+  width: 90% !important;
+}
+
+.cognitive-levels-html {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.cognitive-levels-container {
+  padding: 20px 0;
+}
+
+.cognitive-intro {
+  text-align: center;
+  margin-bottom: 25px;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 500;
+}
+
+.cognitive-levels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.cognitive-level-card {
+  background: #fff;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer !important;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.cognitive-level-card:hover {
+  border-color: #159750;
+  box-shadow: 0 4px 15px rgba(21, 151, 80, 0.15);
+  transform: translateY(-2px);
+}
+
+.cognitive-level-card.selected {
+  border-color: #159750;
+  background: linear-gradient(135deg, #f8fff9, #e8f5e8);
+  box-shadow: 0 6px 20px rgba(21, 151, 80, 0.2);
+  transform: translateY(-3px);
+}
+
+.cognitive-level-card.selected::before {
+  content: '✓';
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #159750;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 14px;
+  z-index: 10;
+}
+
+.cognitive-level-card:active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(21, 151, 80, 0.2);
+}
+
+.level-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.level-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  border-radius: 10px;
+}
+
+.level-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.level-details {
+  opacity: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  transition: all 0.3s ease !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.cognitive-level-card:hover .level-details {
+  opacity: 1 !important;
+  max-height: 200px !important;
+}
+
+.level-description {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.level-example {
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  border-left: 4px solid #159750;
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+}
+
+.level-example strong {
+  color: #159750;
+}
+
+/* Responsive adjustments for cognitive levels */
+@media (max-width: 768px) {
+  .cognitive-levels-popup {
+    width: 95% !important;
+    max-width: none !important;
+  }
+  
+  .cognitive-levels-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .cognitive-level-card {
+    padding: 15px;
+  }
+  
+  .level-header {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  
+  .level-icon {
+    font-size: 20px;
+    width: 35px;
+    height: 35px;
+  }
+  
+  .level-header h4 {
+    font-size: 1rem;
+  }
+  
+  .level-description {
+    font-size: 0.9rem;
+  }
+  
+  .level-example {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  /* For mobile, show details on touch instead of hover */
+  .cognitive-level-card:active .level-details,
+  .cognitive-level-card.selected .level-details {
+    opacity: 1 !important;
+    max-height: 200px !important;
   }
 }
 </style>

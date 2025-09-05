@@ -143,16 +143,16 @@
               <div 
                 class="tf-option"
                 :class="{
-                  'user-selected': 'True' === question.userAnswer,
-                  'correct-answer': 'True' === question.correctAnswer
+                  'user-selected': isTrueSelected(question.userAnswer),
+                  'correct-answer': isTrueCorrect(question.correctAnswer)
                 }"
               >
                 <span class="option-marker">
-                  <span v-if="'True' === question.userAnswer && 'True' === question.correctAnswer" 
+                  <span v-if="isTrueSelected(question.userAnswer) && isTrueCorrect(question.correctAnswer)" 
                         class="material-icons-round correct-icon">check_circle</span>
-                  <span v-else-if="'True' === question.userAnswer && 'True' !== question.correctAnswer" 
+                  <span v-else-if="isTrueSelected(question.userAnswer) && !isTrueCorrect(question.correctAnswer)" 
                         class="material-icons-round incorrect-icon">cancel</span>
-                  <span v-else-if="'True' === question.correctAnswer" 
+                  <span v-else-if="isTrueCorrect(question.correctAnswer)" 
                         class="material-icons-round correct-icon">check_circle</span>
                   <span v-else class="material-icons-round">radio_button_unchecked</span>
                 </span>
@@ -162,16 +162,16 @@
               <div 
                 class="tf-option"
                 :class="{
-                  'user-selected': 'False' === question.userAnswer,
-                  'correct-answer': 'False' === question.correctAnswer
+                  'user-selected': isFalseSelected(question.userAnswer),
+                  'correct-answer': isFalseCorrect(question.correctAnswer)
                 }"
               >
                 <span class="option-marker">
-                  <span v-if="'False' === question.userAnswer && 'False' === question.correctAnswer" 
+                  <span v-if="isFalseSelected(question.userAnswer) && isFalseCorrect(question.correctAnswer)" 
                         class="material-icons-round correct-icon">check_circle</span>
-                  <span v-else-if="'False' === question.userAnswer && 'False' !== question.correctAnswer" 
+                  <span v-else-if="isFalseSelected(question.userAnswer) && !isFalseCorrect(question.correctAnswer)" 
                         class="material-icons-round incorrect-icon">cancel</span>
-                  <span v-else-if="'False' === question.correctAnswer" 
+                  <span v-else-if="isFalseCorrect(question.correctAnswer)" 
                         class="material-icons-round correct-icon">check_circle</span>
                   <span v-else class="material-icons-round">radio_button_unchecked</span>
                 </span>
@@ -218,7 +218,7 @@
                 </td>
                 <td>{{ formatQuestionType(question.questionType) }}</td>
                 <td>{{ formatAnswer(question) }}</td>
-                <td>{{ question.correctAnswer }}</td>
+                <td>{{ formatCorrectAnswer(question) }}</td>
                 <td>
                   <span class="status-badge" :class="question.isCorrect ? 'correct' : 'incorrect'">
                     <span class="material-icons-round">{{ question.isCorrect ? 'check_circle' : 'cancel' }}</span>
@@ -379,7 +379,28 @@ export default {
     
     formatAnswer(question) {
       if (!question.userAnswer) return 'No answer provided';
+      
+      // Format true/false answers consistently
+      if (question.questionType === 'true_false') {
+        const answer = question.userAnswer.toString().toLowerCase();
+        if (answer === 'true') return 'True';
+        if (answer === 'false') return 'False';
+      }
+      
       return question.userAnswer;
+    },
+    
+    formatCorrectAnswer(question) {
+      if (!question.correctAnswer) return 'No correct answer';
+      
+      // Format true/false correct answers consistently
+      if (question.questionType === 'true_false') {
+        const answer = question.correctAnswer.toString().toLowerCase();
+        if (answer === 'true') return 'True';
+        if (answer === 'false') return 'False';
+      }
+      
+      return question.correctAnswer;
     },
     
     getScoreClass(percentage) {
@@ -402,6 +423,27 @@ export default {
     
     getActualQuestionNumber(index) {
       return (this.currentPage - 1) * this.itemsPerPage + index + 1;
+    },
+    
+    // Helper methods for True/False comparison (case-insensitive)
+    isTrueSelected(userAnswer) {
+      if (!userAnswer) return false;
+      return userAnswer.toString().toLowerCase() === 'true';
+    },
+    
+    isFalseSelected(userAnswer) {
+      if (!userAnswer) return false;
+      return userAnswer.toString().toLowerCase() === 'false';
+    },
+    
+    isTrueCorrect(correctAnswer) {
+      if (!correctAnswer) return false;
+      return correctAnswer.toString().toLowerCase() === 'true';
+    },
+    
+    isFalseCorrect(correctAnswer) {
+      if (!correctAnswer) return false;
+      return correctAnswer.toString().toLowerCase() === 'false';
     }
   },
   watch: {

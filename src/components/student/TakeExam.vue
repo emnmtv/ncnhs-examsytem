@@ -1710,4 +1710,445 @@ export default {
   color: #ff9800;
   margin-top: 5px;
 }
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .take-exam-container {
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 7rem;
+    top: 18%;
+    right: 4rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .test-code-input {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .primary-btn, .danger-btn {
+    padding: 10px 16px;
+    font-size: 0.95rem;
+  }
+  
+  .primary-btn.large {
+    padding: 12px 20px;
+    font-size: 1rem;
+  }
+  
+  .exam-header {
+    padding: 16px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .exam-meta {
+    gap: 12px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.95rem;
+    padding: 5px 10px;
+  }
+  
+  .action-buttons {
+    padding: 16px;
+  }
+  
+  .students-container {
+    padding: 16px;
+    max-height: 350px;
+  }
+  
+  .section-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .student-count {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .students-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+  }
+  
+  .student-card {
+    padding: 8px;
+  }
+  
+  .avatar {
+    width: 45px;
+    height: 45px;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+  
+  .student-name {
+    font-size: 0.85rem;
+  }
+  
+  .schedule-container {
+    padding: 10px 14px;
+  }
+  
+  .schedule-item {
+    font-size: 0.9rem;
+    margin: 4px 0;
+  }
+  
+  .tooltip {
+    max-width: 220px;
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .take-exam-container {
+    padding: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.6rem;
+  }
+  
+  .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    top: 16%;
+    right: 3rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .test-code-input {
+    padding: 8px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .primary-btn, .danger-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .primary-btn.large {
+    padding: 10px 18px;
+    font-size: 0.95rem;
+  }
+  
+  .exam-details-container {
+    border-radius: 8px;
+  }
+  
+  .exam-header {
+    padding: 14px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+  
+  .exam-meta {
+    gap: 10px;
+    margin-top: 8px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  
+  .action-buttons {
+    padding: 14px;
+  }
+  
+  .students-container {
+    padding: 14px;
+    max-height: 320px;
+  }
+  
+  .section-header {
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+  }
+  
+  .section-header h3 {
+    font-size: 1rem;
+    gap: 6px;
+  }
+  
+  .student-count {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+  
+  .students-grid {
+    grid-template-columns: repeat(auto-fill, minmax(85px, 1fr));
+    gap: 10px;
+  }
+  
+  .student-card {
+    padding: 6px;
+    border-radius: 6px;
+  }
+  
+  .avatar, .avatar-container {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+  }
+  
+  .schedule-container {
+    padding: 8px 12px;
+  }
+  
+  .schedule-item {
+    font-size: 0.85rem;
+    margin: 3px 0;
+    gap: 8px;
+  }
+  
+  .schedule-item i {
+    width: 16px;
+  }
+  
+  .error-container {
+    padding: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .error-message {
+    font-size: 0.85rem;
+  }
+  
+  .tooltip {
+    max-width: 200px;
+    font-size: 0.75rem;
+    padding: 6px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .take-exam-container {
+    padding: 12px;
+  }
+  
+  .exam-setup {
+    gap: 8px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    top: 15%;
+    right: 2rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .test-code-section {
+    border-radius: 8px;
+  }
+  
+  .input-group {
+    gap: 8px;
+  }
+  
+  .test-code-input {
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .primary-btn, .danger-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .primary-btn.large {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .exam-details-container {
+    border-radius: 6px;
+  }
+  
+  .exam-header {
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+  }
+  
+  .exam-meta {
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+  
+  .action-buttons {
+    padding: 12px;
+  }
+  
+  .students-container {
+    padding: 12px;
+    max-height: 280px;
+  }
+  
+  .section-header {
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+  }
+  
+  .section-header h3 {
+    font-size: 0.95rem;
+    gap: 4px;
+  }
+  
+  .student-count {
+    padding: 2px 5px;
+    font-size: 0.65rem;
+    border-radius: 10px;
+  }
+  
+  .no-students {
+    padding: 20px;
+    border-radius: 6px;
+  }
+  
+  .students-grid {
+    grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+    gap: 8px;
+  }
+  
+  .student-card {
+    padding: 5px;
+    border-radius: 4px;
+  }
+  
+  .avatar, .avatar-container {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+  }
+  
+  .student-name {
+    font-size: 0.75rem;
+  }
+  
+  .schedule-container {
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  
+  .schedule-item {
+    font-size: 0.8rem;
+    margin: 2px 0;
+    gap: 6px;
+  }
+  
+  .schedule-item i {
+    width: 14px;
+    font-size: 0.8rem;
+  }
+  
+  .error-container {
+    padding: 6px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+  }
+  
+  .error-message {
+    font-size: 0.8rem;
+  }
+  
+  .tooltip {
+    max-width: 180px;
+    font-size: 0.7rem;
+    padding: 5px;
+    gap: 3px;
+  }
+  
+  /* Status indicators */
+  .status-started, .status-pending, .status-stopped {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  /* Paint effect adjustments */
+  .exam-header::after {
+    width: 45%;
+    right: -8%;
+  }
+  
+  .exam-header::before {
+    width: 25%;
+    right: 18%;
+  }
+  
+  /* Button hover effects */
+  .primary-btn:hover, .danger-btn:hover {
+    transform: translateY(-1px);
+  }
+  
+  .primary-btn.large:hover {
+    transform: translateY(-1px);
+  }
+}
 </style> 

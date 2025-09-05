@@ -294,7 +294,7 @@
         >
           <div class="question-section">
             <div class="question-header">
-              <span class="question-number">Question {{ answer.questionId }}</span>
+              <span class="question-number">Question {{ getQuestionNumber(answer) }}</span>
               <span 
                 class="question-type"
                 :class="(getQuestionType(answer) || '').toLowerCase().replace('_', '-')"
@@ -1103,6 +1103,14 @@ export default {
       console.log(`Updated total score display: ${totalPointsEarned}/${totalPointsPossible} (${totalPercentage}%)`);
     };
 
+    const getQuestionNumber = (answer) => {
+      if (!details.value?.answers) return answer.questionId;
+      
+      // Find the index of this answer in the answers array and add 1 for human-readable numbering
+      const index = details.value.answers.findIndex(a => a.questionId === answer.questionId);
+      return index >= 0 ? index + 1 : answer.questionId;
+    };
+
     const initializeNavigation = () => {
       // Get student list from route state or localStorage
       const state = router.currentRoute.value.state;
@@ -1193,6 +1201,7 @@ export default {
       loadEssayScores,
       updateTotalScoreDisplay,
       initializeNavigation,
+      getQuestionNumber,
     };
   }
 };

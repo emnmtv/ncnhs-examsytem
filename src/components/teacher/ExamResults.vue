@@ -2627,6 +2627,862 @@ tr:hover {
   color: white;
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .exam-results {
+    padding: 16px;
+  }
+  
+  .results-header {
+    padding: 16px;
+    margin-bottom: 24px;
+    border-radius: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+  
+  .test-code {
+    font-size: 0.9rem;
+  }
+  
+  .header-actions {
+    gap: 8px;
+  }
+  
+  .back-btn,
+  .bulk-archive-btn,
+  .part-results-btn,
+  .export-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .filters {
+    padding: 16px;
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+  
+  .filter-group label {
+    font-size: 0.9rem;
+  }
+  
+  .filter-group select {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    min-width: 130px;
+  }
+  
+  .search-input {
+    padding: 10px 10px 10px 36px;
+    font-size: 0.9rem;
+  }
+  
+  .search-icon {
+    font-size: 18px;
+    left: 10px;
+  }
+  
+  .stats-cards {
+    gap: 16px;
+    margin-bottom: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-card h3 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .stat-value {
+    font-size: 1.6em;
+  }
+  
+  .view-controls {
+    margin: 0.8rem 0;
+    gap: 0.4rem;
+  }
+  
+  .view-toggle-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+  
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem;
+  }
+  
+  .result-card {
+    padding: 1.2rem;
+  }
+  
+  .student-info h3 {
+    font-size: 1rem;
+  }
+  
+  .grade-section {
+    font-size: 0.85rem;
+  }
+  
+  .score-badge {
+    padding: 0.4rem 0.8rem;
+    font-size: 1rem;
+  }
+  
+  .detail-item .label {
+    font-size: 0.9rem;
+  }
+  
+  .detail-item .value {
+    font-size: 0.9rem;
+  }
+  
+  .view-answers-btn,
+  .archive-result-btn {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .table-wrapper th,
+  .table-wrapper td {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+  
+  .item-analysis {
+    padding: 16px;
+    margin-top: 24px;
+  }
+  
+  .item-analysis h2 {
+    font-size: 1.4rem;
+    margin-bottom: 16px;
+  }
+  
+  .analysis-filters {
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .analysis-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem;
+  }
+  
+  .analysis-card {
+    padding: 1.2rem;
+    gap: 0.6rem;
+  }
+  
+  .question-number {
+    font-size: 1rem;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+  }
+  
+  .answer-info {
+    padding: 0.6rem;
+  }
+  
+  .pagination {
+    padding: 12px;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  
+  .pagination-btn,
+  .page-number {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .page-size-selector select {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.9rem;
+  }
+  
+  .export-dropdown {
+    width: 280px;
+  }
+  
+  .export-options-header,
+  .export-data-selection,
+  .export-actions {
+    padding: 12px;
+  }
+  
+  .export-checkboxes {
+    gap: 8px;
+  }
+  
+  .export-action-btn {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .archive-modal-content,
+  .attempt-records-modal-content {
+    max-width: 520px;
+  }
+  
+  .archive-modal-body,
+  .attempt-modal-body {
+    padding: 16px;
+  }
+  
+  .archive-reason-input textarea {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .record-item {
+    padding: 12px;
+  }
+  
+  .restore-record-action {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .exam-results {
+    padding: 14px;
+  }
+  
+  .results-header {
+    padding: 14px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+    margin-bottom: 6px;
+  }
+  
+  .test-code {
+    font-size: 0.85rem;
+  }
+  
+  .header-actions {
+    gap: 6px;
+  }
+  
+  .back-btn,
+  .bulk-archive-btn,
+  .part-results-btn,
+  .export-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 4px;
+  }
+  
+  .filters {
+    padding: 14px;
+    margin-bottom: 14px;
+    gap: 14px;
+  }
+  
+  .filter-group label {
+    font-size: 0.85rem;
+  }
+  
+  .filter-group select {
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    min-width: 120px;
+  }
+  
+  .search-input {
+    padding: 8px 8px 8px 32px;
+    font-size: 0.85rem;
+  }
+  
+  .search-icon {
+    font-size: 16px;
+    left: 8px;
+  }
+  
+  .stats-cards {
+    gap: 14px;
+    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  
+  .stat-card {
+    padding: 14px;
+  }
+  
+  .stat-card h3 {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .stat-value {
+    font-size: 1.4em;
+  }
+  
+  .view-controls {
+    margin: 0.6rem 0;
+    gap: 0.3rem;
+  }
+  
+  .view-toggle-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+    gap: 0.3rem;
+  }
+  
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  
+  .result-card {
+    padding: 1rem;
+  }
+  
+  .student-info h3 {
+    font-size: 0.95rem;
+  }
+  
+  .grade-section {
+    font-size: 0.8rem;
+  }
+  
+  .score-badge {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.95rem;
+  }
+  
+  .detail-item .label {
+    font-size: 0.85rem;
+  }
+  
+  .detail-item .value {
+    font-size: 0.85rem;
+  }
+  
+  .view-answers-btn,
+  .archive-result-btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    gap: 3px;
+  }
+  
+  .table-wrapper th,
+  .table-wrapper td {
+    padding: 10px;
+    font-size: 0.85rem;
+  }
+  
+  .item-analysis {
+    padding: 14px;
+    margin-top: 20px;
+  }
+  
+  .item-analysis h2 {
+    font-size: 1.3rem;
+    margin-bottom: 14px;
+  }
+  
+  .analysis-filters {
+    gap: 14px;
+    margin-bottom: 14px;
+    padding: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  
+  .analysis-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  
+  .analysis-card {
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+  
+  .question-number {
+    font-size: 0.95rem;
+  }
+  
+  .question-text {
+    font-size: 0.9rem;
+  }
+  
+  .answer-info {
+    padding: 0.5rem;
+  }
+  
+  .pagination {
+    padding: 10px;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  
+  .pagination-btn,
+  .page-number {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+  
+  .page-size-selector select {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.85rem;
+  }
+  
+  .export-dropdown {
+    width: 260px;
+  }
+  
+  .export-options-header,
+  .export-data-selection,
+  .export-actions {
+    padding: 10px;
+  }
+  
+  .export-checkboxes {
+    gap: 6px;
+  }
+  
+  .export-action-btn {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .archive-modal-content,
+  .attempt-records-modal-content {
+    max-width: 480px;
+  }
+  
+  .archive-modal-body,
+  .attempt-modal-body {
+    padding: 14px;
+  }
+  
+  .archive-reason-input textarea {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .record-item {
+    padding: 10px;
+  }
+  
+  .restore-record-action {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .exam-results {
+    padding: 12px;
+  }
+  
+  .results-header {
+    padding: 12px;
+    margin-bottom: 16px;
+    border-radius: 10px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.3rem;
+    margin-bottom: 4px;
+  }
+  
+  .test-code {
+    font-size: 0.8rem;
+  }
+  
+  .header-actions {
+    gap: 4px;
+  }
+  
+  .back-btn,
+  .bulk-archive-btn,
+  .part-results-btn,
+  .export-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 3px;
+  }
+  
+  .filters {
+    padding: 12px;
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  
+  .filter-group label {
+    font-size: 0.8rem;
+  }
+  
+  .filter-group select {
+    padding: 4px 6px;
+    font-size: 0.8rem;
+    min-width: 110px;
+  }
+  
+  .search-input {
+    padding: 6px 6px 6px 28px;
+    font-size: 0.8rem;
+  }
+  
+  .search-icon {
+    font-size: 14px;
+    left: 6px;
+  }
+  
+  .stats-cards {
+    gap: 12px;
+    margin-bottom: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-card h3 {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+  }
+  
+  .stat-value {
+    font-size: 1.2em;
+  }
+  
+  .view-controls {
+    margin: 0.4rem 0;
+    gap: 0.2rem;
+  }
+  
+  .view-toggle-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    gap: 0.25rem;
+  }
+  
+  .view-toggle-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .results-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.8rem;
+  }
+  
+  .result-card {
+    padding: 0.8rem;
+  }
+  
+  .student-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .grade-section {
+    font-size: 0.75rem;
+  }
+  
+  .score-badge {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .detail-item .label {
+    font-size: 0.8rem;
+  }
+  
+  .detail-item .value {
+    font-size: 0.8rem;
+  }
+  
+  .view-answers-btn,
+  .archive-result-btn {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+    gap: 2px;
+  }
+  
+  .table-wrapper th,
+  .table-wrapper td {
+    padding: 8px;
+    font-size: 0.8rem;
+  }
+  
+  .item-analysis {
+    padding: 12px;
+    margin-top: 16px;
+  }
+  
+  .item-analysis h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .analysis-filters {
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+  
+  .analysis-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 0.8rem;
+  }
+  
+  .analysis-card {
+    padding: 0.8rem;
+    gap: 0.4rem;
+  }
+  
+  .question-number {
+    font-size: 0.9rem;
+  }
+  
+  .question-text {
+    font-size: 0.85rem;
+  }
+  
+  .answer-info {
+    padding: 0.4rem;
+  }
+  
+  .answer-label {
+    font-size: 0.8rem;
+  }
+  
+  .correct-answer {
+    font-size: 0.85rem;
+  }
+  
+  .score-label {
+    font-size: 0.75rem;
+  }
+  
+  .score-value {
+    font-size: 0.85rem;
+  }
+  
+  .rate-label {
+    font-size: 0.75rem;
+  }
+  
+  .progress-bar {
+    height: 20px;
+    min-width: 80px;
+  }
+  
+  .progress {
+    font-size: 10px;
+    padding: 0 6px;
+  }
+  
+  .difficulty-badge {
+    padding: 2px 6px;
+    font-size: 0.8rem;
+  }
+  
+  .percentage-badge {
+    padding: 2px 6px;
+    font-size: 0.8rem;
+    min-width: 50px;
+  }
+  
+  .pagination {
+    padding: 8px;
+    gap: 8px;
+    margin: 12px 0;
+  }
+  
+  .pagination-btn,
+  .page-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .pagination-btn .material-icons {
+    font-size: 16px;
+  }
+  
+  .page-size-selector {
+    gap: 0.3rem;
+  }
+  
+  .page-size-selector label {
+    font-size: 0.8rem;
+  }
+  
+  .page-size-selector select {
+    padding: 0.15rem 0.25rem;
+    font-size: 0.8rem;
+  }
+  
+  .export-dropdown {
+    width: 240px;
+  }
+  
+  .export-options-header h3 {
+    font-size: 14px;
+  }
+  
+  .export-options-header,
+  .export-data-selection,
+  .export-actions {
+    padding: 8px;
+  }
+  
+  .export-data-selection h4,
+  .export-section-selector h4 {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  
+  .export-checkboxes {
+    gap: 4px;
+    grid-template-columns: 1fr;
+  }
+  
+  .export-checkboxes label,
+  .export-radio-options label {
+    font-size: 12px;
+  }
+  
+  .export-action-btn {
+    padding: 5px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .export-action-btn .material-icons {
+    font-size: 14px;
+  }
+  
+  .archive-modal-content,
+  .attempt-records-modal-content {
+    max-width: 420px;
+  }
+  
+  .archive-modal-title,
+  .attempt-modal-title {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+  
+  .archive-modal-body,
+  .attempt-modal-body {
+    padding: 12px;
+  }
+  
+  .archive-student-info {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .archive-student-info p {
+    margin: 3px 0;
+    font-size: 0.9rem;
+  }
+  
+  .archive-reason-input label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  
+  .archive-reason-input textarea {
+    padding: 6px;
+    font-size: 0.8rem;
+    min-height: 60px;
+  }
+  
+  .char-count {
+    font-size: 11px;
+  }
+  
+  .cancel-btn,
+  .archive-confirm-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .record-item {
+    padding: 8px;
+  }
+  
+  .record-header {
+    margin-bottom: 8px;
+  }
+  
+  .record-number {
+    font-size: 0.9rem;
+  }
+  
+  .record-score {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .record-details {
+    gap: 12px;
+  }
+  
+  .record-detail {
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .record-detail .material-icons {
+    font-size: 14px;
+  }
+  
+  .restore-record-action {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  
+  .summary-item {
+    padding: 10px;
+  }
+  
+  .summary-item .label {
+    font-size: 0.8rem;
+  }
+  
+  .summary-item .value {
+    font-size: 1rem;
+  }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
  .exam-results {
