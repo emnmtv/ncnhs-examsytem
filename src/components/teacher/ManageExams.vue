@@ -448,6 +448,91 @@
                 <p class="empty-hint">Use the search box above to add specific students.</p>
               </div>
             </div>
+
+            <!-- Subject-Based Access -->
+            <div class="section-list-card">
+              <div class="list-header">
+                <h4>
+                  <span class="material-icons-round">school</span>
+                  Subject-Based Access
+                </h4>
+                <div class="toggle-wrapper">
+                  <label class="switch">
+                    <input type="checkbox" v-model="enableSubjectAccess" @change="toggleSubjectAccess">
+                    <span class="slider round"></span>
+                  </label>
+                  <span class="toggle-state">{{ enableSubjectAccess ? 'Enabled' : 'Disabled' }}</span>
+                </div>
+              </div>
+              
+              <div class="access-description">
+                <div class="description-icon">
+                  <span class="material-icons-round">{{ enableSubjectAccess ? 'school' : 'block' }}</span>
+                </div>
+                <div class="description-text">
+                  <p>{{ enableSubjectAccess ? 
+                    'Only students enrolled in selected subjects will be able to access this exam.' : 
+                    'Subject-based access is disabled. Students can access based on grade/section or specific access only.' }}</p>
+                </div>
+              </div>
+
+              <div class="subject-access-container">
+                <div class="form-row">
+                  <div class="form-group" style="flex:2;">
+                    <label for="subjectSelect">Select Subject</label>
+                    <select 
+                      id="subjectSelect"
+                      v-model="selectedSubjectId" 
+                      class="form-select"
+                    >
+                      <option value="">Choose a subject...</option>
+                      <option 
+                        v-for="subject in availableSubjects" 
+                        :key="subject.id" 
+                        :value="subject.id"
+                      >
+                        {{ subject.subjectName || subject.name || subject.title || `Subject ${subject.id}` }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="form-action">
+                    <button 
+                      @click="addSubjectAccess" 
+                      class="add-section-btn"
+                      :disabled="!selectedSubjectId"
+                    >
+                      <span class="material-icons-round">add</span>
+                      Add Subject
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Subject Access List -->
+                <div v-if="subjectAccessList.length > 0" class="section-list">
+                  <div v-for="(subjectAccess, index) in subjectAccessList" :key="index" class="section-item">
+                    <div class="section-info">
+                      <span class="section-grade">{{ getSubjectName(subjectAccess.subjectId) }}</span>
+                      <span class="section-name">Subject Access</span>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <label class="switch">
+                        <input type="checkbox" :checked="subjectAccess.isEnabled" @change="toggleSubjectAccessItem(index)" />
+                        <span class="slider round"></span>
+                      </label>
+                      <button @click="removeSubjectAccess(index)" class="remove-section-btn">
+                        <span class="material-icons-round">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-else class="empty-sections">
+                  <span class="material-icons-round">info</span>
+                  <p>No subjects added</p>
+                  <p class="empty-hint">Select subjects above to control access based on student enrollment.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -601,7 +686,10 @@ import {
   getExamAccess,
   setExamUserAccess,
   fetchStudents,
-  updateExamSettings
+  updateExamSettings,
+  setExamSubjectAccess,
+  getExamSubjectAccess,
+  getAllSubjects
 } from '../../services/authService';
 import Swal from 'sweetalert2';
 import socketManager from '@/utils/socketManager';
@@ -694,6 +782,12 @@ export default {
     const isSearchingStudents = ref(false);
     const isClosing = ref(false);
     
+    // Subject-based access
+    const availableSubjects = ref([]);
+    const subjectAccessList = ref([]);
+    const enableSubjectAccess = ref(false);
+    const selectedSubjectId = ref('');
+    
     // Settings modal variables
     const showSettingsModal = ref(false);
     const selectedExamForSettings = ref(null);
@@ -712,6 +806,7 @@ export default {
       socket.value = socketManager.getSocket();
       loadExams();
       loadGradeSections();
+      loadSubjects(); // Load subjects on component mount
     });
 
     // Computed property for currently displayed exams based on active tab
@@ -947,10 +1042,18 @@ export default {
       newAccessSection.value = '';
       accessSections.value = [];
       userAccessList.value = [];
+      subjectAccessList.value = [];
+      enableSubjectAccess.value = false;
+      selectedSubjectId.value = '';
       
       // Load grade sections if not already loaded
       if (availableGrades.value.length === 0) {
         await loadGradeSections();
+      }
+      
+      // Load subjects if not already loaded
+      if (availableSubjects.value.length === 0) {
+        await loadSubjects();
       }
       
       // Load current access settings for this exam
@@ -1159,12 +1262,64 @@ export default {
       item.isEnabled = !item.isEnabled;
     };
 
+    // Subject access management functions
+    const toggleSubjectAccess = () => {
+      if (!enableSubjectAccess.value) {
+        // When disabling, clear the subject access list
+        subjectAccessList.value = [];
+      }
+    };
+
+    const addSubjectAccess = () => {
+      if (!selectedSubjectId.value) return;
+
+      // Check if subject already exists in access list
+      const exists = subjectAccessList.value.some(
+        sa => sa.subjectId === parseInt(selectedSubjectId.value)
+      );
+
+      if (exists) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Subject Already Added',
+          text: 'This subject is already in the access list'
+        });
+        return;
+      }
+
+      // Add new subject to access list
+      subjectAccessList.value.push({
+        examId: selectedExam.value.id,
+        subjectId: parseInt(selectedSubjectId.value),
+        isEnabled: true
+      });
+
+      // Reset selection
+      selectedSubjectId.value = '';
+    };
+
+    const removeSubjectAccess = (index) => {
+      subjectAccessList.value.splice(index, 1);
+    };
+
+    const toggleSubjectAccessItem = (index) => {
+      const item = subjectAccessList.value[index];
+      if (!item) return;
+      item.isEnabled = !item.isEnabled;
+    };
+
+    const getSubjectName = (subjectId) => {
+      const subject = availableSubjects.value.find(s => s.id === subjectId);
+      return subject ? (subject.subjectName || subject.name || subject.title || `Subject ${subject.id}`) : `Subject #${subjectId}`;
+    };
+
     const saveAccessSettings = async () => {
       try {
         if (!restrictAccess.value) {
           // If not restricting access, remove all access settings
           await setExamAccess(selectedExam.value.id, []);
           await setExamUserAccess(selectedExam.value.id, []);
+          await setExamSubjectAccess(selectedExam.value.id, []);
           Swal.fire({
             icon: 'success',
             title: 'Access Updated',
@@ -1174,12 +1329,12 @@ export default {
           return;
         }
         
-        // If restricting but neither sections nor specific students added
-        if (accessSections.value.length === 0 && userAccessList.value.length === 0) {
+        // If restricting but no access entries added
+        if (accessSections.value.length === 0 && userAccessList.value.length === 0 && subjectAccessList.value.length === 0) {
           Swal.fire({
             icon: 'warning',
             title: 'No Access Entries Added',
-            text: 'Please add at least one section or specific student, or disable access restriction'
+            text: 'Please add at least one section, specific student, or subject, or disable access restriction'
           });
           return;
         }
@@ -1196,10 +1351,17 @@ export default {
           userId: u.userId,
           isEnabled: u.isEnabled !== false
         }));
+
+        const subjectAccess = subjectAccessList.value.map(sa => ({
+          examId: selectedExam.value.id,
+          subjectId: sa.subjectId,
+          isEnabled: sa.isEnabled !== false
+        }));
         
-        // Save both access settings
+        // Save all access settings
         await setExamAccess(selectedExam.value.id, gradeAccess);
         await setExamUserAccess(selectedExam.value.id, userAccess);
+        await setExamSubjectAccess(selectedExam.value.id, subjectAccess);
         
         Swal.fire({
           icon: 'success',
@@ -1248,41 +1410,81 @@ export default {
       }
     };
 
+    const loadSubjects = async () => {
+      try {
+        const response = await getAllSubjects();
+        console.log('Raw subjects response:', response);
+        
+        // Handle different response structures
+        if (response && Array.isArray(response)) {
+          availableSubjects.value = response;
+        } else if (response && response.subjects && Array.isArray(response.subjects)) {
+          availableSubjects.value = response.subjects;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          availableSubjects.value = response.data;
+        } else {
+          availableSubjects.value = [];
+        }
+        
+        console.log('Processed subjects:', availableSubjects.value);
+      } catch (error) {
+        console.error('Error loading subjects:', error);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to load subjects'
+        });
+      }
+    };
+
     const loadExamAccess = async (examId) => {
       try {
         const response = await getExamAccess(examId);
         
-        if (response && response.access) {
-          // If there are access settings, then the exam has restricted access
-          if (response.access.length > 0) {
-            restrictAccess.value = true;
-            accessSections.value = response.access.map(access => ({
-              examId: access.examId,
-              grade: access.grade,
-              section: access.section,
-              isEnabled: access.isEnabled
-            }));
-          } else {
-            // No access settings means open access
-            restrictAccess.value = false;
-            accessSections.value = [];
-          }
+        // Initialize access lists
+        accessSections.value = [];
+        userAccessList.value = [];
+        subjectAccessList.value = [];
+        
+        // Load grade/section access
+        if (response && response.access && response.access.length > 0) {
+          accessSections.value = response.access.map(access => ({
+            examId: access.examId,
+            grade: access.grade,
+            section: access.section,
+            isEnabled: access.isEnabled
+          }));
         }
         
-        // Load user-specific access if available
-        if (response && response.userAccess) {
+        // Load user-specific access
+        if (response && response.userAccess && response.userAccess.length > 0) {
           userAccessList.value = response.userAccess.map(ua => ({
             userId: ua.userId,
             isEnabled: ua.isEnabled,
             name: ua.user?.firstName && ua.user?.lastName ? `${ua.user.firstName} ${ua.user.lastName}` : undefined,
             lrn: ua.user?.lrn
           }));
-        } else {
-          userAccessList.value = [];
         }
         
-        // Determine restricted mode based on either list having entries
-        restrictAccess.value = (accessSections.value.length > 0) || (userAccessList.value.length > 0);
+        // Load subject-based access
+        await loadExamSubjectAccess(examId);
+        
+        // Determine restricted mode based on any access type having entries
+        const hasGradeAccess = accessSections.value.length > 0;
+        const hasUserAccess = userAccessList.value.length > 0;
+        const hasSubjectAccess = subjectAccessList.value.length > 0;
+        
+        restrictAccess.value = hasGradeAccess || hasUserAccess || hasSubjectAccess;
+        
+        console.log('Access loading summary:', {
+          hasGradeAccess,
+          hasUserAccess,
+          hasSubjectAccess,
+          restrictAccess: restrictAccess.value,
+          gradeSections: accessSections.value.length,
+          userAccess: userAccessList.value.length,
+          subjectAccess: subjectAccessList.value.length
+        });
       } catch (error) {
         console.error('Error loading exam access settings:', error);
         Swal.fire({
@@ -1290,6 +1492,32 @@ export default {
           title: 'Error',
           text: 'Failed to load exam access settings'
         });
+      }
+    };
+
+    const loadExamSubjectAccess = async (examId) => {
+      try {
+        const response = await getExamSubjectAccess(examId);
+        console.log('Subject access response:', response);
+        
+        if (response && response.length > 0) {
+          enableSubjectAccess.value = true;
+          subjectAccessList.value = response.map(access => ({
+            examId: access.examId,
+            subjectId: access.subjectId,
+            isEnabled: access.isEnabled
+          }));
+          console.log('Loaded subject access:', subjectAccessList.value);
+        } else {
+          enableSubjectAccess.value = false;
+          subjectAccessList.value = [];
+          console.log('No subject access found');
+        }
+      } catch (error) {
+        console.error('Error loading subject access settings:', error);
+        // Don't show error for this as it might not be set up yet
+        enableSubjectAccess.value = false;
+        subjectAccessList.value = [];
       }
     };
 
@@ -1420,7 +1648,17 @@ export default {
       settingsForm,
       openSettingsModal,
       closeSettingsModal,
-      saveExamSettings
+      saveExamSettings,
+      // Subject access
+      availableSubjects,
+      subjectAccessList,
+      enableSubjectAccess,
+      selectedSubjectId,
+      toggleSubjectAccess,
+      addSubjectAccess,
+      removeSubjectAccess,
+      toggleSubjectAccessItem,
+      getSubjectName
     };
   }
 };

@@ -101,7 +101,8 @@ import {
   getAllExams, 
   checkExamAccess,
   getExamAccess,
-  fetchUserProfile
+  fetchUserProfile,
+  getStudentSubjects
 } from '@/services/authService';
 // eslint-disable-next-line no-unused-vars
 import Swal from 'sweetalert2';
@@ -115,6 +116,7 @@ export default {
     const loading = ref(true);
     const error = ref('');
     const userProfile = ref(null);
+    const studentSubjects = ref([]);
     
     // Load student profile
     const loadProfile = async () => {
@@ -135,6 +137,20 @@ export default {
       } catch (err) {
         console.error('Error loading profile:', err);
         error.value = 'Failed to load your profile';
+      }
+    };
+    
+    // Load student subjects
+    const loadStudentSubjects = async () => {
+      try {
+        console.log('Loading student subjects...');
+        const subjects = await getStudentSubjects();
+        console.log('Student subjects loaded:', subjects);
+        studentSubjects.value = subjects || [];
+      } catch (err) {
+        console.error('Error loading student subjects:', err);
+        // Don't set error here as subjects might not be critical for exam access
+        studentSubjects.value = [];
       }
     };
     
@@ -175,9 +191,10 @@ export default {
         
         // Check grade/section access
         if (accessResponse.access && Array.isArray(accessResponse.access)) {
-          // If access array is empty, the exam is restricted to nobody
-          if (accessResponse.access.length === 0) {
-            console.log(`Exam ${exam.id} has empty access list, denying access`);
+          // Only deny access if there are no access controls at all (no grade/section AND no subject access)
+          if (accessResponse.access.length === 0 && 
+              (!accessResponse.subjectAccess || accessResponse.subjectAccess.length === 0)) {
+            console.log(`Exam ${exam.id} has no access controls, denying access`);
             return false; 
           }
           
@@ -209,6 +226,40 @@ export default {
           }
         }
         
+        // If we reach here, either there's no grade/section access or user doesn't match
+        // Continue to check subject access below
+        
+        // Check subject-based access
+        if (accessResponse.subjectAccess && Array.isArray(accessResponse.subjectAccess)) {
+          console.log(`Checking subject-based access for exam ${exam.id}`);
+          console.log('Exam subject access:', accessResponse.subjectAccess);
+          console.log('Student subjects:', studentSubjects.value);
+          
+          // If there are subject access controls, check if student has access to any of the required subjects
+          if (accessResponse.subjectAccess.length > 0) {
+            const hasSubjectAccess = accessResponse.subjectAccess.some(examSubject => {
+              if (!examSubject.isEnabled) return false;
+              
+              // Check if student is enrolled in this subject
+              const studentHasSubject = studentSubjects.value.some(studentSubject => 
+                studentSubject.subjectId === examSubject.subjectId || 
+                studentSubject.id === examSubject.subjectId
+              );
+              
+              console.log(`Exam subject ${examSubject.subjectId} enabled: ${examSubject.isEnabled}, student has subject: ${studentHasSubject}`);
+              return studentHasSubject;
+            });
+            
+            if (hasSubjectAccess) {
+              console.log(`User has subject-based access to exam ${exam.id}`);
+              return true;
+            } else {
+              console.log(`User does not have subject-based access to exam ${exam.id}`);
+              return false;
+            }
+          }
+        }
+        
         // As a backup, also use the API endpoint with user ID
         const apiAccessCheck = await checkExamAccess(exam.id, userProfile.value.gradeLevel, userProfile.value.section, userProfile.value.id);
         console.log(`API access check for exam ${exam.id}: ${apiAccessCheck}`);
@@ -235,6 +286,9 @@ export default {
         if (!userProfile.value) {
           throw new Error('Failed to load user profile');
         }
+        
+        // Load student subjects
+        await loadStudentSubjects();
         
         // Then load all exams
         console.log('Loading exams...');

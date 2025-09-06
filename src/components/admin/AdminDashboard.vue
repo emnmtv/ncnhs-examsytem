@@ -1108,20 +1108,22 @@ export default {
   align-items: center;
   padding: 20px;
   border-radius: 8px;
-  color: white;
-  transition: transform 0.3s;
+  background: white;
+  border: 1px solid #e0e0e0;
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
 .overview-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.overview-card.students { background: linear-gradient(135deg, #4CAF50, #45a049); }
-.overview-card.teachers { background: linear-gradient(135deg, #2196F3, #1976D2); }
-.overview-card.exams { background: linear-gradient(135deg, #FF9800, #f57c00); }
-.overview-card.subjects { background: linear-gradient(135deg, #9C27B0, #7b1fa2); }
-.overview-card.active { background: linear-gradient(135deg, #4CAF50, #45a049); }
-.overview-card.completed { background: linear-gradient(135deg, #607D8B, #455a64); }
+.overview-card.students .card-icon { color: #4CAF50; }
+.overview-card.teachers .card-icon { color: #2196F3; }
+.overview-card.exams .card-icon { color: #FF9800; }
+.overview-card.subjects .card-icon { color: #9C27B0; }
+.overview-card.active .card-icon { color: #4CAF50; }
+.overview-card.completed .card-icon { color: #607D8B; }
 
 .card-icon {
   margin-right: 15px;
@@ -1135,12 +1137,13 @@ export default {
   margin: 0 0 5px 0;
   font-size: 2rem;
   font-weight: bold;
+  color: #333;
 }
 
 .card-content p {
   margin: 0;
   font-size: 14px;
-  opacity: 0.9;
+  color: #666;
 }
 
 .performance-overview {

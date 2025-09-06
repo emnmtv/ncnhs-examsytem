@@ -41,11 +41,17 @@ import Forbidden from "@/components/Forbidden.vue";
 import TeacherClassList from "@/components/teacher/TeacherClassList.vue";
 import AttendanceScanner from "@/components/teacher/AttendanceScanner.vue";
 import AttendanceRecords from "@/components/teacher/AttendanceRecords.vue";
+import StudentRegistrationPage from "@/components/public/StudentRegistrationPage.vue";
 
 const routes = [
   { 
     path: "/", 
     component: LoginPage,
+    meta: { requiresAuth: false }
+  },
+  { 
+    path: "/register", 
+    component: StudentRegistrationPage,
     meta: { requiresAuth: false }
   },
   { 
@@ -312,7 +318,14 @@ const routes = [
     name: 'ExamPartResults',
     component: () => import('@/components/teacher/ExamPartResults.vue'),
     meta: { requiresAuth: true, roles: ['teacher'] }
-  }
+  },
+  {
+    path: '/admin/student-approval',
+    name: 'StudentApproval',
+    component: () => import('@/components/admin/StudentApprovalTab.vue'),
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  
 ];
 
 

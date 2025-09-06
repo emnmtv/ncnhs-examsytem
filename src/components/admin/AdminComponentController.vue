@@ -60,6 +60,36 @@
       </div>
     </div>
 
+    <!-- Public Registration Control Section -->
+    <div class="permissions-section">
+      <h2 class="section-title">
+        <span class="material-icons">person_add</span>
+        Public Registration Control
+      </h2>
+      <p class="section-description">Control whether students can register publicly without admin approval</p>
+
+      <div class="permissions-grid">
+        <div class="permission-card">
+          <div class="permission-header">
+            <span class="material-icons">how_to_reg</span>
+            <h3>Public Student Registration</h3>
+          </div>
+          <p class="permission-description">Allow students to register themselves through the public registration form</p>
+          <div class="permission-controls">
+            <label class="switch">
+              <input 
+                type="checkbox" 
+                v-model="publicRegistrationEnabled"
+                @change="updatePublicRegistrationStatus"
+              >
+              <span class="slider"></span>
+            </label>
+            <span class="status-text">{{ publicRegistrationEnabled ? 'Enabled' : 'Disabled' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="controls-section">
       <div class="role-tabs">
         <button 
@@ -100,7 +130,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { getComponentSettings, updateComponentSetting, initializeComponentSettings, getProfileEditPermissions, updateProfileEditPermissions } from '@/services/authService';
+import { getComponentSettings, updateComponentSetting, initializeComponentSettings, getProfileEditPermissions, updateProfileEditPermissions, getPublicRegistrationEnabled, setPublicRegistrationEnabled } from '@/services/authService';
 import Swal from 'sweetalert2';
 
 const selectedRole = ref('student');
@@ -116,10 +146,14 @@ const profilePermissions = ref({
   canEditGradeSection: false
 });
 
+// Add public registration state
+const publicRegistrationEnabled = ref(false);
+
 // Load component settings on mount
 onMounted(async () => {
   await loadComponentSettings();
   await loadProfilePermissions();
+  await loadPublicRegistrationStatus();
 });
 
 const loadComponentSettings = async () => {
@@ -190,6 +224,47 @@ const updateProfilePermissions = async () => {
     
     // Revert the toggle if the update failed
     await loadProfilePermissions();
+  }
+};
+
+// Load public registration status
+const loadPublicRegistrationStatus = async () => {
+  try {
+    const response = await getPublicRegistrationEnabled();
+    publicRegistrationEnabled.value = response.enabled;
+  } catch (error) {
+    console.error('Failed to load public registration status:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to load public registration status'
+    });
+  }
+};
+
+// Update public registration status
+const updatePublicRegistrationStatus = async () => {
+  try {
+    await setPublicRegistrationEnabled(publicRegistrationEnabled.value);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Updated Successfully',
+      text: `Public student registration has been ${publicRegistrationEnabled.value ? 'enabled' : 'disabled'}`,
+      toast: true,
+      position: 'top-end',
+      showConfirmButton: false,
+      timer: 3000
+    });
+  } catch (error) {
+    console.error('Failed to update public registration status:', error);
+    // Revert the toggle if the update failed
+    publicRegistrationEnabled.value = !publicRegistrationEnabled.value;
+    Swal.fire({
+      icon: 'error',
+      title: 'Update Failed',
+      text: 'Failed to update public registration status'
+    });
   }
 };
 

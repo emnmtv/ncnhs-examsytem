@@ -150,7 +150,7 @@
 <script>
 import { ref,  onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchTeacherExams, getFullImageUrl, createQuestionBankItem, getQuestionBankFolders } from '../../services/authService';
+import { fetchTeacherExams, fetchArchivedTeacherExams, getFullImageUrl, createQuestionBankItem, getQuestionBankFolders } from '../../services/authService';
 
 export default {
   name: 'PreviewExam',
@@ -169,8 +169,16 @@ export default {
       try {
         loading.value = true;
         error.value = null;
-        const exams = await fetchTeacherExams();
-        exam.value = exams.find(e => e.id === parseInt(route.params.examId));
+        
+        // First try to find the exam in active exams
+        const activeExams = await fetchTeacherExams();
+        exam.value = activeExams.find(e => e.id === parseInt(route.params.examId));
+        
+        // If not found in active exams, check archived exams
+        if (!exam.value) {
+          const archivedExams = await fetchArchivedTeacherExams();
+          exam.value = archivedExams.find(e => e.id === parseInt(route.params.examId));
+        }
         
         if (!exam.value) {
           throw new Error('Exam not found');

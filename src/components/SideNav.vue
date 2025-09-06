@@ -110,8 +110,9 @@ const toggleNav = () => {
 
 const navigationItems = {
   admin: [
-    // {name:'Dashboard', path:'/admin-dashboard', icon:'dashboard'},
+    {name:'Dashboard', path:'/admin-dashboard', icon:'dashboard'},
     { name: 'Manage Users', path: '/manage-users', icon: 'group' },
+    { name: 'Approval', path: '/admin/student-approval', icon: 'verified_user' },
     { name: 'Student Scores', path: '/scores', icon: 'analytics' },
     { name: 'Active Users', path: '/active-users', icon: 'person_search' },
     { name: 'Exam Monitor', path: '/admin-exam-monitor', icon: 'admin_panel_settings' },

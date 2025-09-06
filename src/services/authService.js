@@ -1,9 +1,11 @@
-export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
 // export const BASE_URL = 'http://localhost:3300/auth';
 // export const SOCKET_URL = 'http://localhost:3300/';
-// export const BASE_URL = 'https://emnmtv.shop/auth';
-// export const SOCKET_URL = 'https://emnmtv.shop/';
+export const BASE_URL = 'https://emnmtv.shop/auth';
+export const SOCKET_URL = 'https://emnmtv.shop/';
+// export const BASE_URL = 'https://ncnhs.online/auth';
+// export const SOCKET_URL = 'https://ncnhs.online/';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));
@@ -113,6 +115,26 @@ export const registerStudent = async (studentData) => {
   if (!response.ok) {
     const errorData = await response.json();
     console.error('AuthService: Student registration failed', errorData);
+    throw new Error(errorData.error || "Student registration failed");
+  }
+
+  const result = await response.json();
+  return result;
+};
+
+// Public student registration (no authentication required)
+export const registerStudentPublic = async (studentData) => {
+  const response = await fetch(`${BASE_URL}/register-student-public`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(studentData),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error('AuthService: Public student registration failed', errorData);
     throw new Error(errorData.error || "Student registration failed");
   }
 
@@ -1247,6 +1269,23 @@ export const getAllGradeSections = async () => {
     return await response.json();
   } catch (error) {
     console.error('Get grade sections error:', error);
+    throw error;
+  }
+};
+
+// Get all grade sections (public - no authentication required)
+export const getAllGradeSectionsPublic = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/grade-sections-public`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch grade sections');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Get public grade sections error:', error);
     throw error;
   }
 };
@@ -4502,6 +4541,426 @@ export const getAdminAnalytics = async (filters = {}) => {
     return data;
   } catch (error) {
     console.error('Error fetching admin analytics:', error);
+    throw error;
+  }
+};
+
+// Public Registration Control Functions (Admin Only)
+
+/**
+ * Enable or disable public student registration
+ * @param {boolean} enabled - Whether to enable or disable public registration
+ * @returns {Promise<Object>} Response with success message and setting data
+ */
+export const setPublicRegistrationEnabled = async (enabled) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/public-registration`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ enabled })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error setting public registration status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the current status of public student registration (public endpoint - no auth required)
+ * @returns {Promise<Object>} Object with enabled status
+ */
+export const getPublicRegistrationStatus = async () => {
+  try {
+    const response = await fetch(`${BASE_URL}/public-registration-status`);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting public registration status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get the current status of public student registration (admin endpoint - requires auth)
+ * @returns {Promise<Object>} Object with enabled status
+ */
+export const getPublicRegistrationEnabled = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/public-registration`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting public registration status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get pending student registrations (admin only)
+ * @returns {Promise<Object>} Object with pending registrations data
+ */
+export const getPendingStudentRegistrations = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/pending-registrations`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting pending student registrations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approve student registration (admin only)
+ * @param {number} studentId - ID of the student to approve
+ * @returns {Promise<Object>} Object with approval result
+ */
+export const approveStudentRegistration = async (studentId) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/approve-student/${studentId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error approving student registration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject student registration (admin only)
+ * @param {number} studentId - ID of the student to reject
+ * @param {string} reason - Reason for rejection
+ * @returns {Promise<Object>} Object with rejection result
+ */
+export const rejectStudentRegistration = async (studentId, reason) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/reject-student/${studentId}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ reason })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error rejecting student registration:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get student registration statistics (admin only)
+ * @returns {Promise<Object>} Object with registration statistics
+ */
+export const getStudentRegistrationStats = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/registration-stats`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting student registration stats:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all public student registrations (pending, approved, rejected) (admin only)
+ * @returns {Promise<Object>} Object with all public registrations data
+ */
+export const getAllPublicStudentRegistrations = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/all-public-registrations`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting all public student registrations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get approved student registrations (admin only)
+ * @returns {Promise<Object>} Object with approved registrations data
+ */
+export const getApprovedStudentRegistrations = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/approved-registrations`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting approved student registrations:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get rejected student registrations (admin only)
+ * @returns {Promise<Object>} Object with rejected registrations data
+ */
+export const getRejectedStudentRegistrations = async () => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/admin/rejected-registrations`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error getting rejected student registrations:', error);
+    throw error;
+  }
+};
+
+// Subject-based exam access functions
+
+/**
+ * Set subject-based access for an exam (admin only)
+ * @param {number} examId - The exam ID
+ * @param {Array} subjectAccess - Array of subject access objects
+ * @returns {Promise<Object>} API response
+ */
+export const setExamSubjectAccess = async (examId, subjectAccess) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/subject-access`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ subjectAccess })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error setting subject-based exam access:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get subject-based access for an exam (admin only)
+ * @param {number} examId - The exam ID
+ * @returns {Promise<Object>} Subject access data
+ */
+export const getExamSubjectAccess = async (examId) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/subject-access`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.data; // Return just the data array, not the full response object
+  } catch (error) {
+    console.error('Error getting subject-based exam access:', error);
+    throw error;
+  }
+};
+
+/**
+ * Check if a user has subject-based access to an exam
+ * @param {number} examId - The exam ID
+ * @returns {Promise<boolean>} Access check result
+ */
+export const checkExamSubjectAccess = async (examId) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    const response = await fetch(`${BASE_URL}/exam/${examId}/check-subject-access`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.hasAccess;
+  } catch (error) {
+    console.error('Error checking subject-based exam access:', error);
     throw error;
   }
 };

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { loginUser } from "../services/authService";
+import { loginUser, getPublicRegistrationStatus } from "../services/authService";
 import Swal from 'sweetalert2';
 
 const router = useRouter();
@@ -14,6 +14,7 @@ const loading = ref(false);
 const showPassword = ref(false);
 const pageLoaded = ref(false);
 const showPrivacyPolicy = ref(false); // Add ref for privacy policy modal
+const registrationEnabled = ref(false); // Track if public registration is enabled
 
 // PWA installation refs
 const deferredPrompt = ref(null);
@@ -69,6 +70,9 @@ onMounted(() => {
   setTimeout(() => {
     pageLoaded.value = true;
   }, 100);
+
+  // Check registration status
+  checkRegistrationStatus();
 
   // Check if we should show the install prompt (not shown in the last 3 days)
   const lastDismissed = localStorage.getItem('pwaPromptDismissed');
@@ -159,6 +163,20 @@ const togglePassword = () => {
 const goToSurvey = () => {
   router.push('/answer-survey');
 };
+
+const goToRegistration = () => {
+  router.push('/register');
+};
+
+const checkRegistrationStatus = async () => {
+  try {
+    const response = await getPublicRegistrationStatus();
+    registrationEnabled.value = response.enabled;
+  } catch (error) {
+    console.error('Error checking registration status:', error);
+    registrationEnabled.value = false; // Default to disabled on error
+  }
+};
 </script>
 
 <template>
@@ -246,6 +264,8 @@ const goToSurvey = () => {
             <a href="#" @click.prevent="togglePrivacyPolicy" class="policy-link">Privacy Policy</a>
             <span class="divider-dot">•</span>
             <a href="#" @click.prevent="goToSurvey" class="policy-link">Take Survey</a>
+            <span v-if="registrationEnabled" class="divider-dot">•</span>
+            <a v-if="registrationEnabled" href="#" @click.prevent="goToRegistration" class="policy-link">Register</a>
           </div>
         </div>
       </div>
@@ -256,6 +276,7 @@ const goToSurvey = () => {
       <span class="material-icons">poll</span>
       <span class="button-text">Answer Survey</span>
     </button>
+    
     
     <!-- PWA Installation Notification -->
     <div v-if="showInstallPrompt" class="pwa-install-prompt" :class="{ 'show-prompt': showInstallPrompt }">
@@ -427,6 +448,7 @@ const goToSurvey = () => {
 .button-text {
   font-weight: 500;
 }
+
 
 /* PWA Installation Prompt Styles */
 .pwa-install-prompt {
@@ -1438,6 +1460,7 @@ label {
     justify-content: center;
   }
 
+
   /* Adjust modal for mobile */
   .modal-content {
     width: 95%;
@@ -1507,6 +1530,7 @@ label {
   .survey-button .material-icons {
     font-size: 16px;
   }
+
 
   .footer-links {
     flex-direction: column;
