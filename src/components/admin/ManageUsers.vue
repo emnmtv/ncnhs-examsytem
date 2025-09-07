@@ -602,7 +602,8 @@
           <thead>
             <tr>
               <th>Profile</th>
-              <th>Name</th>
+              <th>First Name</th>
+              <th>Last Name</th>
               <th>Email</th>
               <th>Role</th>
               <th>Archived Date</th>
@@ -625,7 +626,8 @@
                   {{ user.firstName[0] }}{{ user.lastName[0] }}
                 </div>
               </td>
-              <td>{{ getDisplayName(user) }}</td>
+              <td>{{ user.firstName }}</td>
+              <td>{{ user.lastName }}</td>
               <td>{{ user.email }}</td>
               <td><span class="archived-role-badge" :class="user.role">{{ user.role }}</span></td>
               <td>{{ formatDate(user.archivedAt) }}</td>
@@ -770,7 +772,8 @@
           <thead>
             <tr>
               <th>Profile</th>
-              <th>Name</th>
+              <th>First Name</th>
+              <th>Last Name</th>
               <th>Email</th>
               <th v-if="activeTab === 'students'">LRN</th>
               <th v-if="activeTab === 'students'">Grade</th>
@@ -812,10 +815,10 @@
                 </div>
               </td>
               
-              <!-- Name -->
+              <!-- First Name -->
               <td>
                 <div v-if="!isRowEditing(user.id)">
-                  {{ user.firstName }} {{ user.lastName }}
+                  {{ user.firstName }}
                 </div>
                 <div v-else class="inline-edit-name">
                   <input 
@@ -824,6 +827,15 @@
                     class="inline-input"
                     placeholder="First Name"
                   />
+                </div>
+              </td>
+              
+              <!-- Last Name -->
+              <td>
+                <div v-if="!isRowEditing(user.id)">
+                  {{ user.lastName }}
+                </div>
+                <div v-else class="inline-edit-name">
                   <input 
                     v-model="inlineEditData[user.id].lastName" 
                     type="text" 
@@ -3135,19 +3147,9 @@ const getExportData = () => {
     dataToExport = filteredUsers.value.map(student => {
       const row = {};
       if (fields.name) {
-        // Split the display name back into firstName and lastName
-        const displayName = getDisplayName(student);
-        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
-          // If sorting by last name, format is "Last Name, First Name"
-          const nameParts = displayName.split(', ');
-          row['lastName'] = nameParts[0] || '';
-          row['firstName'] = nameParts[1] || '';
-        } else {
-          // Default format is "First Name Last Name"
-          const nameParts = displayName.split(' ');
-          row['firstName'] = nameParts[0] || '';
-          row['lastName'] = nameParts.slice(1).join(' ') || '';
-        }
+        // Use original firstName and lastName directly from the user object
+        row['firstName'] = student.firstName || '';
+        row['lastName'] = student.lastName || '';
       }
       if (fields.email) row['email'] = student.email;
       if (fields.lrn) row['lrn'] = student.lrn || '';
@@ -3172,19 +3174,9 @@ const getExportData = () => {
     dataToExport = filteredUsers.value.map(teacher => {
       const row = {};
       if (fields.name) {
-        // Split the display name back into firstName and lastName
-        const displayName = getDisplayName(teacher);
-        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
-          // If sorting by last name, format is "Last Name, First Name"
-          const nameParts = displayName.split(', ');
-          row['lastName'] = nameParts[0] || '';
-          row['firstName'] = nameParts[1] || '';
-        } else {
-          // Default format is "First Name Last Name"
-          const nameParts = displayName.split(' ');
-          row['firstName'] = nameParts[0] || '';
-          row['lastName'] = nameParts.slice(1).join(' ') || '';
-        }
+        // Use original firstName and lastName directly from the user object
+        row['firstName'] = teacher.firstName || '';
+        row['lastName'] = teacher.lastName || '';
       }
       if (fields.email) row['email'] = teacher.email;
       if (fields.department) row['department'] = teacher.department || '';
@@ -3206,19 +3198,9 @@ const getExportData = () => {
     dataToExport = filteredUsers.value.map(admin => {
       const row = {};
       if (fields.name) {
-        // Split the display name back into firstName and lastName
-        const displayName = getDisplayName(admin);
-        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
-          // If sorting by last name, format is "Last Name, First Name"
-          const nameParts = displayName.split(', ');
-          row['lastName'] = nameParts[0] || '';
-          row['firstName'] = nameParts[1] || '';
-        } else {
-          // Default format is "First Name Last Name"
-          const nameParts = displayName.split(' ');
-          row['firstName'] = nameParts[0] || '';
-          row['lastName'] = nameParts.slice(1).join(' ') || '';
-        }
+        // Use original firstName and lastName directly from the user object
+        row['firstName'] = admin.firstName || '';
+        row['lastName'] = admin.lastName || '';
       }
       if (fields.email) row['email'] = admin.email;
       row['address'] = admin.address || '';
@@ -3253,19 +3235,9 @@ const getExportData = () => {
     dataToExport = filteredArchivedUsers.value.map(user => {
       const row = {};
       if (fields.name) {
-        // Split the display name back into firstName and lastName
-        const displayName = getDisplayName(user);
-        if (filters.value.sortBy && filters.value.sortBy.includes('lastName')) {
-          // If sorting by last name, format is "Last Name, First Name"
-          const nameParts = displayName.split(', ');
-          row['lastName'] = nameParts[0] || '';
-          row['firstName'] = nameParts[1] || '';
-        } else {
-          // Default format is "First Name Last Name"
-          const nameParts = displayName.split(' ');
-          row['firstName'] = nameParts[0] || '';
-          row['lastName'] = nameParts.slice(1).join(' ') || '';
-        }
+        // Use original firstName and lastName directly from the user object
+        row['firstName'] = user.firstName || '';
+        row['lastName'] = user.lastName || '';
       }
       if (fields.email) row['email'] = user.email;
       row['role'] = user.role;
