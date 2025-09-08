@@ -841,7 +841,7 @@
             <div v-if="!documentFile" class="upload-placeholder">
               <span class="material-icons large-icon">upload_file</span>
               <p>Drag and drop your file here or click to browse</p>
-              <p class="smaller">PDF or DOCX format</p>
+              <p class="smaller">PDF format</p>
             </div>
             
             <div v-else class="file-info">
@@ -4607,8 +4607,10 @@ small {
 .question-type {
   font-size: 0.85rem;
   background-color: #f5f5f5;
+  color: #333;
   padding: 3px 8px;
   border-radius: 12px;
+  font-weight: 500;
 }
 
 .question-text {

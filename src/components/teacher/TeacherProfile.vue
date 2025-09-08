@@ -1318,6 +1318,327 @@ const toggleCamera = () => {
   100% { transform: rotate(360deg); }
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .profile-page {
+    padding: 1.6rem;
+  }
+  
+  .header-container {
+    margin-bottom: 24px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+    gap: 10px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 7rem;
+    top: 25%;
+    right: 4rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .edit-section {
+    padding: 1.8rem;
+    border-radius: 14px;
+  }
+  
+  .section-header {
+    margin-bottom: 1.6rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.3rem;
+    gap: 0.6rem;
+  }
+  
+  .edit-btn {
+    padding: 0.65rem 1.3rem;
+    font-size: 0.9rem;
+  }
+  
+  .form-grid {
+    gap: 1.3rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+  }
+  
+  .input-wrapper input {
+    padding: 0.65rem 0.9rem 0.65rem 2.7rem;
+    font-size: 0.9rem;
+  }
+  
+  .input-wrapper .material-icons-round {
+    left: 0.9rem;
+    font-size: 1.1rem;
+  }
+  
+  .password-fields {
+    gap: 1.3rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+  
+  .password-header h3 {
+    font-size: 1rem;
+    gap: 0.6rem;
+  }
+  
+  .save-btn {
+    padding: 0.65rem 1.3rem;
+    font-size: 0.9rem;
+  }
+  
+  /* Profile picture responsive styles */
+  .profile-img-wrapper {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .picture-actions {
+    gap: 0.8rem;
+  }
+  
+  .upload-btn, .remove-btn, .camera-btn {
+    padding: 0.65rem 1.3rem;
+    font-size: 0.9rem;
+  }
+  
+  .picture-hint {
+    font-size: 0.75rem;
+  }
+}
+
+/* Medium laptops and smaller screens (1366px) */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .profile-page {
+    padding: 1.4rem;
+  }
+  
+  .header-container {
+    margin-bottom: 20px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.7rem;
+    gap: 8px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    top: 25%;
+    right: 3rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .edit-section {
+    padding: 1.6rem;
+    border-radius: 12px;
+  }
+  
+  .section-header {
+    margin-bottom: 1.4rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.2rem;
+    gap: 0.5rem;
+  }
+  
+  .edit-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  .form-grid {
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
+  }
+  
+  .input-wrapper input {
+    padding: 0.6rem 0.8rem 0.6rem 2.5rem;
+    font-size: 0.85rem;
+  }
+  
+  .input-wrapper .material-icons-round {
+    left: 0.8rem;
+    font-size: 1rem;
+  }
+  
+  .password-fields {
+    gap: 1.2rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+  
+  .password-header h3 {
+    font-size: 0.95rem;
+    gap: 0.5rem;
+  }
+  
+  .save-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  /* Profile picture responsive styles */
+  .profile-img-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .picture-actions {
+    gap: 0.7rem;
+  }
+  
+  .upload-btn, .remove-btn, .camera-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  .picture-hint {
+    font-size: 0.7rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .profile-page {
+    padding: 1.2rem;
+  }
+  
+  .header-container {
+    margin-bottom: 18px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.6rem;
+    gap: 6px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    top: 25%;
+    right: 2rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .edit-section {
+    padding: 1.4rem;
+    border-radius: 10px;
+  }
+  
+  .section-header {
+    margin-bottom: 1.2rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.1rem;
+    gap: 0.4rem;
+  }
+  
+  .edit-btn {
+    padding: 0.55rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .form-grid {
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  
+  .input-wrapper input {
+    padding: 0.55rem 0.7rem 0.55rem 2.3rem;
+    font-size: 0.8rem;
+  }
+  
+  .input-wrapper .material-icons-round {
+    left: 0.7rem;
+    font-size: 0.9rem;
+  }
+  
+  .password-fields {
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  
+  .password-header h3 {
+    font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+  
+  .save-btn {
+    padding: 0.55rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  /* Profile picture responsive styles */
+  .profile-img-wrapper {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .picture-actions {
+    gap: 0.6rem;
+  }
+  
+  .upload-btn, .remove-btn, .camera-btn {
+    padding: 0.55rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .picture-hint {
+    font-size: 0.65rem;
+  }
+}
+
 @media (max-width: 768px) {
   .profile-page {
     padding: 10px;

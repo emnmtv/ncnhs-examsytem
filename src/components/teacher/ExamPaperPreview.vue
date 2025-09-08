@@ -344,7 +344,7 @@ export default {
       const filename = `${exam.value?.examTitle || 'Exam'}_${includeAnswers ? 'with_answers' : 'student_copy'}.pdf`;
       
       const opt = {
-        margin: [15, 15, 15, 15], // [top, right, bottom, left] margins in mm
+        margin: [10, 10, 10, 10], // [top, right, bottom, left] margins in mm - reduced margins
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -559,7 +559,7 @@ input:checked + .slider:before {
 
 /* School Header */
 .school-header {
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   break-after: avoid !important;
 }
 
@@ -567,13 +567,13 @@ input:checked + .slider:before {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .logo-container {
-  width: 80px;
-  height: 80px;
-  margin-right: 20px;
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
 }
 
 .school-logo {
@@ -587,60 +587,61 @@ input:checked + .slider:before {
 }
 
 .republic, .department, .region, .division {
-  font-size: 12px;
-  margin-bottom: 2px;
+  font-size: 8px;
+  margin-bottom: 0px;
+  line-height: 1.1;
 }
 
 .school-name {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
-  margin: 4px 0;
-  letter-spacing: 1px;
+  margin: 2px 0;
+  letter-spacing: 0.3px;
 }
 
 .address {
-  font-size: 12px;
+  font-size: 8px;
   font-style: italic;
 }
 
 .line-break {
-  height: 2px;
+  height: 1px;
   background: #000;
-  margin: 10px 0;
+  margin: 4px 0;
 }
 
 /* Exam Title Section */
 .exam-title-section {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   break-after: avoid !important;
 }
 
 .exam-title-section h1 {
-  font-size: 22px;
+  font-size: 16px;
   margin: 0;
   text-transform: uppercase;
   font-weight: bold;
 }
 
 .exam-subtitle {
-  font-size: 16px;
-  margin-top: 4px;
+  font-size: 12px;
+  margin-top: 2px;
 }
 
 /* Student Info Section */
 .student-info-section {
-  margin-bottom: 30px;
+  margin-bottom: 8px;
   border: 1px solid #000;
-  padding: 15px;
+  padding: 6px;
   break-after: avoid !important;
 }
 
 .student-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 
 .info-group {
@@ -650,18 +651,21 @@ input:checked + .slider:before {
 
 .info-label {
   font-weight: bold;
-  min-width: 100px;
+  min-width: 60px;
+  font-size: 10px;
 }
 
 .info-value {
   flex: 1;
   border-bottom: 1px solid #000;
+  height: 16px;
 }
 
 .exam-details {
-  margin-top: 15px;
+  margin-top: 4px;
   display: flex;
   justify-content: space-between;
+  font-size: 10px;
 }
 
 .detail-item {
@@ -700,37 +704,46 @@ input:checked + .slider:before {
 
 /* Questions Section */
 .questions-section {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  margin-top: 5px;
   position: relative;
+  column-count: 2;
+  column-gap: 15px;
+  column-fill: balance;
 }
 
 .question-item {
-  margin-bottom: 25px;
+  margin-bottom: 10px;
   page-break-inside: avoid !important;
   break-inside: avoid !important;
   position: relative;
+  display: inline-block;
+  width: 100%;
 }
 
 .question-header {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: flex-start;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   break-after: avoid !important;
 }
 
 .question-number {
   font-weight: bold;
-  min-width: 25px;
+  min-width: 20px;
+  font-size: 12px;
 }
 
 .question-text {
   flex: 1;
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .question-type {
   font-style: italic;
-  font-size: 0.9em;
+  font-size: 10px;
   color: #555;
   font-weight: normal;
 }
@@ -738,55 +751,57 @@ input:checked + .slider:before {
 /* Question Image */
 .question-image-container {
   text-align: center;
-  margin: 15px 0;
+  margin: 8px 0;
 }
 
 .question-image {
   max-width: 80%;
-  max-height: 250px;
+  max-height: 200px;
   border: 1px solid #ddd;
 }
 
 /* Options */
 .options-list {
-  padding-left: 35px;
-  margin-top: 10px;
+  padding-left: 25px;
+  margin-top: 6px;
 }
 
 .option-item {
   display: flex;
   align-items: flex-start;
-  gap: 15px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 6px;
 }
 
 .circle {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-width: 24px;
-  height: 24px;
+  min-width: 18px;
+  height: 18px;
   border: 1px solid #000;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: bold;
 }
 
 .option-text {
   flex: 1;
-  padding-top: 3px;
+  padding-top: 2px;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 /* Text Answer */
 .text-answer {
-  padding-left: 35px;
-  margin-top: 10px;
+  padding-left: 25px;
+  margin-top: 6px;
 }
 
 .answer-lines {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 }
 
 .line {
@@ -797,27 +812,28 @@ input:checked + .slider:before {
 
 /* Correct Answer (Teacher version) */
 .correct-answer {
-  margin-top: 10px;
-  padding: 10px;
+  margin-top: 6px;
+  padding: 6px;
   background-color: #e8f5e9;
-  border-left: 4px solid #4CAF50;
+  border-left: 3px solid #4CAF50;
+  font-size: 10px;
 }
 
 .answer-label {
   font-weight: bold;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 /* Footer */
 .exam-footer {
-  margin-top: 40px;
+  margin-top: 25px;
   text-align: center;
 }
 
 .prepared-by {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .teacher-section, .approved-section {
@@ -826,39 +842,41 @@ input:checked + .slider:before {
 
 .footer-label {
   font-weight: bold;
-  margin-bottom: 25px;
+  margin-bottom: 15px;
+  font-size: 11px;
 }
 
 .footer-line {
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .footer-name {
   font-weight: bold;
+  font-size: 11px;
 }
 
 .footer-position {
   font-style: italic;
-  font-size: 12px;
+  font-size: 10px;
 }
 
 .watermark {
-  font-size: 12px;
+  font-size: 10px;
   color: #777;
   font-style: italic;
-  margin-bottom: 5px;
+  margin-bottom: 3px;
 }
 
 .end-note {
   font-weight: bold;
-  margin-top: 20px;
-  font-size: 14px;
+  margin-top: 15px;
+  font-size: 12px;
 }
 
 /* Print Styles */
 @media print {
   @page {
-    margin: 1.5cm;
+    margin: 1cm;
     size: A4;
   }
 
@@ -900,17 +918,47 @@ input:checked + .slider:before {
     height: 1px !important;
   }
 
-  /* Keep consistent font size */
+  /* Smaller font sizes for print */
   body {
-    font-size: 11pt;
+    font-size: 8pt;
+  }
+
+  .school-name {
+    font-size: 12pt !important;
+  }
+
+  .exam-title-section h1 {
+    font-size: 14pt !important;
+  }
+
+  .exam-subtitle {
+    font-size: 10pt !important;
   }
 
   .question-text {
-    font-size: 11pt;
+    font-size: 8pt !important;
+    line-height: 1.1 !important;
   }
 
   .option-text {
-    font-size: 11pt;
+    font-size: 7pt !important;
+    line-height: 1.0 !important;
+  }
+
+  .question-number {
+    font-size: 8pt !important;
+  }
+
+  .question-type {
+    font-size: 6pt !important;
+  }
+
+  .info-label {
+    font-size: 8pt !important;
+  }
+
+  .exam-details {
+    font-size: 8pt !important;
   }
 
   .page-break {
@@ -925,7 +973,38 @@ input:checked + .slider:before {
   
   /* Ensure footer stays at bottom */
   .exam-footer {
-    margin-top: 40px;
+    margin-top: 20px;
+  }
+
+  /* Optimize spacing for print */
+  .school-header {
+    margin-bottom: 5px !important;
+  }
+
+  .exam-title-section {
+    margin-bottom: 5px !important;
+  }
+
+  .student-info-section {
+    margin-bottom: 5px !important;
+    padding: 4px !important;
+  }
+
+  .question-item {
+    margin-bottom: 6px !important;
+  }
+
+  .questions-section {
+    column-gap: 12px !important;
+    margin-top: 2px !important;
+  }
+
+  .header-content {
+    margin-bottom: 2px !important;
+  }
+
+  .line-break {
+    margin: 2px 0 !important;
   }
 }
 

@@ -77,6 +77,9 @@
         <div class="question-header">
           <span class="question-type">{{ formatQuestionType(question.questionType) }}</span>
           <div class="question-actions">
+            <button @click="showQuestionInfo(question)" title="View Question Info" class="info-btn">
+              <span class="material-icons">info</span>
+            </button>
             <button @click="assignToFolder(question)" title="Assign to Folder">
               <span class="material-icons">folder_copy</span>
             </button>
@@ -93,23 +96,6 @@
             <img :src="getImageUrl(question.imageUrl)" alt="Question image">
           </div>
 
-          <div class="source-info" v-if="question.sourceTestCode || question.sourceClassCode || question.sourceExamTitle">
-            <h4>Source Exam:</h4>
-            <div class="source-details">
-              <span v-if="question.sourceExamTitle" class="exam-title">
-                <span class="material-icons">title</span>
-                {{ question.sourceExamTitle }}
-              </span>
-              <span v-if="question.sourceTestCode" class="test-code">
-                <span class="material-icons">code</span>
-                {{ question.sourceTestCode }}
-              </span>
-              <span v-if="question.sourceClassCode" class="class-code">
-                <span class="material-icons">class</span>
-                {{ question.sourceClassCode }}
-              </span>
-            </div>
-          </div>
 
           <div class="question-meta">
             <span class="folder" v-if="question.folder">
@@ -221,6 +207,90 @@
         </div>
       </div>
     </div>
+
+    <!-- Question Info Modal -->
+    <div v-if="showQuestionInfoModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Question Information</h2>
+          <button class="close-btn" @click="closeQuestionInfoModal">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body" v-if="selectedQuestionForInfo">
+          <div class="question-info-content">
+            <div class="info-section">
+              <h3>Question Details</h3>
+              <div class="info-item">
+                <label>Question Text:</label>
+                <p>{{ selectedQuestionForInfo.questionText }}</p>
+              </div>
+              <div class="info-item">
+                <label>Question Type:</label>
+                <span class="question-type-badge">{{ formatQuestionType(selectedQuestionForInfo.questionType) }}</span>
+              </div>
+              <div class="info-item">
+                <label>Difficulty:</label>
+                <span :class="['difficulty-badge', selectedQuestionForInfo.difficulty]">
+                  <span class="material-icons">{{ getDifficultyIcon(selectedQuestionForInfo.difficulty) }}</span>
+                  {{ selectedQuestionForInfo.difficulty }}
+                </span>
+              </div>
+              <div class="info-item" v-if="selectedQuestionForInfo.subject">
+                <label>Subject:</label>
+                <span class="subject-badge">{{ selectedQuestionForInfo.subject }}</span>
+              </div>
+              <div class="info-item" v-if="selectedQuestionForInfo.folder">
+                <label>Folder:</label>
+                <span class="folder-badge">
+                  <span class="material-icons">folder</span>
+                  {{ selectedQuestionForInfo.folder.name }}
+                </span>
+              </div>
+            </div>
+
+            <div class="info-section" v-if="selectedQuestionForInfo.sourceTestCode || selectedQuestionForInfo.sourceClassCode || selectedQuestionForInfo.sourceExamTitle">
+              <h3>Source Exam Information</h3>
+              <div class="source-details">
+                <div class="info-item" v-if="selectedQuestionForInfo.sourceExamTitle">
+                  <label>Exam Title:</label>
+                  <span class="exam-title-badge">
+                    <span class="material-icons">title</span>
+                    {{ selectedQuestionForInfo.sourceExamTitle }}
+                  </span>
+                </div>
+                <div class="info-item" v-if="selectedQuestionForInfo.sourceTestCode">
+                  <label>Test Code:</label>
+                  <span class="test-code-badge">
+                    <span class="material-icons">code</span>
+                    {{ selectedQuestionForInfo.sourceTestCode }}
+                  </span>
+                </div>
+                <div class="info-item" v-if="selectedQuestionForInfo.sourceClassCode">
+                  <label>Class Code:</label>
+                  <span class="class-code-badge">
+                    <span class="material-icons">class</span>
+                    {{ selectedQuestionForInfo.sourceClassCode }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section" v-if="selectedQuestionForInfo.imageUrl">
+              <h3>Question Image</h3>
+              <div class="question-image-preview">
+                <img :src="getImageUrl(selectedQuestionForInfo.imageUrl)" alt="Question image">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="close-info-btn" @click="closeQuestionInfoModal">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -246,6 +316,8 @@ export default {
     const showAssignFolderModal = ref(false);
     const selectedFolderForAssign = ref('');
     const currentQuestion = ref(null);
+    const showQuestionInfoModal = ref(false);
+    const selectedQuestionForInfo = ref(null);
 
     const loadQuestions = async () => {
       try {
@@ -453,6 +525,16 @@ export default {
       currentQuestion.value = null;
     };
 
+    const showQuestionInfo = (question) => {
+      selectedQuestionForInfo.value = question;
+      showQuestionInfoModal.value = true;
+    };
+
+    const closeQuestionInfoModal = () => {
+      showQuestionInfoModal.value = false;
+      selectedQuestionForInfo.value = null;
+    };
+
     return {
       questions,
       folders,
@@ -480,7 +562,11 @@ export default {
       selectedFolderForAssign,
       assignToFolder,
       saveAssignFolder,
-      closeAssignFolderModal
+      closeAssignFolderModal,
+      showQuestionInfoModal,
+      selectedQuestionForInfo,
+      showQuestionInfo,
+      closeQuestionInfoModal
     };
   }
 };
@@ -744,7 +830,7 @@ export default {
   background: white;
   border-radius: 12px;
   width: 90%;
-  max-width: 800px;
+  max-width: 1000px;
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -1077,6 +1163,10 @@ export default {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.question-actions .info-btn:hover {
+  background: rgba(33, 150, 243, 0.3);
+}
+
 .question-content {
   padding: 15px;
 }
@@ -1208,6 +1298,849 @@ export default {
   border-color: #2196F3;
   outline: none;
   box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+/* Question Info Modal Styles */
+.question-info-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-section {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.info-section h3 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1rem;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 8px;
+}
+
+.info-item {
+  margin-bottom: 12px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item label {
+  display: block;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+}
+
+.info-item p {
+  margin: 0;
+  color: #333;
+  line-height: 1.5;
+  background: white;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.question-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.difficulty-badge.easy {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.difficulty-badge.medium {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty-badge.hard {
+  background: #fbe9e7;
+  color: #d84315;
+}
+
+.subject-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  background: #f1f8e9;
+  color: #558b2f;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.folder-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #e3f2fd;
+  color: #1976d2;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.exam-title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #e8eaf6;
+  color: #3f51b5;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.test-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #f3e5f5;
+  color: #9c27b0;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.class-code-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: #e0f2f1;
+  color: #009688;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.question-image-preview {
+  text-align: center;
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+}
+
+.question-image-preview img {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.close-info-btn {
+  padding: 10px 20px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s;
+}
+
+.close-info-btn:hover {
+  background: #1976D2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .question-bank-container {
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .filters-section {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .search-box input {
+    padding: 10px 35px 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .filter-group {
+    gap: 8px;
+  }
+  
+  .filter-group select {
+    padding: 8px 12px;
+    font-size: 0.95rem;
+    min-width: 130px;
+  }
+  
+  .actions-row {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .manage-folders-btn {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+  }
+  
+  .questions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+  
+  .question-card {
+    border-radius: 10px;
+  }
+  
+  .question-header {
+    padding: 12px;
+  }
+  
+  .question-type {
+    font-size: 0.85rem;
+    padding: 3px 10px;
+  }
+  
+  .question-actions button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .question-content {
+    padding: 12px;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  
+  .question-meta {
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+  
+  .question-meta span {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  .source-info {
+    margin: 12px 0;
+    padding: 8px;
+  }
+  
+  .source-info h4 {
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+  }
+  
+  .source-details {
+    gap: 8px;
+  }
+  
+  .source-details span {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  .modal-content {
+    max-width: 900px;
+    width: 95%;
+    border-radius: 10px;
+  }
+  
+  .modal-header {
+    padding: 12px 16px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .modal-body {
+    padding: 12px 16px;
+  }
+  
+  .form-group label {
+    margin-bottom: 4px;
+    font-size: 0.8rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .folder-input-group {
+    gap: 6px;
+  }
+  
+  .create-folder-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .folder-item {
+    padding: 8px;
+  }
+  
+  .folder-name {
+    font-size: 0.8rem;
+  }
+  
+  .question-count {
+    font-size: 0.75rem;
+  }
+  
+  .modal-actions {
+    gap: 6px;
+    margin-top: 12px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .folder-select {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .question-info-content {
+    gap: 12px;
+  }
+  
+  .info-section {
+    padding: 8px;
+  }
+  
+  .info-section h3 {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  
+  .info-item {
+    margin-bottom: 6px;
+  }
+  
+  .info-item label {
+    font-size: 0.75rem;
+  }
+  
+  .info-item p {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .question-image-preview {
+    padding: 8px;
+  }
+  
+  .question-image-preview img {
+    max-height: 200px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .question-bank-container {
+    padding: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.7rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .filters-section {
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  
+  .search-box input {
+    padding: 8px 30px 8px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .filter-group {
+    gap: 6px;
+  }
+  
+  .filter-group select {
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    min-width: 120px;
+  }
+  
+  .actions-row {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .manage-folders-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .questions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+  
+  .question-card {
+    border-radius: 8px;
+  }
+  
+  .question-header {
+    padding: 10px;
+  }
+  
+  .question-type {
+    font-size: 0.8rem;
+    padding: 2px 8px;
+  }
+  
+  .question-actions button {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .question-content {
+    padding: 10px;
+  }
+  
+  .question-text {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .question-meta {
+    gap: 5px;
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+  
+  .question-meta span {
+    font-size: 0.75rem;
+    padding: 2px 5px;
+  }
+  
+  .source-info {
+    margin: 10px 0;
+    padding: 6px;
+  }
+  
+  .source-info h4 {
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+  }
+  
+  .source-details {
+    gap: 6px;
+  }
+  
+  .source-details span {
+    font-size: 0.75rem;
+    padding: 2px 5px;
+  }
+  
+  .modal-content {
+    max-width: 800px;
+    width: 95%;
+    border-radius: 8px;
+  }
+  
+  .modal-header {
+    padding: 10px 12px;
+    border-radius: 8px 8px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1rem;
+  }
+  
+  .modal-body {
+    padding: 10px 12px;
+  }
+  
+  .form-group label {
+    margin-bottom: 4px;
+    font-size: 0.75rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 5px;
+    font-size: 0.75rem;
+  }
+  
+  .folder-input-group {
+    gap: 5px;
+  }
+  
+  .create-folder-btn {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .folder-item {
+    padding: 6px;
+  }
+  
+  .folder-name {
+    font-size: 0.75rem;
+  }
+  
+  .question-count {
+    font-size: 0.7rem;
+  }
+  
+  .modal-actions {
+    gap: 5px;
+    margin-top: 10px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .folder-select {
+    padding: 5px;
+    font-size: 0.75rem;
+  }
+  
+  .question-info-content {
+    gap: 10px;
+  }
+  
+  .info-section {
+    padding: 6px;
+  }
+  
+  .info-section h3 {
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+  
+  .info-item {
+    margin-bottom: 5px;
+  }
+  
+  .info-item label {
+    font-size: 0.7rem;
+  }
+  
+  .info-item p {
+    padding: 4px;
+    font-size: 0.75rem;
+  }
+  
+  .question-image-preview {
+    padding: 6px;
+  }
+  
+  .question-image-preview img {
+    max-height: 150px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .question-bank-container {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .filters-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .search-box input {
+    padding: 6px 25px 6px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .filter-group {
+    gap: 5px;
+  }
+  
+  .filter-group select {
+    padding: 5px 8px;
+    font-size: 0.85rem;
+    min-width: 110px;
+  }
+  
+  .actions-row {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .manage-folders-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .questions-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  
+  .question-card {
+    border-radius: 6px;
+  }
+  
+  .question-header {
+    padding: 8px;
+  }
+  
+  .question-type {
+    font-size: 0.75rem;
+    padding: 1px 6px;
+  }
+  
+  .question-actions button {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .question-content {
+    padding: 8px;
+  }
+  
+  .question-text {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  
+  .question-meta {
+    gap: 4px;
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  
+  .question-meta span {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .source-info {
+    margin: 8px 0;
+    padding: 4px;
+  }
+  
+  .source-info h4 {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+  }
+  
+  .source-details {
+    gap: 4px;
+  }
+  
+  .source-details span {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .modal-content {
+    max-width: 700px;
+    width: 95%;
+    border-radius: 6px;
+  }
+  
+  .modal-header {
+    padding: 8px 10px;
+    border-radius: 6px 6px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 0.95rem;
+  }
+  
+  .modal-body {
+    padding: 8px 10px;
+  }
+  
+  .form-group label {
+    margin-bottom: 3px;
+    font-size: 0.7rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 3px;
+    font-size: 0.7rem;
+  }
+  
+  .folder-input-group {
+    gap: 3px;
+  }
+  
+  .create-folder-btn {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .folder-item {
+    padding: 4px;
+  }
+  
+  .folder-name {
+    font-size: 0.7rem;
+  }
+  
+  .question-count {
+    font-size: 0.65rem;
+  }
+  
+  .modal-actions {
+    gap: 3px;
+    margin-top: 8px;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .folder-select {
+    padding: 3px;
+    font-size: 0.7rem;
+  }
+  
+  .question-info-content {
+    gap: 8px;
+  }
+  
+  .info-section {
+    padding: 4px;
+  }
+  
+  .info-section h3 {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+  }
+  
+  .info-item {
+    margin-bottom: 3px;
+  }
+  
+  .info-item label {
+    font-size: 0.65rem;
+  }
+  
+  .info-item p {
+    padding: 3px;
+    font-size: 0.7rem;
+  }
+  
+  .question-image-preview {
+    padding: 4px;
+  }
+  
+  .question-image-preview img {
+    max-height: 120px;
+  }
 }
 
 @media (max-width: 768px) {

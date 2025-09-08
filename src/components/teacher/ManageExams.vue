@@ -28,6 +28,18 @@
     </div>
 
       <div class="header-actions">
+        <div class="search-container">
+          <i class="fas fa-search search-icon"></i>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search exams by title, subject, or test code..." 
+            class="search-input"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
         <button class="template-btn" @click="downloadTemplate">
           <i class="fas fa-file-download"></i> Download Template
         </button>
@@ -90,7 +102,7 @@
               <span class="exam-meta-item">
                 <i class="fas fa-chalkboard"></i> {{ exam.classCode || 'No Class' }}
               </span>
-              <span class="exam-meta-item">
+              <span class="exam-meta-item clickable" @click="copyTestCode(exam.testCode)" title="Click to copy test code">
                 <i class="fas fa-key"></i> {{ exam.testCode }}
               </span>
               <span class="exam-meta-item" :class="'status-' + exam.status">
@@ -766,6 +778,7 @@ export default {
     const activeTab = ref('active');
     const loading = ref(true);
     const error = ref(null);
+    const searchQuery = ref('');
     const socket = ref(null);
     const showAccessModal = ref(false);
     const selectedExam = ref(null);
@@ -809,13 +822,27 @@ export default {
       loadSubjects(); // Load subjects on component mount
     });
 
-    // Computed property for currently displayed exams based on active tab
+    // Computed property for currently displayed exams based on active tab and search
     const displayedExams = computed(() => {
+      let examList = [];
       if (activeTab.value === 'active') {
-        return exams.value || [];
+        examList = exams.value || [];
       } else {
-        return archivedExams.value || [];
+        examList = archivedExams.value || [];
       }
+
+      // Apply search filter if search query exists
+      if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase().trim();
+        return examList.filter(exam => 
+          exam.examTitle.toLowerCase().includes(query) ||
+          (exam.classCode && exam.classCode.toLowerCase().includes(query)) ||
+          exam.testCode.toLowerCase().includes(query) ||
+          (exam.subject && exam.subject.toLowerCase().includes(query))
+        );
+      }
+
+      return examList;
     });
 
     // Switch between active and archived exams tabs
@@ -1529,6 +1556,59 @@ export default {
       router.push(`/exam-mps/${exam.id}`);
     };
 
+    const copyTestCode = async (testCode) => {
+      try {
+        await navigator.clipboard.writeText(testCode);
+        
+        // Show success toast
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+          }
+        });
+
+        Toast.fire({
+          icon: 'success',
+          title: `Test code "${testCode}" copied to clipboard!`
+        });
+      } catch (err) {
+        // Fallback for older browsers
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = testCode;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          Swal.fire({
+            icon: 'success',
+            title: 'Copied!',
+            text: `Test code "${testCode}" copied to clipboard!`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } catch (fallbackErr) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Copy Failed',
+            text: 'Unable to copy test code to clipboard',
+            confirmButtonColor: '#4CAF50'
+          });
+        }
+      }
+    };
+
+    const clearSearch = () => {
+      searchQuery.value = '';
+    };
+
     const confirmArchive = async (exam) => {
       const result = await Swal.fire({
         title: 'Archive Exam?',
@@ -1658,7 +1738,10 @@ export default {
       addSubjectAccess,
       removeSubjectAccess,
       toggleSubjectAccessItem,
-      getSubjectName
+      getSubjectName,
+      copyTestCode,
+      searchQuery,
+      clearSearch
     };
   }
 };
@@ -1778,6 +1861,66 @@ export default {
   gap: 1rem;
   margin-bottom: 2rem;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+  max-width: 500px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 45px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+  transform: translateY(-1px);
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.clear-search-btn:hover {
+  background: #f5f5f5;
+  color: #666;
 }
 
 .template-btn, .import-btn, .create-btn {
@@ -2014,6 +2157,22 @@ export default {
   background: rgba(0, 0, 0, 0.1);
   padding: 4px 10px;
   border-radius: 20px;
+}
+
+.exam-meta-item.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.exam-meta-item.clickable:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.exam-meta-item.clickable:active {
+  transform: scale(0.98);
 }
 
 .status-started {
@@ -2917,6 +3076,21 @@ input:checked + .slider:before {
     margin-bottom: 1.6rem;
   }
   
+  .search-container {
+    min-width: 250px;
+    max-width: 400px;
+  }
+  
+  .search-input {
+    padding: 10px 14px 10px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .search-icon {
+    left: 14px;
+    font-size: 0.85rem;
+  }
+  
   .template-btn, .import-btn, .create-btn {
     padding: 0.6rem 1rem;
     font-size: 0.9rem;
@@ -2944,6 +3118,10 @@ input:checked + .slider:before {
   .exam-meta-item {
     font-size: 0.85rem;
     padding: 3px 8px;
+  }
+  
+  .exam-meta-item.clickable:hover {
+    transform: scale(1.03);
   }
   
   .exam-body {
@@ -3121,6 +3299,21 @@ input:checked + .slider:before {
     margin-bottom: 1.4rem;
   }
   
+  .search-container {
+    min-width: 200px;
+    max-width: 350px;
+  }
+  
+  .search-input {
+    padding: 8px 12px 8px 35px;
+    font-size: 0.85rem;
+  }
+  
+  .search-icon {
+    left: 12px;
+    font-size: 0.8rem;
+  }
+  
   .template-btn, .import-btn, .create-btn {
     padding: 0.5rem 0.9rem;
     font-size: 0.85rem;
@@ -3154,6 +3347,10 @@ input:checked + .slider:before {
     font-size: 0.8rem;
     padding: 2px 6px;
     gap: 4px;
+  }
+  
+  .exam-meta-item.clickable:hover {
+    transform: scale(1.02);
   }
   
   .exam-body {
@@ -3441,6 +3638,21 @@ input:checked + .slider:before {
     margin-bottom: 1.2rem;
   }
   
+  .search-container {
+    min-width: 180px;
+    max-width: 300px;
+  }
+  
+  .search-input {
+    padding: 6px 10px 6px 30px;
+    font-size: 0.8rem;
+  }
+  
+  .search-icon {
+    left: 10px;
+    font-size: 0.75rem;
+  }
+  
   .template-btn, .import-btn, .create-btn {
     padding: 0.4rem 0.8rem;
     font-size: 0.8rem;
@@ -3474,6 +3686,10 @@ input:checked + .slider:before {
     font-size: 0.75rem;
     padding: 1px 5px;
     gap: 3px;
+  }
+  
+  .exam-meta-item.clickable:hover {
+    transform: scale(1.01);
   }
   
   .exam-body {
@@ -3758,6 +3974,28 @@ input:checked + .slider:before {
     gap: 10px;
   }
   
+  .header-actions {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+  
+  .search-container {
+    min-width: auto;
+    max-width: none;
+    order: 1;
+  }
+  
+  .search-input {
+    padding: 12px 16px 12px 45px;
+    font-size: 0.9rem;
+  }
+  
+  .search-icon {
+    left: 16px;
+    font-size: 0.9rem;
+  }
+
   .template-btn, .import-btn, .create-btn {
     width: calc(32% - 8px);
     padding: 10px 8px;

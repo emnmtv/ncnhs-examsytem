@@ -825,12 +825,521 @@
     font-size: 1.25rem;
   }
   
-  @media (max-width: 768px) {
-    .manage-exam-container {
-      padding: 0rem;
-    }
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .manage-exam-container {
+    padding: 1.6rem;
+  }
   
-    
+  .header-container {
+    margin-bottom: 24px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+    gap: 10px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .test-code-section {
+    padding: 1.6rem;
+    margin-bottom: 1.6rem;
+    border-radius: 14px;
+  }
+  
+  .input-wrapper {
+    gap: 0.8rem;
+    max-width: 450px;
+  }
+  
+  .input-wrapper label {
+    font-size: 0.95rem;
+  }
+  
+  .test-code-input {
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+  
+  .join-btn {
+    padding: 0.8rem;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    gap: 0.4rem;
+  }
+  
+  .control-panel {
+    gap: 1.6rem;
+  }
+  
+  .panel-grid {
+    gap: 1.2rem;
+  }
+  
+  .stat-card {
+    padding: 1.2rem;
+    border-radius: 14px;
+    gap: 0.8rem;
+  }
+  
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    font-size: 1.3rem;
+  }
+  
+  .stat-info h3 {
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .stat-value {
+    font-size: 1.3rem;
+  }
+  
+  .stat-label {
+    font-size: 0.85rem;
+  }
+  
+  .status-badge {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .action-card {
+    padding: 1.2rem;
+    border-radius: 14px;
+    gap: 0.8rem;
+  }
+  
+  .control-btn {
+    padding: 0.6rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    gap: 0.4rem;
+  }
+  
+  .section-header {
+    margin-bottom: 0.8rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1.1rem;
+    gap: 0.4rem;
+  }
+  
+  .student-count {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .students-grid {
+    gap: 0.8rem;
+  }
+  
+  .student-card {
+    padding: 0.8rem;
+    border-radius: 10px;
+    gap: 0.8rem;
+  }
+  
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+  }
+  
+  .student-name {
+    font-size: 0.9rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .student-status {
+    font-size: 0.8rem;
+    gap: 0.4rem;
+  }
+  
+  .status-dot {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .error-container {
+    padding: 0.8rem;
+    border-radius: 10px;
+    gap: 0.6rem;
+  }
+  
+  .error-container i {
+    font-size: 1.1rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-exam-container {
+    padding: 1.4rem;
+  }
+  
+  .header-container {
+    margin-bottom: 20px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.7rem;
+    gap: 8px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .test-code-section {
+    padding: 1.4rem;
+    margin-bottom: 1.4rem;
+    border-radius: 12px;
+  }
+  
+  .input-wrapper {
+    gap: 0.7rem;
+    max-width: 400px;
+  }
+  
+  .input-wrapper label {
+    font-size: 0.9rem;
+  }
+  
+  .test-code-input {
+    padding: 0.7rem;
+    font-size: 0.95rem;
+    border-radius: 8px;
+  }
+  
+  .join-btn {
+    padding: 0.7rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    gap: 0.3rem;
+  }
+  
+  .control-panel {
+    gap: 1.4rem;
+  }
+  
+  .panel-grid {
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+    border-radius: 12px;
+    gap: 0.7rem;
+  }
+  
+  .stat-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+  }
+  
+  .stat-info h3 {
+    font-size: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .stat-value {
+    font-size: 1.2rem;
+  }
+  
+  .stat-label {
+    font-size: 0.8rem;
+  }
+  
+  .status-badge {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  
+  .action-card {
+    padding: 1rem;
+    border-radius: 12px;
+    gap: 0.7rem;
+  }
+  
+  .control-btn {
+    padding: 0.5rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    gap: 0.3rem;
+  }
+  
+  .section-header {
+    margin-bottom: 0.7rem;
+  }
+  
+  .section-header h2 {
+    font-size: 1rem;
+    gap: 0.3rem;
+  }
+  
+  .student-count {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.75rem;
+  }
+  
+  .students-grid {
+    gap: 0.7rem;
+  }
+  
+  .student-card {
+    padding: 0.7rem;
+    border-radius: 8px;
+    gap: 0.7rem;
+  }
+  
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .student-name {
+    font-size: 0.85rem;
+    margin-bottom: 0.15rem;
+  }
+  
+  .student-status {
+    font-size: 0.75rem;
+    gap: 0.3rem;
+  }
+  
+  .status-dot {
+    width: 5px;
+    height: 5px;
+  }
+  
+  .error-container {
+    padding: 0.7rem;
+    border-radius: 8px;
+    gap: 0.5rem;
+  }
+  
+  .error-container i {
+    font-size: 1rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-exam-container {
+    padding: 1.2rem;
+  }
+  
+  .header-container {
+    margin-bottom: 18px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    gap: 6px;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .test-code-section {
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
+    border-radius: 10px;
+  }
+  
+  .input-wrapper {
+    gap: 0.6rem;
+    max-width: 350px;
+  }
+  
+  .input-wrapper label {
+    font-size: 0.85rem;
+  }
+  
+  .test-code-input {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+    border-radius: 6px;
+  }
+  
+  .join-btn {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    gap: 0.25rem;
+  }
+  
+  .control-panel {
+    gap: 1.2rem;
+  }
+  
+  .panel-grid {
+    gap: 0.8rem;
+  }
+  
+  .stat-card {
+    padding: 0.8rem;
+    border-radius: 10px;
+    gap: 0.6rem;
+  }
+  
+  .stat-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 6px;
+    font-size: 1.1rem;
+  }
+  
+  .stat-info h3 {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .stat-value {
+    font-size: 1.1rem;
+  }
+  
+  .stat-label {
+    font-size: 0.75rem;
+  }
+  
+  .status-badge {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .action-card {
+    padding: 0.8rem;
+    border-radius: 10px;
+    gap: 0.6rem;
+  }
+  
+  .control-btn {
+    padding: 0.4rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    gap: 0.25rem;
+  }
+  
+  .section-header {
+    margin-bottom: 0.6rem;
+  }
+  
+  .section-header h2 {
+    font-size: 0.95rem;
+    gap: 0.25rem;
+  }
+  
+  .student-count {
+    padding: 0.25rem 0.6rem;
+    font-size: 0.7rem;
+  }
+  
+  .students-grid {
+    gap: 0.6rem;
+  }
+  
+  .student-card {
+    padding: 0.6rem;
+    border-radius: 6px;
+    gap: 0.6rem;
+  }
+  
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    font-size: 0.7rem;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+    margin-bottom: 0.1rem;
+  }
+  
+  .student-status {
+    font-size: 0.7rem;
+    gap: 0.25rem;
+  }
+  
+  .status-dot {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .error-container {
+    padding: 0.6rem;
+    border-radius: 6px;
+    gap: 0.4rem;
+  }
+  
+  .error-container i {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .manage-exam-container {
+    padding: 0rem;
+  }
+  
   .header-content h1 {
     font-size: 2rem;
   }
@@ -848,14 +1357,15 @@
   .divider {
     margin: 0.5rem 0;
   }
-    .panel-grid {
-      grid-template-columns: 1fr;
-    }
   
-    .students-grid {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
+  .panel-grid {
+    grid-template-columns: 1fr;
   }
+  
+  .students-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
   
   .uppercase-input {
     text-transform: uppercase;

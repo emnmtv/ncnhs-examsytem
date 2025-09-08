@@ -339,6 +339,189 @@ export default {
   color: #424242;
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .profile-card {
+    border-radius: 14px;
+  }
+  
+  .profile-header {
+    padding: 26px 18px;
+    gap: 18px;
+  }
+  
+  .avatar {
+    width: 90px;
+    height: 90px;
+    font-size: 2.3rem;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .profile-info h2 {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+  }
+  
+  .profile-meta {
+    gap: 12px;
+  }
+  
+  .profile-meta-item {
+    font-size: 0.95rem;
+    padding: 4px 10px;
+  }
+  
+  .profile-meta-item i {
+    font-size: 0.85rem;
+  }
+  
+  .profile-body {
+    padding: 18px;
+  }
+  
+  .detail-item {
+    padding: 13px 0;
+    gap: 13px;
+  }
+  
+  .detail-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+  
+  .detail-label {
+    font-size: 0.75rem;
+    margin-bottom: 3px;
+  }
+  
+  .detail-value {
+    font-size: 0.95rem;
+  }
+}
+
+/* Medium laptops and smaller screens (1366px) */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .profile-card {
+    border-radius: 12px;
+  }
+  
+  .profile-header {
+    padding: 24px 16px;
+    gap: 16px;
+  }
+  
+  .avatar {
+    width: 85px;
+    height: 85px;
+    font-size: 2.1rem;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .profile-info h2 {
+    font-size: 1.5rem;
+    margin-bottom: 7px;
+  }
+  
+  .profile-meta {
+    gap: 10px;
+  }
+  
+  .profile-meta-item {
+    font-size: 0.9rem;
+    padding: 4px 9px;
+  }
+  
+  .profile-meta-item i {
+    font-size: 0.8rem;
+  }
+  
+  .profile-body {
+    padding: 16px;
+  }
+  
+  .detail-item {
+    padding: 12px 0;
+    gap: 12px;
+  }
+  
+  .detail-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
+  
+  .detail-label {
+    font-size: 0.7rem;
+    margin-bottom: 3px;
+  }
+  
+  .detail-value {
+    font-size: 0.9rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .profile-card {
+    border-radius: 10px;
+  }
+  
+  .profile-header {
+    padding: 22px 14px;
+    gap: 14px;
+  }
+  
+  .avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 1.9rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .profile-info h2 {
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+  
+  .profile-meta {
+    gap: 8px;
+  }
+  
+  .profile-meta-item {
+    font-size: 0.85rem;
+    padding: 3px 8px;
+  }
+  
+  .profile-meta-item i {
+    font-size: 0.75rem;
+  }
+  
+  .profile-body {
+    padding: 14px;
+  }
+  
+  .detail-item {
+    padding: 11px 0;
+    gap: 11px;
+  }
+  
+  .detail-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 0.9rem;
+  }
+  
+  .detail-label {
+    font-size: 0.65rem;
+    margin-bottom: 2px;
+  }
+  
+  .detail-value {
+    font-size: 0.85rem;
+  }
+}
+
 @media (max-width: 768px) {
   .profile-header {
     flex-direction: column;

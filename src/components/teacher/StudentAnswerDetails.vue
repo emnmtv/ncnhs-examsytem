@@ -2398,6 +2398,1065 @@ export default {
   100% { opacity: 1; transform: scale(1.05); }
 }
 
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .student-answer-details {
+    padding: 16px;
+  }
+  
+  .header {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    gap: 16px;
+  }
+  
+  .header-left {
+    gap: 12px;
+  }
+  
+  .controls-row {
+    gap: 16px;
+  }
+  
+  .filter-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .search-input {
+    padding: 8px 14px 8px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .search-box .material-icons {
+    left: 10px;
+    font-size: 18px;
+  }
+  
+  .student-navigation {
+    padding: 10px 16px;
+    gap: 12px;
+  }
+  
+  .nav-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .student-counter {
+    font-size: 1rem;
+  }
+  
+  .back-button {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .back-button .material-icons {
+    font-size: 18px;
+  }
+  
+  .student-info h2 {
+    font-size: 1.6rem;
+  }
+  
+  .sub-info {
+    font-size: 0.85rem;
+    gap: 8px;
+  }
+  
+  .header-card {
+    border-radius: 14px;
+    margin-bottom: 24px;
+  }
+  
+  .header-card-top {
+    padding: 20px;
+  }
+  
+  .header-card-content {
+    padding: 20px;
+  }
+  
+  .info-section h4 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  
+  .info-grid {
+    gap: 12px;
+  }
+  
+  .setting-item {
+    padding: 12px;
+    font-size: 0.9rem;
+    gap: 10px;
+  }
+  
+  .setting-item .material-icons {
+    font-size: 1.2em;
+  }
+  
+  .latest-attempt-card {
+    padding: 14px;
+  }
+  
+  .attempt-detail {
+    gap: 6px;
+  }
+  
+  .attempt-detail .material-icons {
+    font-size: 1.1em;
+  }
+  
+  .score-display-container {
+    gap: 24px;
+  }
+  
+  .score-value {
+    font-size: 2.2em;
+  }
+  
+  .score-total {
+    font-size: 1.3em;
+  }
+  
+  .score-percentage {
+    font-size: 1.1em;
+    margin-left: 8px;
+  }
+  
+  .score-input input {
+    width: 70px;
+    padding: 10px;
+    font-size: 0.9em;
+  }
+  
+  .score-input button {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+  }
+  
+  .answers-list {
+    gap: 20px;
+  }
+  
+  .answer-item {
+    border-radius: 14px;
+  }
+  
+  .question-section,
+  .answer-section {
+    padding: 20px;
+  }
+  
+  .question-header {
+    margin-bottom: 12px;
+  }
+  
+  .question-number {
+    font-size: 1rem;
+  }
+  
+  .question-type {
+    padding: 5px 14px;
+    font-size: 0.8em;
+  }
+  
+  .question-text {
+    font-size: 1rem;
+    margin: 14px 0;
+  }
+  
+  .question-image img {
+    max-height: 350px;
+  }
+  
+  .options {
+    gap: 8px;
+    margin-top: 14px;
+  }
+  
+  .option {
+    padding: 10px 14px;
+  }
+  
+  .answer-label {
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  
+  .student-answer {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+  
+  .correct-answer {
+    padding: 12px;
+    margin-top: 14px;
+  }
+  
+  .toggle-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    gap: 8px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 1.1rem;
+  }
+  
+  /* Essay styles for 1536px */
+  .essay-answer-section {
+    gap: 20px;
+  }
+  
+  .essay-response {
+    padding: 16px;
+  }
+  
+  .essay-text {
+    padding: 12px;
+    min-height: 90px;
+    font-size: 0.95rem;
+  }
+  
+  .essay-meta {
+    gap: 16px;
+    font-size: 0.85rem;
+  }
+  
+  .essay-scoring {
+    padding: 16px;
+  }
+  
+  .essay-score-input {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .essay-score-input label {
+    font-size: 0.9rem;
+    min-width: 55px;
+  }
+  
+  .score-input-field {
+    width: 70px;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .max-points {
+    font-size: 0.9rem;
+  }
+  
+  .essay-feedback label {
+    font-size: 0.9rem;
+  }
+  
+  .feedback-textarea {
+    padding: 12px;
+    font-size: 0.9rem;
+    min-height: 70px;
+  }
+  
+  .essay-actions {
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+  
+  .grade-btn {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    gap: 6px;
+  }
+  
+  .grade-status {
+    font-size: 0.85rem;
+  }
+  
+  .grade-status .material-icons {
+    font-size: 16px;
+  }
+  
+  /* Attempt history styles */
+  .attempt-record-item {
+    padding: 12px;
+  }
+  
+  .attempt-record-header {
+    margin-bottom: 6px;
+  }
+  
+  .attempt-number {
+    font-size: 0.9rem;
+  }
+  
+  .attempt-score {
+    font-size: 0.8rem;
+    padding: 3px 6px;
+  }
+  
+  .attempt-record-details {
+    gap: 12px;
+  }
+  
+  .attempt-record-detail {
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+  
+  .attempt-record-detail .material-icons {
+    font-size: 14px;
+  }
+  
+  .restore-attempt-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .attempt-preview-container {
+    gap: 12px;
+  }
+  
+  .attempt-dropdown {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .clear-preview-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .preview-indicator {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+  }
+  
+  .preview-indicator .material-icons {
+    font-size: 16px;
+  }
+  
+  .attempt-preview-badge {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .student-answer-details {
+    padding: 14px;
+  }
+  
+  .header {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    gap: 14px;
+  }
+  
+  .header-left {
+    gap: 10px;
+  }
+  
+  .controls-row {
+    gap: 14px;
+  }
+  
+  .filter-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .search-input {
+    padding: 6px 12px 6px 35px;
+    font-size: 0.85rem;
+  }
+  
+  .search-box .material-icons {
+    left: 8px;
+    font-size: 16px;
+  }
+  
+  .student-navigation {
+    padding: 8px 14px;
+    gap: 10px;
+  }
+  
+  .nav-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .student-counter {
+    font-size: 0.95rem;
+  }
+  
+  .back-button {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .back-button .material-icons {
+    font-size: 16px;
+  }
+  
+  .student-info h2 {
+    font-size: 1.4rem;
+  }
+  
+  .sub-info {
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+  
+  .header-card {
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .header-card-top {
+    padding: 16px;
+  }
+  
+  .header-card-content {
+    padding: 16px;
+  }
+  
+  .info-section h4 {
+    font-size: 0.95rem;
+    margin-bottom: 10px;
+  }
+  
+  .info-grid {
+    gap: 10px;
+  }
+  
+  .setting-item {
+    padding: 10px;
+    font-size: 0.85rem;
+    gap: 8px;
+  }
+  
+  .setting-item .material-icons {
+    font-size: 1.1em;
+  }
+  
+  .latest-attempt-card {
+    padding: 12px;
+  }
+  
+  .attempt-detail {
+    gap: 5px;
+  }
+  
+  .attempt-detail .material-icons {
+    font-size: 1em;
+  }
+  
+  .score-display-container {
+    gap: 20px;
+  }
+  
+  .score-value {
+    font-size: 2em;
+  }
+  
+  .score-total {
+    font-size: 1.2em;
+  }
+  
+  .score-percentage {
+    font-size: 1em;
+    margin-left: 6px;
+  }
+  
+  .score-input input {
+    width: 60px;
+    padding: 8px;
+    font-size: 0.85em;
+  }
+  
+  .score-input button {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+  }
+  
+  .answers-list {
+    gap: 18px;
+  }
+  
+  .answer-item {
+    border-radius: 12px;
+  }
+  
+  .question-section,
+  .answer-section {
+    padding: 16px;
+  }
+  
+  .question-header {
+    margin-bottom: 10px;
+  }
+  
+  .question-number {
+    font-size: 0.95rem;
+  }
+  
+  .question-type {
+    padding: 4px 12px;
+    font-size: 0.75em;
+  }
+  
+  .question-text {
+    font-size: 0.95rem;
+    margin: 12px 0;
+  }
+  
+  .question-image img {
+    max-height: 300px;
+  }
+  
+  .options {
+    gap: 6px;
+    margin-top: 12px;
+  }
+  
+  .option {
+    padding: 8px 12px;
+  }
+  
+  .answer-label {
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+  }
+  
+  .student-answer {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .correct-answer {
+    padding: 10px;
+    margin-top: 12px;
+  }
+  
+  .toggle-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 1rem;
+  }
+  
+  /* Essay styles for 1366px */
+  .essay-answer-section {
+    gap: 18px;
+  }
+  
+  .essay-response {
+    padding: 14px;
+  }
+  
+  .essay-text {
+    padding: 10px;
+    min-height: 80px;
+    font-size: 0.9rem;
+  }
+  
+  .essay-meta {
+    gap: 14px;
+    font-size: 0.8rem;
+  }
+  
+  .essay-scoring {
+    padding: 14px;
+  }
+  
+  .essay-score-input {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  
+  .essay-score-input label {
+    font-size: 0.85rem;
+    min-width: 50px;
+  }
+  
+  .score-input-field {
+    width: 60px;
+    padding: 5px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .max-points {
+    font-size: 0.85rem;
+  }
+  
+  .essay-feedback label {
+    font-size: 0.85rem;
+  }
+  
+  .feedback-textarea {
+    padding: 10px;
+    font-size: 0.85rem;
+    min-height: 60px;
+  }
+  
+  .essay-actions {
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+  
+  .grade-btn {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    gap: 5px;
+  }
+  
+  .grade-status {
+    font-size: 0.8rem;
+  }
+  
+  .grade-status .material-icons {
+    font-size: 14px;
+  }
+  
+  /* Attempt history styles */
+  .attempt-record-item {
+    padding: 10px;
+  }
+  
+  .attempt-record-header {
+    margin-bottom: 5px;
+  }
+  
+  .attempt-number {
+    font-size: 0.85rem;
+  }
+  
+  .attempt-score {
+    font-size: 0.75rem;
+    padding: 2px 5px;
+  }
+  
+  .attempt-record-details {
+    gap: 10px;
+  }
+  
+  .attempt-record-detail {
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+  
+  .attempt-record-detail .material-icons {
+    font-size: 12px;
+  }
+  
+  .restore-attempt-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .attempt-preview-container {
+    gap: 10px;
+  }
+  
+  .attempt-dropdown {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .clear-preview-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .preview-indicator {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+  
+  .preview-indicator .material-icons {
+    font-size: 14px;
+  }
+  
+  .attempt-preview-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    margin-top: 6px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .student-answer-details {
+    padding: 12px;
+  }
+  
+  .header {
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    gap: 12px;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+  
+  .controls-row {
+    gap: 12px;
+  }
+  
+  .filter-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .search-input {
+    padding: 5px 10px 5px 30px;
+    font-size: 0.8rem;
+  }
+  
+  .search-box .material-icons {
+    left: 6px;
+    font-size: 14px;
+  }
+  
+  .student-navigation {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  
+  .nav-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .student-counter {
+    font-size: 0.9rem;
+  }
+  
+  .back-button {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .back-button .material-icons {
+    font-size: 14px;
+  }
+  
+  .student-info h2 {
+    font-size: 1.2rem;
+  }
+  
+  .sub-info {
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+  
+  .header-card {
+    border-radius: 10px;
+    margin-bottom: 18px;
+  }
+  
+  .header-card-top {
+    padding: 14px;
+  }
+  
+  .header-card-content {
+    padding: 14px;
+  }
+  
+  .info-section h4 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+  }
+  
+  .info-grid {
+    gap: 8px;
+  }
+  
+  .setting-item {
+    padding: 8px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+  
+  .setting-item .material-icons {
+    font-size: 1em;
+  }
+  
+  .latest-attempt-card {
+    padding: 10px;
+  }
+  
+  .attempt-detail {
+    gap: 4px;
+  }
+  
+  .attempt-detail .material-icons {
+    font-size: 0.9em;
+  }
+  
+  .score-display-container {
+    gap: 18px;
+  }
+  
+  .score-value {
+    font-size: 1.8em;
+  }
+  
+  .score-total {
+    font-size: 1.1em;
+  }
+  
+  .score-percentage {
+    font-size: 0.95em;
+    margin-left: 5px;
+  }
+  
+  .score-input input {
+    width: 50px;
+    padding: 6px;
+    font-size: 0.8em;
+  }
+  
+  .score-input button {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+  
+  .answers-list {
+    gap: 16px;
+  }
+  
+  .answer-item {
+    border-radius: 10px;
+  }
+  
+  .question-section,
+  .answer-section {
+    padding: 14px;
+  }
+  
+  .question-header {
+    margin-bottom: 8px;
+  }
+  
+  .question-number {
+    font-size: 0.9rem;
+  }
+  
+  .question-type {
+    padding: 3px 10px;
+    font-size: 0.7em;
+  }
+  
+  .question-text {
+    font-size: 0.9rem;
+    margin: 10px 0;
+  }
+  
+  .question-image img {
+    max-height: 250px;
+  }
+  
+  .options {
+    gap: 5px;
+    margin-top: 10px;
+  }
+  
+  .option {
+    padding: 6px 10px;
+  }
+  
+  .answer-label {
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+  }
+  
+  .student-answer {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .correct-answer {
+    padding: 8px;
+    margin-top: 10px;
+  }
+  
+  .toggle-btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+  
+  .toggle-btn .material-icons {
+    font-size: 0.9rem;
+  }
+  
+  /* Essay styles for 1280px */
+  .essay-answer-section {
+    gap: 16px;
+  }
+  
+  .essay-response {
+    padding: 12px;
+  }
+  
+  .essay-text {
+    padding: 8px;
+    min-height: 70px;
+    font-size: 0.85rem;
+  }
+  
+  .essay-meta {
+    gap: 12px;
+    font-size: 0.75rem;
+  }
+  
+  .essay-scoring {
+    padding: 12px;
+  }
+  
+  .essay-score-input {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .essay-score-input label {
+    font-size: 0.8rem;
+    min-width: 45px;
+  }
+  
+  .score-input-field {
+    width: 50px;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+  }
+  
+  .max-points {
+    font-size: 0.8rem;
+  }
+  
+  .essay-feedback label {
+    font-size: 0.8rem;
+  }
+  
+  .feedback-textarea {
+    padding: 8px;
+    font-size: 0.8rem;
+    min-height: 50px;
+  }
+  
+  .essay-actions {
+    margin-top: 12px;
+    padding-top: 8px;
+  }
+  
+  .grade-btn {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    gap: 4px;
+  }
+  
+  .grade-status {
+    font-size: 0.75rem;
+  }
+  
+  .grade-status .material-icons {
+    font-size: 12px;
+  }
+  
+  /* Attempt history styles */
+  .attempt-record-item {
+    padding: 8px;
+  }
+  
+  .attempt-record-header {
+    margin-bottom: 4px;
+  }
+  
+  .attempt-number {
+    font-size: 0.8rem;
+  }
+  
+  .attempt-score {
+    font-size: 0.7rem;
+    padding: 1px 4px;
+  }
+  
+  .attempt-record-details {
+    gap: 8px;
+  }
+  
+  .attempt-record-detail {
+    font-size: 0.7rem;
+    gap: 3px;
+  }
+  
+  .attempt-record-detail .material-icons {
+    font-size: 10px;
+  }
+  
+  .restore-attempt-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 3px;
+  }
+  
+  .attempt-preview-container {
+    gap: 8px;
+  }
+  
+  .attempt-dropdown {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .clear-preview-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    gap: 3px;
+  }
+  
+  .preview-indicator {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    margin-bottom: 5px;
+  }
+  
+  .preview-indicator .material-icons {
+    font-size: 12px;
+  }
+  
+  .attempt-preview-badge {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    margin-top: 5px;
+  }
+}
+
 @media (max-width: 768px) {
   .student-answer-details {
     padding: 0rem;

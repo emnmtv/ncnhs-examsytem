@@ -533,27 +533,25 @@
       </div>
     </div>
 
-    <!-- Add this template for print that shows only when printing -->
+    <!-- Professional PDF Export Template -->
     <div v-if="mpsData" class="print-only">
       <div class="print-header">
-        <img :src="NcnhsLogo" alt="NCNHS Logo" class="print-logo">
         <div class="print-title">
-          <h1>New Cabalan National High School</h1>
-          <h2>Exam Mean Percentage Score Report</h2>
+          <h1>NEW CABALAN NATIONAL HIGH SCHOOL</h1>
+          <h2>EXAM MEAN PERCENTAGE SCORE REPORT</h2>
           <div class="print-exam-info">
             <p><strong>Exam:</strong> {{ mpsData.exam.title }}</p>
             <p><strong>Test Code:</strong> {{ mpsData.exam.testCode }}</p>
-            <p><strong>Date:</strong> {{ new Date().toLocaleDateString() }}</p>
+            <p><strong>Date Generated:</strong> {{ new Date().toLocaleDateString() }}</p>
           </div>
         </div>
       </div>
 
       <div class="print-summary">
-        <div class="summary-title">Summary Statistics</div>
-        <table class="summary-table" key="summary-stats">
+        <table class="summary-table">
           <thead>
             <tr>
-              <th>Overall MPS</th>
+              <th>Overall MPS (%)</th>
               <th>Total Students</th>
               <th>Highest Score</th>
               <th>Lowest Score</th>
@@ -577,15 +575,14 @@
       </div>
 
       <div class="print-distribution">
-        <div class="summary-title">Score Distribution</div>
-        <table class="summary-table" key="distribution">
+        <table class="distribution-table">
           <thead>
             <tr>
-              <th>Excellent (90-100%)</th>
-              <th>Good (80-89%)</th>
-              <th>Satisfactory (70-79%)</th>
-              <th>Fair (60-69%)</th>
-              <th>Poor (Below 60%)</th>
+              <th>Excellent<br>(90-100%)</th>
+              <th>Good<br>(80-89%)</th>
+              <th>Satisfactory<br>(70-79%)</th>
+              <th>Fair<br>(60-69%)</th>
+              <th>Poor<br>(Below 60%)</th>
             </tr>
           </thead>
           <tbody>
@@ -601,12 +598,11 @@
       </div>
 
       <div class="print-details">
-        <div class="summary-title">Section Performance</div>
-        <table class="details-table" key="section-performance">
+        <table class="details-table">
           <thead>
             <tr>
               <th>Section</th>
-              <th>MPS</th>
+              <th>MPS (%)</th>
               <th>Students</th>
               <th>Highest Score</th>
               <th>Lowest Score</th>
@@ -619,7 +615,7 @@
           </thead>
           <tbody>
             <tr v-for="(section, index) in mpsData.sectionMPS" :key="index">
-              <td>{{ section.section }}</td>
+              <td class="section-name">{{ section.section }}</td>
               <td class="center">{{ section.mps.toFixed(1) }}%</td>
               <td class="center">{{ section.studentCount }}</td>
               <td class="center">
@@ -1405,7 +1401,7 @@ onMounted(async () => {
   });
 });
 
-// Improve the downloadPDF function to ensure proper HTML structure
+// Professional PDF generation function
 const downloadPDF = () => {
   if (!mpsData.value) return;
 
@@ -1423,49 +1419,102 @@ const downloadPDF = () => {
         element.innerHTML = document.querySelector('.print-only').innerHTML;
         element.classList.add('pdf-container');
         
+        // Apply professional styling to the cloned element
+        element.style.cssText = `
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 10pt;
+          line-height: 1.2;
+          color: #000;
+          background: white;
+          width: 100%;
+          max-width: 100%;
+          padding: 10px;
+          box-sizing: border-box;
+          overflow: hidden;
+        `;
+        
         // Fix potential HTML issues - ensure all tables have proper structure
         const tables = element.querySelectorAll('table');
         tables.forEach(table => {
-          // Check if table already has thead and tbody
-          if (!table.querySelector('thead')) {
-            const thead = document.createElement('thead');
-            const firstRow = table.querySelector('tr');
-            if (firstRow) {
-              thead.appendChild(firstRow.cloneNode(true));
-              firstRow.parentNode.replaceChild(thead, firstRow);
-            }
-          }
+          // Apply professional table styling
+          table.style.cssText = `
+            width: 100%;
+            max-width: 100%;
+            border-collapse: collapse;
+            font-size: 10pt;
+            margin-bottom: 15px;
+            border: 2px solid #000;
+            table-layout: fixed;
+          `;
           
-          // Check if table has tbody
-          if (!table.querySelector('tbody')) {
-            const tbody = document.createElement('tbody');
-            const rows = Array.from(table.querySelectorAll('tr')).slice(1); // Skip first row (header)
-            rows.forEach(row => {
-              tbody.appendChild(row.cloneNode(true));
-              if (row.parentNode) {
-                row.parentNode.removeChild(row);
-              }
-            });
-            table.appendChild(tbody);
-          }
+          // Style table headers
+          const headers = table.querySelectorAll('th');
+          headers.forEach(th => {
+            th.style.cssText = `
+              border: 1px solid #000;
+              padding: 6px 4px;
+              text-align: center;
+              vertical-align: middle;
+              background-color: #f0f0f0;
+              font-weight: bold;
+              font-size: 10pt;
+              color: #000;
+              word-wrap: break-word;
+              overflow: hidden;
+            `;
+          });
+          
+          // Style table cells
+          const cells = table.querySelectorAll('td');
+          cells.forEach(td => {
+            td.style.cssText = `
+              border: 1px solid #000;
+              padding: 6px 4px;
+              text-align: center;
+              vertical-align: middle;
+              background-color: #fff;
+              color: #000;
+              word-wrap: break-word;
+              overflow: hidden;
+            `;
+          });
+          
+          // Style section names
+          const sectionNames = table.querySelectorAll('.section-name');
+          sectionNames.forEach(td => {
+            td.style.cssText = `
+              border: 1px solid #000;
+              padding: 6px 4px;
+              text-align: left;
+              vertical-align: middle;
+              background-color: #f8f8f8;
+              color: #000;
+              font-weight: bold;
+              word-wrap: break-word;
+              overflow: hidden;
+            `;
+          });
         });
         
         document.body.appendChild(element);
       
-        // Setup PDF options
+        // Setup PDF options for landscape
         const options = {
-          margin: 10,
-          filename: `MPS_${mpsData.value.exam.testCode}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
+          margin: [5, 5, 5, 5],
+          filename: `MPS_Report_${mpsData.value.exam.testCode}.pdf`,
+          image: { type: 'jpeg', quality: 0.95 },
           html2canvas: { 
-            scale: 2, 
+            scale: 1.2, 
             useCORS: true, 
-            logging: false
+            logging: false,
+            backgroundColor: '#ffffff',
+            width: 1200,
+            height: 800
           },
           jsPDF: { 
             unit: 'mm', 
             format: 'a4', 
-            orientation: 'portrait'
+            orientation: 'landscape'
           }
         };
         
@@ -1477,7 +1526,7 @@ const downloadPDF = () => {
           .then(() => {
             // Cleanup - remove the cloned element
             document.body.removeChild(element);
-            // Reset view modet:
+            // Reset view mode
             viewMode.value = originalView;
           })
           .catch(error => {
@@ -2167,12 +2216,13 @@ th {
   font-size: 18px;
 }
 
-/* Print Styles */
+/* Professional Print Styles */
 @media print {
   /* Hide non-printable elements */
   .header-container, .header-actions, .view-controls, 
   .settings-card, .chart-container, .table-view,
-  .exam-info-card, .distribution-card, .back-btn {
+  .exam-info-card, .distribution-card, .back-btn,
+  .ai-analysis-panel {
     display: none !important;
   }
   
@@ -2186,135 +2236,138 @@ th {
   body {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', 'Helvetica', sans-serif;
     background: white;
-    color: black;
+    color: #000;
+    font-size: 10pt;
+    line-height: 1.2;
+  }
+  
+  /* Page setup for landscape */
+  @page {
+    size: A4 landscape;
+    margin: 0.5cm;
   }
   
   .print-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 30px;
-    padding: 10px 0;
-    border-bottom: 2px solid #333;
-  }
-  
-  .print-logo {
-    height: 80px;
-    margin-right: 20px;
-  }
-  
-  .print-title {
-    flex: 1;
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #000;
   }
   
   .print-title h1 {
-    font-size: 22px;
+    font-size: 16pt;
+    font-weight: bold;
     margin: 0 0 5px 0;
-    color: #333;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
   
   .print-title h2 {
-    font-size: 16px;
-    margin: 0 0 10px 0;
+    font-size: 12pt;
     font-weight: normal;
-    color: #555;
+    margin: 0 0 15px 0;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
   .print-exam-info {
     display: flex;
-    font-size: 12px;
-    gap: 20px;
+    justify-content: center;
+    font-size: 11pt;
+    gap: 30px;
+    margin-top: 10px;
   }
   
   .print-exam-info p {
     margin: 0;
+    color: #000;
   }
   
   .print-summary, .print-distribution, .print-details {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
   }
   
-  .summary-title {
-    font-size: 14px;
-    font-weight: bold;
-    background-color: #f8f8f8;
-    padding: 8px;
-    margin-bottom: 8px;
-    border-left: 4px solid #ddd;
-  }
-  
-  .summary-table, .details-table {
+  /* Professional table styling */
+  .summary-table, .distribution-table, .details-table {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
-    margin-bottom: 20px;
-    box-shadow: none;
-    border: 1px solid #ddd;
+    font-size: 10pt;
+    margin-bottom: 15px;
+    border: 2px solid #000;
+    table-layout: fixed;
   }
   
   .summary-table th, .summary-table td,
+  .distribution-table th, .distribution-table td,
   .details-table th, .details-table td {
-    border: 1px solid #ddd;
-    padding: 8px;
+    border: 1px solid #000;
+    padding: 6px 4px;
     text-align: center;
+    vertical-align: middle;
+    word-wrap: break-word;
+    overflow: hidden;
   }
   
-  .summary-table th, .details-table th {
-    background-color: #f8f8f8 !important;
+  .summary-table th, .distribution-table th, .details-table th {
+    background-color: #f0f0f0 !important;
     font-weight: bold;
-    border-bottom: 2px solid #ddd;
+    font-size: 10pt;
+    color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   
-  .summary-table thead, .details-table thead {
-    display: table-header-group;
+  .summary-table td, .distribution-table td, .details-table td {
+    background-color: #fff !important;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
-  .summary-table tbody, .details-table tbody {
-    display: table-row-group;
-  }
-  
-  .summary-table tr:nth-child(even), 
-  .details-table tr:nth-child(even) {
-    background-color: #f9f9f9;
+  /* Section name styling */
+  .section-name {
+    text-align: left !important;
+    font-weight: bold;
+    background-color: #f8f8f8 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   .center {
     text-align: center;
   }
   
-  .print-footer {
-    margin-top: 30px;
-    padding-top: 10px;
-    border-top: 1px solid #ddd;
-    font-size: 10px;
-    color: #666;
-    text-align: center;
-  }
-  
-  /* Add header and footer for each page */
-  @page {
-    size: landscape;
-    margin: 0.5cm;
-  }
-  
-  /* Ensure table headers repeat on page breaks */
-  thead {
+  /* Table headers repeat on page breaks */
+  .summary-table thead, .distribution-table thead, .details-table thead {
     display: table-header-group;
   }
   
-  tbody {
+  .summary-table tbody, .distribution-table tbody, .details-table tbody {
     display: table-row-group;
   }
   
+  /* Prevent row breaks */
   tr {
     page-break-inside: avoid;
   }
   
-  .print-details {
-    page-break-before: auto;
+  /* Footer styling */
+  .print-footer {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #000;
+    font-size: 10pt;
+    color: #000;
+    text-align: center;
+  }
+  
+  .print-footer p {
+    margin: 2px 0;
   }
 }
 

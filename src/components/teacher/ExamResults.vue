@@ -10,7 +10,20 @@
           <i class="fas fa-arrow-left"></i> Back
         </button>
         
-        <button @click="openBulkArchiveModal" class="bulk-archive-btn">
+        <!-- Archive Toggle -->
+        <div class="archive-toggle-container">
+          <label class="archive-toggle">
+            <input type="checkbox" v-model="archiveEnabled" @change="toggleArchiveMode">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Archive Mode</span>
+          </label>
+        </div>
+        
+        <button 
+          v-if="archiveEnabled" 
+          @click="openBulkArchiveModal" 
+          class="bulk-archive-btn"
+        >
           <span class="material-icons">archive</span>
           Archive All Results
         </button>
@@ -245,6 +258,7 @@
               View Answers
             </button>
             <button 
+              v-if="archiveEnabled"
               class="archive-result-btn"
               @click="openArchiveModal(result)"
               title="Archive this result"
@@ -318,6 +332,7 @@
                       <span class="btn-text">View</span>
                     </button>
                     <button 
+                      v-if="archiveEnabled"
                       class="archive-result-btn"
                       @click="openArchiveModal(result)"
                       title="Archive this result"
@@ -977,6 +992,22 @@ export default {
       reason: ''
     });
     const isBulkArchiving = ref(false);
+
+    // Add archive toggle state
+    const archiveEnabled = ref(false);
+
+    // Toggle archive mode function
+    const toggleArchiveMode = () => {
+      // Close any open archive modals when disabling archive mode
+      if (!archiveEnabled.value) {
+        if (showArchiveModal.value) {
+          closeArchiveModal();
+        }
+        if (showBulkArchiveModal.value) {
+          closeBulkArchiveModal();
+        }
+      }
+    };
 
     const checkMobile = () => {
       isMobile.value = window.innerWidth <= 768;
@@ -2173,7 +2204,10 @@ export default {
       closeBulkArchiveModal,
       bulkArchiveResults,
       bulkArchiveModalData,
-      isBulkArchiving
+      isBulkArchiving,
+      // Add archive toggle functionality
+      archiveEnabled,
+      toggleArchiveMode
     };
   }
 };
@@ -2277,6 +2311,133 @@ export default {
   display: flex;
   gap: 10px;
   position: relative;
+}
+
+/* Archive Toggle Styles */
+.archive-toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+.archive-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.archive-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.archive-toggle input[type="checkbox"]:checked + .toggle-slider {
+  background: #4CAF50;
+}
+
+.archive-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(26px);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Archive Button Styles - Clean Theme */
+.bulk-archive-btn {
+  padding: 10px 18px;
+  background: #6c757d;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(108, 117, 125, 0.2);
+}
+
+.bulk-archive-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.archive-result-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+}
+
+.archive-result-btn:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(108, 117, 125, 0.3);
+}
+
+.archive-confirm-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(108, 117, 125, 0.2);
+}
+
+.archive-confirm-btn:hover:not(:disabled) {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+}
+
+.archive-confirm-btn:disabled {
+  background: #b0bec5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .export-container {
@@ -2661,6 +2822,25 @@ tr:hover {
     gap: 6px;
   }
   
+  /* Archive Toggle Responsive */
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+  
+  .toggle-slider {
+    width: 45px;
+    height: 22px;
+  }
+  
+  .toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .archive-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(23px);
+  }
+  
   .filters {
     padding: 16px;
     margin-bottom: 16px;
@@ -2893,6 +3073,25 @@ tr:hover {
     padding: 6px 12px;
     font-size: 0.85rem;
     gap: 4px;
+  }
+  
+  /* Archive Toggle Responsive */
+  .toggle-label {
+    font-size: 0.8rem;
+  }
+  
+  .toggle-slider {
+    width: 40px;
+    height: 20px;
+  }
+  
+  .toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .archive-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(20px);
   }
   
   .filters {
@@ -4772,6 +4971,29 @@ tr:hover {
     padding: 8px 12px;
     font-size: 0.9rem;
   }
+  
+  /* Archive Toggle Mobile */
+  .archive-toggle {
+    gap: 8px;
+  }
+  
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+  
+  .toggle-slider {
+    width: 42px;
+    height: 22px;
+  }
+  
+  .toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .archive-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(20px);
+  }
 
   .filters {
     flex-direction: column;
@@ -5464,7 +5686,7 @@ tr:hover {
 
 .archive-reason-input textarea:focus {
   outline: none;
-  border-color: #ff9800;
+  border-color: #13963b;
   box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.1);
 }
 
@@ -5502,7 +5724,7 @@ tr:hover {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: #ff9800;
+  background: #b1b1b8;
   color: white;
   border: none;
   border-radius: 6px;
@@ -5513,7 +5735,7 @@ tr:hover {
 }
 
 .archive-confirm-btn:hover:not(:disabled) {
-  background: #f57c00;
+  background: #7e7c81;
   box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
 }
 
