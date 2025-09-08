@@ -534,8 +534,8 @@
             <button @click="openGradeSectionModal(gs)" class="action-btn edit">
               <span class="material-icons">edit</span>
             </button>
-            <button @click="deleteGrade(gs.id)" class="action-btn delete">
-              <span class="material-icons">delete</span>
+            <button @click="deleteGrade(gs.id)" class="action-btn archive">
+              <span class="material-icons">archive</span>
             </button>
           </div>
         </div>
@@ -1395,7 +1395,6 @@
                 v-model="editFormData.password" 
                 :type="showPassword ? 'text' : 'password'" 
                 placeholder="Leave blank to keep current password"
-                class="uppercase-input"
               />
               <button 
                 type="button" 

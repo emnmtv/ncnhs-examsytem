@@ -3975,55 +3975,75 @@ input:checked + .slider:before {
   }
   
   .header-actions {
+    position: relative;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.8rem;
     align-items: stretch;
+    padding-bottom: 50px; /* Space for absolutely positioned buttons */
   }
   
   .search-container {
     min-width: auto;
     max-width: none;
     order: 1;
+    margin-bottom: 0.5rem;
   }
   
   .search-input {
-    padding: 12px 16px 12px 45px;
-    font-size: 0.9rem;
+    padding: 10px 14px 10px 40px;
+    font-size: 0.85rem;
   }
   
   .search-icon {
-    left: 16px;
-    font-size: 0.9rem;
+    left: 14px;
+    font-size: 0.8rem;
   }
 
   .template-btn, .import-btn, .create-btn {
-    width: calc(32% - 8px);
-    padding: 10px 8px;
-    font-size: 0.9rem;
+    position: absolute;
+    bottom: 0;
+    width: calc(33.333% - 4px);
+    padding: 8px 6px;
+    font-size: 0.8rem;
     text-align: center;
-    flex-direction: column;
+    flex-direction: row;
     gap: 4px;
+    min-height: 36px;
+  }
+
+  .template-btn {
+    left: 0;
+  }
+
+  .import-btn {
+    left: calc(33.333% + 2px);
+  }
+
+  .create-btn {
+    right: 0;
   }
 
   .template-btn i, 
   .import-btn i, 
   .create-btn i {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
   }
+  
   .header-background {
-  position: absolute;
-  top: 60%;
-  right: 1rem;
-  transform: translateY(-50%);
-  font-size: 3rem;
-  font-weight: 900;
-  color: rgba(0, 0, 0, 0.03);
-  z-index: 0;
-  user-select: none;
-  pointer-events: none;
-  overflow: hidden;
-  white-space: nowrap;
-}
+    position: absolute;
+    top: 60%;
+    right: 1rem;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.03);
+    z-index: 0;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  
   .toggle-wrapper {
     align-self: flex-start;
   }

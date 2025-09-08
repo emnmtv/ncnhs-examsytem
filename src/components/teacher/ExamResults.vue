@@ -543,7 +543,7 @@
               </div>
             </div>
             <div class="success-rate">
-              <div class="rate-label">Success Rate ({{ item.percentageCorrect }}%)</div>
+              <div class="rate-label">Success Rate</div>
               <div class="progress-bar">
                 <div 
                   class="progress" 
@@ -553,6 +553,7 @@
                     'medium': item.percentageCorrect >= 40 && item.percentageCorrect < 70,
                     'poor': item.percentageCorrect < 40
                   }"
+                  :data-label="`${item.percentageCorrect}%`"
                 ></div>
               </div>
             </div>
@@ -2730,6 +2731,7 @@ tr:hover {
   font-weight: 600;
   color: white;
   transition: width 0.3s ease;
+  position: relative;
 }
 
 .progress::after {
@@ -2737,6 +2739,7 @@ tr:hover {
   position: absolute;
   right: 8px;
   color: white;
+  white-space: nowrap;
 }
 
 .progress.good {
