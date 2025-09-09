@@ -481,7 +481,7 @@
                       <option 
                         v-for="(part, partIndex) in parts" 
                         :key="partIndex" 
-                        :value="partIndex + 1"
+                        :value="(part.id || (partIndex + 1)).toString()"
                       >
                         {{ part.label }}
                       </option>
@@ -1098,13 +1098,14 @@ export default {
               correctAnswer: q.correctAnswer,
               imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null, // Fix image URL format
               points: q.points || 1, // Include points, default to 1 if not present
-              partId: q.partId || '', // Include partId if present
+              partId: q.partId ? q.partId.toString() : '', // Convert partId to string to match dropdown values
               wordLimit: q.wordLimit || null // Include wordLimit if present
             }));
             
             // Load parts if they exist
             if (exam.parts && Array.isArray(exam.parts)) {
               parts.value = exam.parts.map(p => ({
+                id: p.id, // Preserve the database ID
                 label: p.label,
                 order: p.order
               }));
@@ -1624,12 +1625,16 @@ export default {
 
     const addPart = () => {
       parts.value.push({
+        id: `new_${Date.now()}`, // Temporary ID for new parts
         label: '',
         order: parts.value.length + 1
       });
     };
 
     const removePart = (index) => {
+      const partToRemove = parts.value[index];
+      const partId = partToRemove.id || (index + 1); // Use actual ID or fallback to index + 1
+      
       // Remove the part
       parts.value.splice(index, 1);
       
@@ -1640,10 +1645,8 @@ export default {
       
       // Remove partId from questions that were assigned to this part
       questions.value.forEach(question => {
-        if (question.partId === index + 1) {
+        if (question.partId == partId.toString()) { // Convert partId to string for comparison
           question.partId = '';
-        } else if (question.partId > index + 1) {
-          question.partId = question.partId - 1;
         }
       });
     };
