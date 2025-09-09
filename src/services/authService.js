@@ -317,8 +317,8 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
   try {
     console.log('AuthService: Creating exam', testCode);
     
-    // Validate input parameters
-    if (!testCode || !classCode || !examTitle || !questions || !userId) {
+    // Validate input parameters (classCode is now optional)
+    if (!testCode || !examTitle || !questions || !userId) {
       throw new Error('Missing required parameters');
     }
 
@@ -348,7 +348,8 @@ export const createExam = async (testCode, classCode, examTitle, questions, user
         correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
         imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
         points: q.points || 1,  // Include points, default to 1 if not specified
-        partId: q.partId || null  // Include partId if specified
+        partId: q.partId || null,  // Include partId if specified
+        wordLimit: q.wordLimit || null  // Include wordLimit for essay questions
       };
     });
 
@@ -957,7 +958,8 @@ export const updateExam = async (examId, examData) => {
           correctAnswer: q.correctAnswer || '', // Essay questions can have empty correctAnswer
           imageUrl: q.imageUrl || null,  // Include imageUrl in the question data
           points: q.points || 1,  // Include points, default to 1 if not specified
-          partId: q.partId || null  // Include partId if specified
+          partId: q.partId || null,  // Include partId if specified
+          wordLimit: q.wordLimit || null  // Include wordLimit for essay questions
         }))
       })
     });
@@ -3436,6 +3438,39 @@ export const getSubjectDirectStudents = async (subjectId) => {
     return data;
   } catch (error) {
     console.error("Error getting direct students for subject:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get complete classlist for a subject (both direct and section-based students)
+ * @param {number} subjectId - The ID of the subject
+ * @returns {Promise<Object>} - Complete classlist with subject details and student information
+ */
+export const getSubjectClasslist = async (subjectId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Getting classlist for subject', { subjectId });
+
+    const response = await fetch(`${BASE_URL}/subject/${subjectId}/classlist`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to get subject classlist");
+    }
+
+    const data = await response.json();
+    console.log('AuthService: Subject classlist response', data);
+    return data;
+  } catch (error) {
+    console.error("Error getting subject classlist:", error);
     throw error;
   }
 };

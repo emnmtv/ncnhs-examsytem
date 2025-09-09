@@ -8,18 +8,92 @@
           </router-link>
           <h1>Class List<span class="material-icons">people</span></h1>
           <div class="action-buttons">
-            <router-link to="/attendance-records" class="attendance-records-btn">
+            <!-- Action Buttons Toggle -->
+            <div class="action-toggle-container">
+              <label class="action-toggle">
+                <input type="checkbox" v-model="actionButtonsEnabled" @change="toggleActionButtons">
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">Show Actions</span>
+              </label>
+            </div>
+            
+            <router-link v-if="actionButtonsEnabled" to="/attendance-records" class="attendance-records-btn">
               <span class="material-icons">fact_check</span>
               Attendance Records
             </router-link>
-            <button @click="openRecentSessionsModal" class="recent-sessions-btn">
+            <button v-if="actionButtonsEnabled" @click="openRecentSessionsModal" class="recent-sessions-btn">
               <span class="material-icons">history</span>
               Recent Sessions
             </button>
-            <button @click="openAttendanceModal" class="create-attendance-btn">
+            <button v-if="actionButtonsEnabled" @click="openAttendanceModal" class="create-attendance-btn">
               <span class="material-icons">qr_code_scanner</span>
               Take Attendance
             </button>
+            
+            <!-- Export Controls -->
+            <div class="export-controls">
+              <button @click="toggleExportOptions" class="export-main-btn">
+                <span class="material-icons">download</span>
+                Export
+                <span class="material-icons dropdown-icon" :class="{ 'rotated': showExportOptions }">expand_more</span>
+              </button>
+              
+              <div v-if="showExportOptions" class="export-dropdown">
+                <div class="export-options-header">
+                  <h3>Export Options</h3>
+                  <p class="export-note">Export class list data in various formats</p>
+                </div>
+                
+                <div class="export-data-selection">
+                  <h4>Select data to export:</h4>
+                  <div class="export-checkboxes">
+                    <label>
+                      <input type="checkbox" v-model="exportOptions.fields.name" checked>
+                      Student Name
+                    </label>
+                    <label>
+                      <input type="checkbox" v-model="exportOptions.fields.lrn">
+                      LRN
+                    </label>
+                    <label>
+                      <input type="checkbox" v-model="exportOptions.fields.grade" checked>
+                      Grade
+                    </label>
+                    <label>
+                      <input type="checkbox" v-model="exportOptions.fields.section" checked>
+                      Section
+                    </label>
+                    <label>
+                      <input type="checkbox" v-model="exportOptions.fields.type" checked>
+                      Student Type
+                    </label>
+                    <label v-if="actionButtonsEnabled">
+                      <input type="checkbox" v-model="exportOptions.fields.attendance">
+                      Attendance Status
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="export-actions">
+                  <button @click="exportToCSV" class="export-btn csv">
+                    <span class="material-icons">table_chart</span>
+                    CSV
+                  </button>
+                  <button @click="exportToExcel" class="export-btn excel">
+                    <span class="material-icons">description</span>
+                    Excel
+                  </button>
+                  <button @click="exportToPDF" class="export-btn pdf">
+                    <span class="material-icons">picture_as_pdf</span>
+                    PDF
+                  </button>
+                  <button @click="printData" class="export-btn print">
+                    <span class="material-icons">print</span>
+                    Print
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
         <div class="divider"></div>
@@ -158,6 +232,25 @@
 
     <!-- Filter Controls -->
     <div v-else class="filter-controls">
+      <!-- Filter Applied Indicator -->
+      <div v-if="selectedSubjectId" class="filter-applied-indicator">
+        <span class="material-icons">filter_alt</span>
+        <span>Showing: {{ getSelectedSubjectName() }}</span>
+        <button @click="clearSubjectFilter" class="clear-filter-btn">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      
+      <!-- Search Bar - First and Prominent -->
+      <div class="search-section">
+        <div class="search-box">
+          <span class="material-icons">search</span>
+          <input type="text" v-model="searchQuery" placeholder="Search students by name or LRN...">
+        </div>
+      </div>
+      
+      <!-- Filter Sections -->
+      <div class="filters-row">
       <div class="filter-section">
         <label for="subjectFilter">Subject:</label>
         <select id="subjectFilter" v-model="selectedSubjectId" class="filter-select">
@@ -169,17 +262,33 @@
       </div>
       
       <div class="filter-section">
-        <label for="sourceFilter">Source:</label>
+          <label for="sourceFilter">Student Type:</label>
         <select id="sourceFilter" v-model="selectedSource" class="filter-select">
           <option value="all">All Students</option>
-          <option value="section">Section Students</option>
-          <option value="direct">Direct Students</option>
+            <option value="section">Section Students Only</option>
+            <option value="direct">Direct Students Only</option>
         </select>
       </div>
       
-      <div class="search-box">
-        <span class="material-icons">search</span>
-        <input type="text" v-model="searchQuery" placeholder="Search students by name or LRN...">
+        <div class="filter-section">
+          <label for="gradeFilter">Grade:</label>
+          <select id="gradeFilter" v-model="selectedGrade" class="filter-select">
+            <option value="">All Grades</option>
+            <option v-for="grade in availableGrades" :key="grade" :value="grade">
+              Grade {{ grade }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="filter-section">
+          <label for="sectionFilter">Section:</label>
+          <select id="sectionFilter" v-model="selectedSection" class="filter-select">
+            <option value="">All Sections</option>
+            <option v-for="section in availableSections" :key="section" :value="section">
+              {{ section }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
     
@@ -192,11 +301,6 @@
 
     <!-- Class List -->
     <div v-if="!loading && !error && hasStudents" class="class-list-container">
-      <!-- Today's Attendance Indicator -->
-      <div class="today-indicator">
-        <span class="material-icons">today</span>
-        Marking attendance for today: {{ formatDate(new Date()) }}
-      </div>
       
       <!-- Subject Cards -->
       <div v-for="subject in filteredSubjects" :key="subject.subject.id" class="subject-card">
@@ -212,72 +316,32 @@
         </div>
 
         <div class="subject-body">
-          <!-- Section Students -->
-          <div v-if="showSectionStudents && subject.sectionStudents.length > 0" class="students-group">
+          <!-- Combined Students List -->
+          <div v-if="hasStudentsInSubject(subject)" class="students-group">
             <h3 class="group-title">
-              <span class="material-icons">groups</span>
-              Section Students
+              <span class="material-icons">people</span>
+              Students <span class="student-count">({{ getTotalStudentsCount(subject) }})</span>
             </h3>
-            <div class="section-list">
-              <div v-for="(students, section) in groupedSectionStudents(subject)" :key="section" class="section-group">
-                <h4 class="section-title">{{ section }} <span class="student-count">({{ students.length }})</span></h4>
                 <div class="students-table-container">
                   <table class="students-table">
                     <thead>
                       <tr>
                         <th>Name</th>
-                        <th>LRN</th>
-                        <th>Attendance</th>
+                    <th class="hide-on-mobile">Grade & Section</th>
+                    <th class="hide-on-mobile">Type</th>
+                    <th v-if="actionButtonsEnabled">Attendance</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr v-for="student in students" :key="student.id">
-                        <td>{{ student.lastName }}, {{ student.firstName }}</td>
-                        <td>{{ student.lrn }}</td>
-                        <td class="actions">
-                          <button 
-                            class="attendance-btn" 
-                            :class="{ 'present': isStudentPresent(student.id, subject.subject.id) }"
-                            @click="toggleAttendance(student.id, subject.subject.id)"
-                            :title="isStudentPresent(student.id, subject.subject.id) ? 'Mark Absent' : 'Mark Present'">
-                            <span class="material-icons">
-                              {{ isStudentPresent(student.id, subject.subject.id) ? 'check_circle' : 'radio_button_unchecked' }}
+                  <tr v-for="student in getAllStudents(subject)" :key="`${student.id}-${student.studentType || 'section'}`">
+                    <td>{{ student.lastName || '' }}, {{ student.firstName || '' }}</td>
+                    <td class="hide-on-mobile">Grade {{ student.gradeLevel || 'N/A' }}-{{ student.section || 'N/A' }}</td>
+                    <td class="hide-on-mobile">
+                      <span class="student-type-badge" :class="student.studentType || 'section'">
+                        {{ student.studentType === 'direct' ? 'Direct' : 'Section' }}
                             </span>
-                            <span class="attendance-status">
-                              {{ isStudentPresent(student.id, subject.subject.id) ? 'Present' : 'Not marked' }}
-                            </span>
-                          </button>
                         </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Direct Students -->
-          <div v-if="showDirectStudents && subject.directStudents.length > 0" class="students-group">
-            <h3 class="group-title">
-              <span class="material-icons">person</span>
-              Direct Students <span class="student-count">({{ subject.directStudents.length }})</span>
-            </h3>
-            <div class="students-table-container">
-              <table class="students-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>LRN</th>
-                    <th class="hide-on-mobile">Section</th>
-                    <th>Attendance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="student in subject.directStudents" :key="student.id">
-                    <td>{{ student.lastName }}, {{ student.firstName }}</td>
-                    <td>{{ student.lrn }}</td>
-                    <td class="hide-on-mobile">Grade {{ student.gradeLevel }}-{{ student.section }}</td>
-                    <td class="actions">
+                    <td v-if="actionButtonsEnabled" class="actions">
                       <button 
                         class="attendance-btn" 
                         :class="{ 'present': isStudentPresent(student.id, subject.subject.id) }"
@@ -310,18 +374,39 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { getTeacherAssignedSubjects, getSubjectDirectStudents, getStudentsBySection, createAttendanceSession as createSession, getAttendanceSessions, markAttendance, getSessionAttendance } from '@/services/authService';
+import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const router = useRouter();
+const route = useRoute();
 const subjects = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const searchQuery = ref('');
 const selectedSubjectId = ref('');
 const selectedSource = ref('all');
+const selectedGrade = ref('');
+const selectedSection = ref('');
+const actionButtonsEnabled = ref(false); // Toggle for showing action buttons
 const attendanceMarked = ref({});  // Track which students are marked present
 const todaySessions = ref({}); // Track today's sessions by subjectId
+
+// Export functionality
+const showExportOptions = ref(false);
+const exportOptions = ref({
+  fields: {
+    name: true,
+    lrn: true,
+    grade: true,
+    section: true,
+    type: true,
+    attendance: false
+  }
+});
 
 // Attendance modal state
 const showAttendanceModal = ref(false);
@@ -374,6 +459,19 @@ const openRecentSessionsModal = () => {
 // Close the recent sessions modal
 const closeRecentSessionsModal = () => {
   showRecentSessionsModal.value = false;
+};
+
+// Toggle action buttons function
+const toggleActionButtons = () => {
+  // Close any open modals when disabling action buttons
+  if (!actionButtonsEnabled.value) {
+    if (showAttendanceModal.value) {
+      closeAttendanceModal();
+    }
+    if (showRecentSessionsModal.value) {
+      closeRecentSessionsModal();
+    }
+  }
 };
 
 // Check if a student is marked present
@@ -694,61 +792,167 @@ const filteredSubjects = computed(() => {
   return result;
 });
 
-// Determine if we should show section students based on filter
-const showSectionStudents = computed(() => {
-  return selectedSource.value === 'all' || selectedSource.value === 'section';
-});
-
-// Determine if we should show direct students based on filter
-const showDirectStudents = computed(() => {
-  return selectedSource.value === 'all' || selectedSource.value === 'direct';
-});
 
 // Check if there are any students to display
 const hasStudents = computed(() => {
   return filteredSubjects.value.some(subject => hasStudentsInSubject(subject));
 });
 
+// Get available grades from all students
+const availableGrades = computed(() => {
+  const grades = new Set();
+  subjects.value.forEach(subject => {
+    if (subject.sectionStudents) {
+      subject.sectionStudents.forEach(student => {
+        if (student.gradeLevel) {
+          grades.add(student.gradeLevel);
+        }
+      });
+    }
+    if (subject.directStudents) {
+      subject.directStudents.forEach(student => {
+        if (student.gradeLevel) {
+          grades.add(student.gradeLevel);
+        }
+      });
+    }
+  });
+  return Array.from(grades).sort((a, b) => a - b);
+});
+
+// Get available sections from all students
+const availableSections = computed(() => {
+  const sections = new Set();
+  subjects.value.forEach(subject => {
+    if (subject.sectionStudents) {
+      subject.sectionStudents.forEach(student => {
+        if (student.section) {
+          sections.add(student.section);
+        }
+      });
+    }
+    if (subject.directStudents) {
+      subject.directStudents.forEach(student => {
+        if (student.section) {
+          sections.add(student.section);
+        }
+      });
+    }
+  });
+  return Array.from(sections).sort();
+});
+
 // Helper function to check if a subject has students based on current filters
 const hasStudentsInSubject = (subject) => {
-  if (showSectionStudents.value && subject.sectionStudents.some(s => matchesSearch(s))) {
+  if (selectedSource.value === 'all' || selectedSource.value === 'section') {
+    if (subject.sectionStudents && subject.sectionStudents.some(s => matchesSearch(s))) {
     return true;
+    }
   }
   
-  if (showDirectStudents.value && subject.directStudents.some(s => matchesSearch(s))) {
+  if (selectedSource.value === 'all' || selectedSource.value === 'direct') {
+    if (subject.directStudents && subject.directStudents.some(s => matchesSearch(s))) {
     return true;
+    }
   }
   
   return false;
 };
 
-// Helper function to check if a student matches the search query
+// Helper function to check if a student matches the search query and filters
 const matchesSearch = (student) => {
-  if (!searchQuery.value) return true;
-  
+  // Check search query
+  if (searchQuery.value) {
   const query = searchQuery.value.toLowerCase();
-  return student.firstName.toLowerCase().includes(query) ||
-         student.lastName.toLowerCase().includes(query) ||
-         student.lrn.toString().includes(query);
+    const matchesQuery = student.firstName?.toLowerCase().includes(query) ||
+                        student.lastName?.toLowerCase().includes(query) ||
+                        (student.lrn ? student.lrn.toString().includes(query) : false);
+    if (!matchesQuery) return false;
+  }
+  
+  // Check grade filter - convert both to strings for comparison
+  if (selectedGrade.value) {
+    const studentGrade = student.gradeLevel?.toString() || '';
+    const selectedGradeValue = selectedGrade.value.toString();
+    if (studentGrade !== selectedGradeValue) {
+      return false;
+    }
+  }
+  
+  // Check section filter
+  if (selectedSection.value) {
+    const studentSection = student.section || '';
+    if (studentSection !== selectedSection.value) {
+      return false;
+    }
+  }
+  
+  return true;
 };
 
-// Group section students by section
-const groupedSectionStudents = (subject) => {
-  const groups = {};
+// Get all students (section + direct) as a flat list
+const getAllStudents = (subject) => {
+  const allStudents = [];
   
-  if (!subject.sectionStudents) return groups;
+  // Process section students
+  if (subject.sectionStudents && (selectedSource.value === 'all' || selectedSource.value === 'section')) {
+    const filteredSectionStudents = subject.sectionStudents.filter(s => matchesSearch(s));
+    filteredSectionStudents.forEach(student => {
+      allStudents.push({ ...student, studentType: 'section' });
+    });
+  }
   
-  const filteredStudents = subject.sectionStudents.filter(s => matchesSearch(s));
+  // Process direct students
+  if (subject.directStudents && (selectedSource.value === 'all' || selectedSource.value === 'direct')) {
+    const filteredDirectStudents = subject.directStudents.filter(s => matchesSearch(s));
+    filteredDirectStudents.forEach(student => {
+      allStudents.push({ ...student, studentType: 'direct' });
+    });
+  }
   
-  filteredStudents.forEach(student => {
-    const sectionKey = `Grade ${student.gradeLevel}-${student.section}`;
-    if (!groups[sectionKey]) {
-      groups[sectionKey] = [];
+  // Sort by grade, then section, then last name, then first name
+  return allStudents.sort((a, b) => {
+    // Handle null/undefined values for gradeLevel
+    const gradeA = a.gradeLevel || 0;
+    const gradeB = b.gradeLevel || 0;
+    if (gradeA !== gradeB) {
+      return gradeA - gradeB;
     }
-    groups[sectionKey].push(student);
+    
+    // Handle null/undefined values for section
+    const sectionA = a.section || '';
+    const sectionB = b.section || '';
+    if (sectionA !== sectionB) {
+      return sectionA.localeCompare(sectionB);
+    }
+    
+    // Handle null/undefined values for lastName
+    const lastNameA = a.lastName || '';
+    const lastNameB = b.lastName || '';
+    if (lastNameA !== lastNameB) {
+      return lastNameA.localeCompare(lastNameB);
+    }
+    
+    // Handle null/undefined values for firstName
+    const firstNameA = a.firstName || '';
+    const firstNameB = b.firstName || '';
+    return firstNameA.localeCompare(firstNameB);
   });
+};
+
+// Get total students count for a subject
+const getTotalStudentsCount = (subject) => {
+  let count = 0;
   
-  return groups;
+  if (selectedSource.value === 'all' || selectedSource.value === 'section') {
+    count += subject.sectionStudents ? subject.sectionStudents.filter(s => matchesSearch(s)).length : 0;
+  }
+  
+  if (selectedSource.value === 'all' || selectedSource.value === 'direct') {
+    count += subject.directStudents ? subject.directStudents.filter(s => matchesSearch(s)).length : 0;
+  }
+  
+  return count;
 };
 
 // Load classes
@@ -812,7 +1016,7 @@ const loadClasses = async () => {
 };
 
 // Watch for filter changes to refresh student lists
-watch([selectedSubjectId, selectedSource, searchQuery], () => {
+watch([selectedSubjectId, selectedSource, selectedGrade, selectedSection, searchQuery], () => {
   // Filter is handled by computed properties, no need to reload data
 }, { deep: true });
 
@@ -826,9 +1030,361 @@ watch(() => subjects.value.length, (newLength) => {
   }
 });
 
+// Apply URL query parameters on mount
+const applyUrlFilters = () => {
+  // Apply subject filter from URL query parameter
+  if (route.query.subject) {
+    selectedSubjectId.value = route.query.subject;
+  }
+};
+
+// Get selected subject name for display
+const getSelectedSubjectName = () => {
+  if (!selectedSubjectId.value) return '';
+  
+  const subject = subjects.value.find(s => s.subject.id === parseInt(selectedSubjectId.value));
+  return subject ? `${subject.subject.name} (${subject.subject.code})` : 'Unknown Subject';
+};
+
+// Clear subject filter
+const clearSubjectFilter = () => {
+  selectedSubjectId.value = '';
+  // Update URL to remove the subject query parameter
+  router.replace({ query: { ...route.query, subject: undefined } });
+};
+
+// Export functionality
+const toggleExportOptions = () => {
+  showExportOptions.value = !showExportOptions.value;
+};
+
+const closeExportOptionsOnClickOutside = (event) => {
+  if (showExportOptions.value && !event.target.closest('.export-controls')) {
+    showExportOptions.value = false;
+  }
+};
+
+// Prepare data for export based on selected options
+const getExportData = () => {
+  let dataToExport = [];
+  let headers = [];
+  
+  const fields = exportOptions.value.fields;
+  
+  // Build headers array
+  if (fields.name) headers.push('firstName', 'lastName');
+  if (fields.lrn) headers.push('lrn');
+  if (fields.grade) headers.push('grade');
+  if (fields.section) headers.push('section');
+  if (fields.type) headers.push('type');
+  if (fields.attendance && actionButtonsEnabled.value) headers.push('attendance');
+  
+  // Get all students from filtered subjects
+  filteredSubjects.value.forEach(subject => {
+    const students = getAllStudents(subject);
+    students.forEach(student => {
+      const row = {};
+      
+      if (fields.name) {
+        row.firstName = student.firstName || '';
+        row.lastName = student.lastName || '';
+      }
+      if (fields.lrn) {
+        row.lrn = student.lrn || '';
+      }
+      if (fields.grade) {
+        row.grade = student.gradeLevel || '';
+      }
+      if (fields.section) {
+        row.section = student.section || '';
+      }
+      if (fields.type) {
+        row.type = student.studentType === 'direct' ? 'Direct' : 'Section';
+      }
+      if (fields.attendance && actionButtonsEnabled.value) {
+        const isPresent = isStudentPresent(student.id, subject.subject.id);
+        row.attendance = isPresent ? 'Present' : 'Not marked';
+      }
+      
+      // Add subject info
+      row.subjectName = subject.subject.name;
+      row.subjectCode = subject.subject.code;
+      
+      dataToExport.push(row);
+    });
+  });
+  
+  return { headers, data: dataToExport };
+};
+
+// Export to CSV
+const exportToCSV = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Create CSV content
+    const csvHeaders = [...headers, 'subjectName', 'subjectCode'];
+    const csvContent = [
+      csvHeaders.join(','),
+      ...data.map(row => 
+        csvHeaders.map(header => {
+          const value = row[header] || '';
+          // Escape commas and quotes in CSV
+          return `"${value.toString().replace(/"/g, '""')}"`;
+        }).join(',')
+      )
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    
+    const fileName = `class_list_${new Date().toISOString().split('T')[0]}.csv`;
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'CSV Export Complete',
+      text: `Class list exported to CSV as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to CSV error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to CSV. Please try again.'
+    });
+  }
+};
+
+// Export to Excel
+const exportToExcel = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Prepare data for Excel
+    const excelHeaders = [...headers, 'subjectName', 'subjectCode'];
+    const excelData = [
+      excelHeaders,
+      ...data.map(row => excelHeaders.map(header => row[header] || ''))
+    ];
+    
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(excelData);
+    
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Class List');
+    
+    // Generate and download file
+    const fileName = `class_list_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Class list exported to Excel as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to Excel error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to Excel. Please try again.'
+    });
+  }
+};
+
+// Export to PDF
+const exportToPDF = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to export.'
+      });
+      return;
+    }
+    
+    // Create PDF
+    const doc = new jsPDF('landscape');
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text('Class List Report', 14, 22);
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+    
+    // Prepare table data
+    const tableHeaders = [...headers, 'Subject'];
+    const tableData = data.map(row => {
+      const rowData = [];
+      headers.forEach(header => {
+        rowData.push(row[header] || '');
+      });
+      rowData.push(`${row.subjectName} (${row.subjectCode})`);
+      return rowData;
+    });
+    
+    // Add table
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY: 40,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [21, 151, 80] },
+      alternateRowStyles: { fillColor: [248, 249, 250] }
+    });
+    
+    // Save PDF
+    const fileName = `class_list_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    // Hide export options after export
+    showExportOptions.value = false;
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Export Complete',
+      text: `Class list exported to PDF as ${fileName}`,
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Export to PDF error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Export Failed',
+      text: 'Failed to export data to PDF. Please try again.'
+    });
+  }
+};
+
+// Print data
+const printData = () => {
+  try {
+    const { headers, data } = getExportData();
+    
+    if (data.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Data',
+        text: 'There is no data to print.'
+      });
+      return;
+    }
+    
+    // Create print content
+    let printContent = `
+      <html>
+        <head>
+          <title>Class List Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            h1 { color: #159750; margin-bottom: 10px; }
+            .report-info { margin-bottom: 20px; color: #666; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #159750; color: white; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+            .no-print { display: none; }
+          </style>
+        </head>
+        <body>
+          <h1>Class List Report</h1>
+          <div class="report-info">
+            <p><strong>Generated on:</strong> ${new Date().toLocaleDateString()}</p>
+            <p><strong>Total Students:</strong> ${data.length}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                ${headers.map(header => `<th>${header.charAt(0).toUpperCase() + header.slice(1)}</th>`).join('')}
+                <th>Subject</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.map(row => `
+                <tr>
+                  ${headers.map(header => `<td>${row[header] || ''}</td>`).join('')}
+                  <td>${row.subjectName} (${row.subjectCode})</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    
+    // Open print window
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+    
+    // Hide export options after print dialog is shown
+    showExportOptions.value = false;
+  } catch (error) {
+    console.error('Print error:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Print Failed',
+      text: 'Failed to prepare data for printing. Please try again.'
+    });
+  }
+};
+
 onMounted(() => {
+  // Apply URL filters first
+  applyUrlFilters();
+  
   // Just load classes - loadRecentSessions will be called after classes are loaded
   loadClasses();
+  
+  // Add click outside listener for export dropdown
+  document.addEventListener('click', closeExportOptionsOnClickOutside);
 });
 </script>
 
@@ -897,8 +1453,8 @@ onMounted(() => {
 /* Filter Controls */
 .filter-controls {
   display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+  flex-direction: column;
+  gap: 20px;
   margin-bottom: 25px;
   padding: 20px;
   background: white;
@@ -906,10 +1462,107 @@ onMounted(() => {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
+/* Filter Applied Indicator */
+.filter-applied-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  color: #2e7d32;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.filter-applied-indicator .material-icons {
+  font-size: 1.1rem;
+  color: #2e7d32;
+}
+
+.clear-filter-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: rgba(46, 125, 50, 0.1);
+  border-radius: 50%;
+  color: #2e7d32;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: auto;
+}
+
+.clear-filter-btn:hover {
+  background: rgba(46, 125, 50, 0.2);
+  transform: scale(1.1);
+}
+
+.clear-filter-btn .material-icons {
+  font-size: 1rem;
+}
+
+/* Search Section - Prominent */
+.search-section {
+  width: 100%;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  background: white;
+  transition: all 0.3s ease;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.search-box:focus-within {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1), 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.search-box .material-icons {
+  color: #6c757d;
+  font-size: 22px;
+}
+
+.search-box input {
+  flex: 1;
+  padding: 0;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background: transparent;
+  font-weight: 500;
+}
+
+.search-box input::placeholder {
+  color: #adb5bd;
+  font-weight: 400;
+}
+
+/* Filters Row */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: end;
+}
+
 .filter-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 200px;
 }
 
 .filter-section label {
@@ -924,29 +1577,13 @@ onMounted(() => {
   border-radius: 8px;
   background: white;
   min-width: 200px;
+  transition: all 0.3s ease;
 }
 
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 15px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
-}
-
-.search-box input {
-  flex: 1;
-  padding: 10px 0;
-  border: none;
+.filter-select:focus {
   outline: none;
-  font-size: 1rem;
-}
-
-.search-box .material-icons {
-  color: #aaa;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 /* Create Attendance Button */
@@ -1424,7 +2061,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: #2196f3;
+  background: #17a2b8;
   color: white;
   border: none;
   border-radius: 8px;
@@ -1436,7 +2073,7 @@ onMounted(() => {
 }
 
 .recent-sessions-btn:hover {
-  background: #1976d2;
+  background: #138496;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
@@ -1446,22 +2083,6 @@ onMounted(() => {
 }
 
 /* Create Attendance Button */
-.create-attendance-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
-  background: #159750;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
-}
-
 /* Recent Sessions Modal */
 .recent-sessions-modal {
   max-width: 600px;
@@ -1602,6 +2223,827 @@ onMounted(() => {
   margin-bottom: 10px;
 }
 
+/* Student Type Badge */
+.student-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.student-type-badge.section {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.student-type-badge.direct {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* Action Toggle Styles */
+.action-toggle-container {
+  display: flex;
+  align-items: center;
+}
+
+.action-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.action-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.action-toggle input[type="checkbox"]:checked + .toggle-slider {
+  background: #4CAF50;
+}
+
+.action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(26px);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+/* High DPI and Small Laptop Screens */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .class-list {
+    padding: 1.6rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+
+  .header-background {
+    font-size: 6rem;
+    right: 4rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .divider {
+    margin: 1.2rem 0;
+  }
+
+  .title-row {
+    gap: 12px;
+  }
+
+  .action-buttons {
+    gap: 8px;
+  }
+
+  .back-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .back-btn .material-icons {
+    font-size: 1.3rem;
+  }
+
+  .attendance-records-btn,
+  .recent-sessions-btn,
+  .create-attendance-btn,
+  .export-main-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .attendance-records-btn .material-icons,
+  .recent-sessions-btn .material-icons,
+  .create-attendance-btn .material-icons,
+  .export-main-btn .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .export-dropdown {
+    min-width: 280px;
+  }
+
+  .export-options-header {
+    padding: 16px 16px 12px;
+  }
+
+  .export-options-header h3 {
+    font-size: 1rem;
+  }
+
+  .export-data-selection {
+    padding: 16px;
+  }
+
+  .export-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+  }
+
+  .export-checkboxes label {
+    font-size: 0.85rem;
+  }
+
+  .export-actions {
+    padding: 16px;
+    gap: 10px;
+  }
+
+  .export-btn {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .filter-controls {
+    padding: 1.6rem;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .filter-applied-indicator {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .filter-applied-indicator .material-icons {
+    font-size: 1rem;
+  }
+
+  .clear-filter-btn {
+    width: 22px;
+    height: 22px;
+  }
+
+  .clear-filter-btn .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .search-box {
+    padding: 12px 16px;
+    max-width: 400px;
+  }
+
+  .search-box .material-icons {
+    font-size: 20px;
+  }
+
+  .filters-row {
+    gap: 16px;
+  }
+
+  .filter-section label {
+    font-size: 0.85rem;
+  }
+
+  .filter-select {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+    min-width: 180px;
+  }
+
+  .search-box input {
+    padding: 8px 0;
+    font-size: 0.9rem;
+  }
+
+  .search-box .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .class-list-container {
+    gap: 24px;
+    margin-top: 16px;
+  }
+
+  .subject-card {
+    border-radius: 12px;
+  }
+
+  .subject-header {
+    padding: 1.6rem;
+  }
+
+  .subject-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.8rem;
+    padding: 4px 10px;
+  }
+
+  .subject-body {
+    padding: 20px;
+  }
+
+  .students-group {
+    margin-bottom: 24px;
+  }
+
+  .group-title {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+
+  .group-title .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .student-count {
+    font-size: 0.8rem;
+  }
+
+  .section-list {
+    gap: 20px;
+  }
+
+  .section-title {
+    font-size: 1rem;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+  }
+
+  .students-table {
+    font-size: 0.9rem;
+  }
+
+  .students-table th,
+  .students-table td {
+    padding: 10px 12px;
+  }
+
+  .attendance-btn {
+    padding: 5px 10px;
+    min-width: 110px;
+  }
+
+  .attendance-btn .material-icons {
+    font-size: 16px;
+  }
+
+  .attendance-status {
+    font-size: 0.8rem;
+  }
+
+  .student-type-badge {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+
+  .toggle-slider {
+    width: 45px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(23px);
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .class-list {
+    padding: 1.4rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+
+  .header-background {
+    font-size: 5rem;
+    right: 3rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .divider {
+    margin: 1rem 0;
+  }
+
+  .title-row {
+    gap: 10px;
+  }
+
+  .action-buttons {
+    gap: 6px;
+  }
+
+  .back-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .back-btn .material-icons {
+    font-size: 1.2rem;
+  }
+
+  .attendance-records-btn,
+  .recent-sessions-btn,
+  .create-attendance-btn,
+  .export-main-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .attendance-records-btn .material-icons,
+  .recent-sessions-btn .material-icons,
+  .create-attendance-btn .material-icons,
+  .export-main-btn .material-icons {
+    font-size: 1rem;
+  }
+
+  .export-dropdown {
+    min-width: 260px;
+  }
+
+  .export-options-header {
+    padding: 14px 14px 10px;
+  }
+
+  .export-options-header h3 {
+    font-size: 0.95rem;
+  }
+
+  .export-data-selection {
+    padding: 14px;
+  }
+
+  .export-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+
+  .export-checkboxes label {
+    font-size: 0.8rem;
+  }
+
+  .export-actions {
+    padding: 14px;
+    gap: 8px;
+  }
+
+  .export-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .filter-controls {
+    padding: 1.4rem;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .filter-applied-indicator {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .filter-applied-indicator .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .clear-filter-btn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .clear-filter-btn .material-icons {
+    font-size: 0.8rem;
+  }
+
+  .search-box {
+    padding: 10px 14px;
+    max-width: 350px;
+  }
+
+  .search-box .material-icons {
+    font-size: 18px;
+  }
+
+  .filters-row {
+    gap: 14px;
+  }
+
+  .filter-section label {
+    font-size: 0.8rem;
+  }
+
+  .filter-select {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 160px;
+  }
+
+  .search-box input {
+    padding: 6px 0;
+    font-size: 0.85rem;
+  }
+
+  .search-box .material-icons {
+    font-size: 1rem;
+  }
+
+  .class-list-container {
+    gap: 20px;
+    margin-top: 14px;
+  }
+
+  .subject-header {
+    padding: 1.4rem;
+  }
+
+  .subject-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+
+  .subject-body {
+    padding: 18px;
+  }
+
+  .students-group {
+    margin-bottom: 20px;
+  }
+
+  .group-title {
+    font-size: 1rem;
+    margin-bottom: 14px;
+    gap: 6px;
+  }
+
+  .group-title .material-icons {
+    font-size: 1rem;
+  }
+
+  .student-count {
+    font-size: 0.75rem;
+  }
+
+  .section-list {
+    gap: 18px;
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+  }
+
+  .students-table {
+    font-size: 0.85rem;
+  }
+
+  .students-table th,
+  .students-table td {
+    padding: 8px 10px;
+  }
+
+  .attendance-btn {
+    padding: 4px 8px;
+    min-width: 100px;
+  }
+
+  .attendance-btn .material-icons {
+    font-size: 15px;
+  }
+
+  .attendance-status {
+    font-size: 0.75rem;
+  }
+
+  .student-type-badge {
+    padding: 1px 5px;
+    font-size: 0.65rem;
+  }
+
+
+  .toggle-label {
+    font-size: 0.8rem;
+  }
+
+  .toggle-slider {
+    width: 42px;
+    height: 20px;
+  }
+
+  .toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(22px);
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .class-list {
+    padding: 1.2rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .header-background {
+    font-size: 4rem;
+    right: 2rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .divider {
+    margin: 0.8rem 0;
+  }
+
+  .title-row {
+    gap: 8px;
+  }
+
+  .action-buttons {
+    gap: 4px;
+  }
+
+  .back-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .back-btn .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .attendance-records-btn,
+  .recent-sessions-btn,
+  .create-attendance-btn,
+  .export-main-btn {
+    padding: 5px 8px;
+    font-size: 0.75rem;
+  }
+
+  .attendance-records-btn .material-icons,
+  .recent-sessions-btn .material-icons,
+  .create-attendance-btn .material-icons,
+  .export-main-btn .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .export-dropdown {
+    min-width: 240px;
+  }
+
+  .export-options-header {
+    padding: 12px 12px 8px;
+  }
+
+  .export-options-header h3 {
+    font-size: 0.9rem;
+  }
+
+  .export-data-selection {
+    padding: 12px;
+  }
+
+  .export-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 6px;
+  }
+
+  .export-checkboxes label {
+    font-size: 0.75rem;
+  }
+
+  .export-actions {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .export-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .filter-controls {
+    padding: 1.2rem;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .filter-applied-indicator {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .filter-applied-indicator .material-icons {
+    font-size: 0.8rem;
+  }
+
+  .clear-filter-btn {
+    width: 18px;
+    height: 18px;
+  }
+
+  .clear-filter-btn .material-icons {
+    font-size: 0.7rem;
+  }
+
+  .search-box {
+    padding: 8px 12px;
+    max-width: 300px;
+  }
+
+  .search-box .material-icons {
+    font-size: 16px;
+  }
+
+  .filters-row {
+    gap: 12px;
+  }
+
+  .filter-section label {
+    font-size: 0.75rem;
+  }
+
+  .filter-select {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    min-width: 140px;
+  }
+
+  .search-box input {
+    padding: 5px 0;
+    font-size: 0.8rem;
+  }
+
+  .search-box .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .class-list-container {
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .subject-header {
+    padding: 1.2rem;
+  }
+
+  .subject-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+
+  .subject-body {
+    padding: 15px;
+  }
+
+  .students-group {
+    margin-bottom: 16px;
+  }
+
+  .group-title {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    gap: 5px;
+  }
+
+  .group-title .material-icons {
+    font-size: 0.95rem;
+  }
+
+  .student-count {
+    font-size: 0.7rem;
+  }
+
+  .section-list {
+    gap: 15px;
+  }
+
+  .section-title {
+    font-size: 0.9rem;
+    padding: 5px 8px;
+    margin-bottom: 8px;
+  }
+
+  .students-table {
+    font-size: 0.8rem;
+  }
+
+  .students-table th,
+  .students-table td {
+    padding: 6px 8px;
+  }
+
+  .attendance-btn {
+    padding: 3px 6px;
+    min-width: 90px;
+  }
+
+  .attendance-btn .material-icons {
+    font-size: 14px;
+  }
+
+  .attendance-status {
+    font-size: 0.7rem;
+  }
+
+  .student-type-badge {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+
+  .toggle-label {
+    font-size: 0.75rem;
+  }
+
+  .toggle-slider {
+    width: 40px;
+    height: 18px;
+  }
+
+  .toggle-slider::before {
+    width: 14px;
+    height: 14px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(20px);
+  }
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .class-list {
@@ -1621,6 +3063,35 @@ onMounted(() => {
   .filter-controls {
     flex-direction: column;
     padding: 15px;
+    gap: 15px;
+  }
+
+  .filter-applied-indicator {
+    padding: 10px 12px;
+    font-size: 0.85rem;
+  }
+
+  .filter-applied-indicator .material-icons {
+    font-size: 1rem;
+  }
+
+  .clear-filter-btn {
+    width: 22px;
+    height: 22px;
+  }
+
+  .clear-filter-btn .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .search-box {
+    max-width: 100%;
+    padding: 12px 16px;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 15px;
   }
   
   .filter-select {
@@ -1708,9 +3179,47 @@ onMounted(() => {
   
   .attendance-records-btn, 
   .recent-sessions-btn, 
-  .create-attendance-btn {
+  .create-attendance-btn,
+  .export-main-btn {
     font-size: 0.8rem;
     padding: 8px 10px;
+  }
+
+  .export-dropdown {
+    min-width: 280px;
+    right: -50px;
+  }
+
+  .export-options-header {
+    padding: 15px 15px 10px;
+  }
+
+  .export-options-header h3 {
+    font-size: 1rem;
+  }
+
+  .export-data-selection {
+    padding: 15px;
+  }
+
+  .export-checkboxes {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .export-checkboxes label {
+    font-size: 0.85rem;
+  }
+
+  .export-actions {
+    padding: 15px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .export-btn {
+    padding: 10px 12px;
+    font-size: 0.85rem;
   }
   
   .attendance-btn {
@@ -1720,6 +3229,33 @@ onMounted(() => {
   
   .attendance-status {
     font-size: 0.8rem;
+  }
+
+  .student-type-badge {
+    padding: 2px 6px;
+    font-size: 0.7rem;
+  }
+
+  .action-toggle {
+    gap: 8px;
+  }
+
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+
+  .toggle-slider {
+    width: 42px;
+    height: 22px;
+  }
+
+  .toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(20px);
   }
 }
 
@@ -1772,6 +3308,33 @@ onMounted(() => {
   
   .attendance-status {
     font-size: 0.75rem;
+  }
+
+  .student-type-badge {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+
+  .action-toggle {
+    gap: 6px;
+  }
+
+  .toggle-label {
+    font-size: 0.8rem;
+  }
+
+  .toggle-slider {
+    width: 40px;
+    height: 20px;
+  }
+
+  .toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(18px);
   }
   
   .attendance-btn .material-icons {
@@ -1911,20 +3474,22 @@ onMounted(() => {
     display: none;
   }
   
-  /* Hide LRN column on mobile */
+  /* Hide Grade & Section and Type columns on mobile */
   .students-table th:nth-child(2),
-  .students-table td:nth-child(2) {
+  .students-table td:nth-child(2),
+  .students-table th:nth-child(3),
+  .students-table td:nth-child(3) {
     display: none;
   }
   
-  /* Ensure attendance column is properly displayed */
+  /* Ensure attendance column is properly displayed when enabled */
   .students-table th:last-child,
   .students-table td:last-child {
     display: table-cell;
     width: 40%;
   }
   
-  /* Adjust name column width since LRN is hidden */
+  /* Adjust name column width since other columns are hidden */
   .students-table th:first-child,
   .students-table td:first-child {
     width: 60%;
@@ -1977,7 +3542,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  background: #673ab7;
+  background: #28a745;
   color: white;
   border: none;
   border-radius: 8px;
@@ -1990,7 +3555,7 @@ onMounted(() => {
 }
 
 .attendance-records-btn:hover {
-  background: #5e35b1;
+  background: #218838;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
@@ -1999,22 +3564,179 @@ onMounted(() => {
   font-size: 1.2rem;
 }
 
-/* Today's Attendance Indicator */
-.today-indicator {
+/* Export Controls */
+.export-controls {
+  position: relative;
+  display: inline-block;
+}
+
+.export-main-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 16px;
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  padding: 10px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
   border-radius: 8px;
-  margin-bottom: 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.export-main-btn:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.export-main-btn .material-icons {
+  font-size: 1.2rem;
+}
+
+.dropdown-icon {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.export-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 300px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.export-options-header {
+  padding: 20px 20px 15px;
+  border-bottom: 1px solid #eee;
+  background: #f9f9f9;
+}
+
+.export-options-header h3 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.export-note {
+  margin: 0;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.export-data-selection {
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.export-data-selection h4 {
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1rem;
   font-weight: 500;
 }
 
-.today-indicator .material-icons {
-  font-size: 1.2rem;
+.export-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
 }
+
+.export-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+  user-select: none;
+}
+
+.export-checkboxes input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #159750;
+}
+
+.export-actions {
+  padding: 20px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.export-btn .material-icons {
+  font-size: 1.1rem;
+}
+
+.export-btn.csv {
+  background: #28a745;
+}
+
+.export-btn.csv:hover {
+  background: #218838;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.export-btn.excel {
+  background: #1d6f42;
+}
+
+.export-btn.excel:hover {
+  background: #155724;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.export-btn.pdf {
+  background: #dc3545;
+}
+
+.export-btn.pdf:hover {
+  background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.export-btn.print {
+  background: #6c757d;
+}
+
+.export-btn.print:hover {
+  background: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
 
 .radio-group {
   display: flex;
@@ -2080,6 +3802,17 @@ onMounted(() => {
   .filter-controls {
     flex-direction: column;
     padding: 8px;
+    gap: 12px;
+  }
+
+  .search-box {
+    max-width: 100%;
+    padding: 10px 12px;
+  }
+
+  .filters-row {
+    flex-direction: column;
+    gap: 12px;
   }
   
   .filter-section, .search-box {
@@ -2105,12 +3838,12 @@ onMounted(() => {
   /* Further adjust column widths for very small screens */
   .students-table th:first-child,
   .students-table td:first-child {
-    width: 50%;
+    width: 60%;
   }
   
   .students-table th:last-child,
   .students-table td:last-child {
-    width: 50%;
+    width: 40%;
   }
 }
 </style> 

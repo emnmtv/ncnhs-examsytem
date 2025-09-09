@@ -325,6 +325,22 @@ const routes = [
     component: () => import('@/components/admin/StudentApprovalTab.vue'),
     meta: { requiresAuth: true, roles: ['admin'] }
   },
+  {
+    path: '/student-classlist/:subjectId',
+    name: 'StudentClasslist',
+    component: () => import('@/components/student/StudentsClasslist.vue'),
+    meta: { requiresAuth: true, roles: ['student'] }
+  },
+ 
+  {
+    path: '/archived-exam-results',
+    name: 'RestoreArchivedExamResults',
+    component: () => import('@/components/teacher/archivedExamResults.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  
+ 
+
   
 ];
 

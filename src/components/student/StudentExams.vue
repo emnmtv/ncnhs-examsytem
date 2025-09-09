@@ -11,6 +11,33 @@
       <div class="header-background">EXAMS</div>
     </div>
 
+    <!-- Search and Filter Controls -->
+    <div class="controls-container">
+      <div class="search-container">
+        <span class="material-icons search-icon">search</span>
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Search exams by title, test code, or class..." 
+          class="search-input"
+        />
+        <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="filter-container">
+        <select v-model="selectedSubjectFilter" @change="applySubjectFilter" class="subject-filter">
+          <option value="">All Subjects</option>
+          <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
+            {{ getSubjectDisplayName(subject) }}
+          </option>
+        </select>
+        <button v-if="selectedSubjectFilter" @click="clearSubjectFilter" class="clear-filter-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
       <span class="material-icons-round rotating">sync</span>
@@ -96,7 +123,8 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { 
   getAllExams, 
   checkExamAccess,
@@ -111,12 +139,16 @@ export default {
   name: 'StudentExams',
   
   setup() {
+    const route = useRoute();
     const allExams = ref([]);
     const exams = ref([]);
     const loading = ref(true);
     const error = ref('');
     const userProfile = ref(null);
     const studentSubjects = ref([]);
+    const searchQuery = ref('');
+    const selectedSubjectFilter = ref('');
+    const availableSubjects = ref([]);
     
     // Load student profile
     const loadProfile = async () => {
@@ -290,6 +322,12 @@ export default {
         // Load student subjects
         await loadStudentSubjects();
         
+        // Populate available subjects for filter
+        availableSubjects.value = studentSubjects.value.map(item => item.subject);
+        
+        // Apply URL filters
+        applyUrlFilters();
+        
         // Then load all exams
         console.log('Loading exams...');
         const response = await getAllExams();
@@ -340,19 +378,101 @@ export default {
       // If neither exists
       return 'Unknown Teacher';
     };
+
+    // Apply URL filters
+    const applyUrlFilters = () => {
+      const subjectId = route.query.subject;
+      if (subjectId) {
+        selectedSubjectFilter.value = subjectId;
+      }
+    };
+
+    // Get subject display name with class code
+    const getSubjectDisplayName = (subject) => {
+      const subjectName = subject.subjectName || subject.name || subject.title || `Subject ${subject.id}`;
+      const classCode = subject.code || subject.subjectCode || subject.classCode;
+      
+      if (classCode) {
+        return `${subjectName} (${classCode})`;
+      }
+      return subjectName;
+    };
+
+    // Filter exams based on search and subject filter
+    const filteredExams = computed(() => {
+      let filtered = exams.value;
+
+      // Apply search filter
+      if (searchQuery.value.trim()) {
+        const query = searchQuery.value.toLowerCase().trim();
+        filtered = filtered.filter(exam => 
+          exam.examTitle.toLowerCase().includes(query) ||
+          exam.testCode.toLowerCase().includes(query) ||
+          (exam.classCode && exam.classCode.toLowerCase().includes(query)) ||
+          formatTeacherName(exam).toLowerCase().includes(query)
+        );
+      }
+
+      // Apply subject filter
+      if (selectedSubjectFilter.value) {
+        const selectedSubject = availableSubjects.value.find(s => s.id === parseInt(selectedSubjectFilter.value));
+        if (selectedSubject) {
+          const subjectCode = selectedSubject.code || selectedSubject.subjectCode || selectedSubject.classCode;
+          const subjectName = selectedSubject.subjectName || selectedSubject.name || selectedSubject.title;
+          
+          filtered = filtered.filter(exam => {
+            if (!exam.classCode) return false;
+            
+            return exam.classCode === subjectCode || 
+                   exam.classCode === subjectName ||
+                   exam.classCode === `${subjectName} (${subjectCode})` ||
+                   exam.classCode === `${subjectCode} - ${subjectName}`;
+          });
+        }
+      }
+
+      return filtered;
+    });
+
+    // Clear search
+    const clearSearch = () => {
+      searchQuery.value = '';
+    };
+
+    // Clear subject filter
+    const clearSubjectFilter = () => {
+      selectedSubjectFilter.value = '';
+    };
+
+    // Apply subject filter (for select change)
+    const applySubjectFilter = () => {
+      // Filter is applied automatically through computed property
+    };
     
+    // Watch for route changes to apply filters
+    watch(() => route.query, () => {
+      applyUrlFilters();
+    }, { immediate: false });
+
     // Load data when component mounts
     onMounted(async () => {
       await loadExams();
     });
     
     return {
-      exams,
+      exams: filteredExams,
       loading,
       error,
       loadExams,
       formatStatus,
-      formatTeacherName
+      formatTeacherName,
+      searchQuery,
+      selectedSubjectFilter,
+      availableSubjects,
+      getSubjectDisplayName,
+      clearSearch,
+      clearSubjectFilter,
+      applySubjectFilter
     };
   }
 };
@@ -420,6 +540,110 @@ export default {
 .subtitle {
   color: #666;
   font-size: 1.1rem;
+}
+
+/* Controls Container */
+.controls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 20px;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 45px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+  cursor: pointer;
+}
+
+.subject-filter:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-filter-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+}
+
+.clear-filter-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
 }
 
 /* Loading, Error, Empty States */
@@ -706,17 +930,307 @@ export default {
   font-size: 1.2rem;
 }
 
-@media (max-width: 768px) {
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
   .student-exams-container {
-    padding: 0rem;
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .controls-container {
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  
+  .search-input {
+    padding: 10px 14px 10px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .subject-filter {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    min-width: 200px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 16px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.9rem;
+  }
+  
+  .exam-body {
+    padding: 16px;
+  }
+  
+  .exam-info {
+    gap: 10px;
+  }
+  
+  .info-item {
+    gap: 10px;
+    padding: 6px 0;
+  }
+  
+  .info-label {
+    font-size: 0.75rem;
+  }
+  
+  .info-value {
+    font-size: 0.9rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1.1rem;
+  }
+  
+  .take-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .student-exams-container {
+    padding: 14px;
   }
   
   .header-content h1 {
     font-size: 2rem;
+    margin-bottom: 0.7rem;
   }
   
   .header-content h1 .material-icons {
     font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .controls-container {
+    margin-bottom: 18px;
+    gap: 14px;
+  }
+  
+  .search-input {
+    padding: 9px 12px 9px 38px;
+    font-size: 0.85rem;
+  }
+  
+  .subject-filter {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+    min-width: 180px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 14px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.85rem;
+  }
+  
+  .exam-body {
+    padding: 14px;
+  }
+  
+  .exam-info {
+    gap: 10px;
+  }
+  
+  .info-item {
+    gap: 8px;
+    padding: 5px 0;
+  }
+  
+  .info-label {
+    font-size: 0.7rem;
+  }
+  
+  .info-value {
+    font-size: 0.85rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1rem;
+  }
+  
+  .take-btn {
+    padding: 9px 14px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .student-exams-container {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .controls-container {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.8rem;
+  }
+  
+  .subject-filter {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    min-width: 160px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  
+  .exam-card {
+    border-radius: 8px;
+  }
+  
+  .exam-header {
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
+  }
+  
+  .exam-body {
+    padding: 12px;
+  }
+  
+  .exam-info {
+    gap: 8px;
+  }
+  
+  .info-item {
+    gap: 6px;
+    padding: 4px 0;
+  }
+  
+  .info-label {
+    font-size: 0.65rem;
+  }
+  
+  .info-value {
+    font-size: 0.8rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.9rem;
+  }
+  
+  .take-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .student-exams-container {
+    padding: 10px 5px; /* Further reduce padding on mobile */
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
   }
   
   .header-background {
@@ -725,20 +1239,170 @@ export default {
     right: 0.3rem;
   }
   
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
   .divider {
-    margin: 0.5rem 0;
+    margin: 0.8rem 0;
+  }
+  
+  .controls-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .search-container {
+    max-width: none;
+  }
+
+  .search-input {
+    padding: 10px 12px 10px 40px;
+    font-size: 0.9rem;
+  }
+
+  .subject-filter {
+    min-width: 200px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
   }
   
   .exams-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 15px;
   }
   
   .exam-header h2 {
     font-size: 1.2rem;
   }
   
+  .exam-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
   .exam-meta-item {
     font-size: 0.8rem;
+  }
+  
+  .exam-body {
+    padding: 15px;
+  }
+  
+  .exam-info {
+    gap: 10px;
+  }
+  
+  .info-item {
+    gap: 8px;
+    padding: 5px 0;
+  }
+  
+  .info-label {
+    font-size: 0.7rem;
+  }
+  
+  .info-value {
+    font-size: 0.85rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 1rem;
+  }
+  
+  .take-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .student-exams-container {
+    padding: 8px 4px;
+  }
+
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .header-background {
+    font-size: 3.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.85rem;
+  }
+
+  .subject-filter {
+    min-width: 160px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .exams-grid {
+    gap: 12px;
+  }
+  
+  .exam-header {
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.75rem;
+  }
+  
+  .exam-body {
+    padding: 12px;
+  }
+  
+  .exam-info {
+    gap: 8px;
+  }
+  
+  .info-item {
+    gap: 6px;
+    padding: 4px 0;
+  }
+  
+  .info-label {
+    font-size: 0.65rem;
+  }
+  
+  .info-value {
+    font-size: 0.8rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.9rem;
+  }
+  
+  .take-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }
 </style> 

@@ -38,16 +38,42 @@
     <div v-else class="subjects-grid">
       <div v-for="subject in subjects" :key="subject.id" class="subject-card">
         <div class="subject-header">
+          <div class="texture-layer"></div>
           <h2>{{ subject.subject.name }}</h2>
-          <div class="subject-meta">
-            <span class="subject-meta-item">
-              <span class="material-icons">code</span>
-              {{ subject.subject.code }}
-            </span>
-            <span v-if="subject.subject.description" class="subject-meta-item">
-              <span class="material-icons">description</span>
-              {{ subject.subject.description }}
-            </span>
+          <div class="subject-meta-container">
+            <div class="subject-meta">
+              <span class="subject-meta-item">
+                <span class="material-icons">code</span>
+                {{ subject.subject.code }}
+              </span>
+              <span v-if="subject.subject.description" class="subject-meta-item">
+                <span class="material-icons">description</span>
+                {{ subject.subject.description }}
+              </span>
+            </div>
+            <div class="subject-actions-dropdown">
+              <button class="dropdown-toggle" @click="toggleDropdown($event)">
+                <span class="material-icons">more_vert</span>
+              </button>
+              <div class="dropdown-menu" @click.stop>
+                <router-link 
+                  :to="`/student-classlist/${subject.subject.id}`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">people</span>
+                  View Classlist
+                </router-link>
+                <router-link 
+                  :to="`/student-exams?subject=${subject.subject.id}`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">quiz</span>
+                  View Exams
+                </router-link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -160,8 +186,59 @@ const loadSubjects = async () => {
   }
 };
 
+// Dropdown functionality
+const toggleDropdown = (event) => {
+  // Close all other open dropdowns first
+  document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+    const parentDropdown = menu.closest('.subject-actions-dropdown');
+    const currentDropdown = event.target.closest('.subject-actions-dropdown');
+    if (parentDropdown !== currentDropdown) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  // Toggle the clicked dropdown
+  const dropdownContainer = event.target.closest('.subject-actions-dropdown');
+  const dropdown = dropdownContainer.querySelector('.dropdown-menu');
+  const isCurrentlyOpen = dropdown.classList.contains('show');
+  
+  if (isCurrentlyOpen) {
+    dropdown.classList.remove('show');
+    return;
+  }
+  
+  dropdown.classList.add('show');
+  
+  // Reset any previous positioning styles
+  dropdown.style.transform = '';
+  dropdown.style.left = '';
+  dropdown.style.right = '';
+  
+  // Check if dropdown goes off screen and adjust position
+  const rect = dropdown.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  
+  if (rect.right > viewportWidth) {
+    dropdown.style.right = '0';
+    dropdown.style.left = 'auto';
+  }
+};
+
+const closeAllDropdowns = () => {
+  document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+    menu.classList.remove('show');
+  });
+};
+
 onMounted(() => {
   loadSubjects();
+  
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.subject-actions-dropdown')) {
+      closeAllDropdowns();
+    }
+  });
 });
 </script>
 
@@ -258,7 +335,7 @@ onMounted(() => {
   background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   padding: 20px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   color: white;
   min-height: 120px;
 }
@@ -344,12 +421,98 @@ onMounted(() => {
   word-break: break-word;
 }
 
+.subject-meta-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
 .subject-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  flex: 1;
+}
+
+.subject-actions-dropdown {
   position: relative;
-  z-index: 1;
+  z-index: 999;
+  margin-left: 15px;
+}
+
+.dropdown-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.dropdown-toggle .material-icons {
+  font-size: 18px;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: none;
+  flex-direction: column;
+  min-width: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.dropdown-menu.show {
+  display: flex;
+}
+
+.dropdown-item {
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  text-decoration: none;
+  border-bottom: 1px solid #f0f0f0;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item .material-icons {
+  font-size: 0.95rem;
+  color: #159750;
 }
 
 .subject-meta-item {
@@ -519,29 +682,581 @@ onMounted(() => {
   color: #159750;
 }
 
-/* Responsive design */
-@media (max-width: 768px) {
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
   .manage-subjects {
-    padding: 0rem ;
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.6rem;
+    margin-top: 1.6rem;
+  }
+  
+  .subject-card {
+    border-radius: 14px;
+  }
+  
+  .subject-header {
+    padding: 16px;
+    min-height: 110px;
+  }
+  
+  .subject-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+  }
+  
+  .subject-body {
+    padding: 20px;
+    gap: 20px;
+  }
+  
+  .subject-info {
+    gap: 20px;
+  }
+  
+  .info-item {
+    gap: 12px;
+  }
+  
+  .info-label {
+    font-size: 0.8rem;
+  }
+  
+  .teacher-chip {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .schedule-info {
+    padding: 12px;
+  }
+  
+  .schedule-type-badge {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .schedule-details {
+    font-size: 0.9rem;
+  }
+  
+  .dropdown-toggle {
+    width: 28px;
+    height: 28px;
   }
 
+  .dropdown-toggle .material-icons {
+    font-size: 16px;
+  }
+
+  .dropdown-menu {
+    min-width: 140px;
+    max-height: 240px;
+  }
+
+  .dropdown-item {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.9rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 14px;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.7rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
   .header-background {
-    font-size: 3rem;
-    top: 30%;
-    right: 1rem;
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.4rem;
+    margin-top: 1.4rem;
+  }
+  
+  .subject-card {
+    border-radius: 12px;
+  }
+  
+  .subject-header {
+    padding: 14px;
+    min-height: 100px;
+  }
+  
+  .subject-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.75rem;
+    padding: 3px 7px;
+  }
+  
+  .subject-body {
+    padding: 18px;
+    gap: 18px;
+  }
+  
+  .subject-info {
+    gap: 18px;
+  }
+  
+  .info-item {
+    gap: 10px;
+  }
+  
+  .info-label {
+    font-size: 0.75rem;
+  }
+  
+  .teacher-chip {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .schedule-info {
+    padding: 10px;
+  }
+  
+  .schedule-type-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .schedule-details {
+    font-size: 0.85rem;
+  }
+  
+  .dropdown-toggle {
+    width: 26px;
+    height: 26px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 15px;
+  }
+
+  .dropdown-menu {
+    min-width: 130px;
+    max-height: 220px;
+  }
+
+  .dropdown-item {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.85rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+  }
+  
+  .subject-card {
+    border-radius: 10px;
+  }
+  
+  .subject-header {
+    padding: 12px;
+    min-height: 90px;
+  }
+  
+  .subject-header h2 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+  
+  .subject-body {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .subject-info {
+    gap: 16px;
+  }
+  
+  .info-item {
+    gap: 8px;
+  }
+  
+  .info-label {
+    font-size: 0.7rem;
+  }
+  
+  .teacher-chip {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .schedule-info {
+    padding: 8px;
+  }
+  
+  .schedule-type-badge {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+  
+  .schedule-details {
+    font-size: 0.8rem;
+  }
+  
+  .dropdown-toggle {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 14px;
+  }
+
+  .dropdown-menu {
+    min-width: 120px;
+    max-height: 200px;
+  }
+
+  .dropdown-item {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .manage-subjects {
+    padding: 10px 5px; /* Further reduce padding on mobile */
   }
 
   .header-content h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
   }
 
   .header-content h1 .material-icons {
-    font-size: 2rem;
+    font-size: 1.8rem;
+  }
+
+  .header-background {
+    font-size: 4rem;
+    top: 30%;
+    right: 0.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .divider {
+    margin: 0.8rem 0;
   }
 
   .subjects-grid {
     grid-template-columns: 1fr;
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+  }
+
+  .subject-card {
+    border-radius: 12px;
+  }
+
+  .subject-header {
+    padding: 15px;
+    min-height: auto;
+  }
+
+  .subject-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+  }
+
+  .subject-meta-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .subject-meta {
+    width: 100%;
+  }
+
+  .subject-meta-item {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+  }
+
+  .subject-actions-dropdown {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .dropdown-toggle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 16px;
+  }
+
+  .dropdown-menu {
+    min-width: 140px;
+    max-height: 240px;
+  }
+
+  .dropdown-item {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .subject-body {
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .subject-info {
+    gap: 18px;
+  }
+
+  .info-item {
+    gap: 10px;
+  }
+
+  .info-label {
+    font-size: 0.75rem;
+  }
+
+  .teacher-chip {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .schedule-info {
+    padding: 10px;
+  }
+
+  .schedule-type-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+
+  .schedule-details {
+    font-size: 0.85rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 1.2rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .manage-subjects {
+    padding: 8px 4px;
+  }
+
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .header-background {
+    font-size: 3.5rem;
+  }
+
+  .subtitle {
+    font-size: 0.85rem;
+  }
+
+  .subjects-grid {
     gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  .subject-header {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .subject-header h2 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+
+  .dropdown-toggle {
+    width: 26px;
+    height: 26px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 15px;
+  }
+
+  .dropdown-menu {
+    min-width: 130px;
+    max-height: 220px;
+  }
+
+  .dropdown-item {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.85rem;
+  }
+
+  .subject-body {
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .subject-info {
+    gap: 15px;
+  }
+
+  .info-item {
+    gap: 8px;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+  }
+
+  .teacher-chip {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+
+  .schedule-info {
+    padding: 8px;
+  }
+
+  .schedule-type-badge {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+
+  .schedule-details {
+    font-size: 0.8rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 1.1rem;
   }
 }
 </style>

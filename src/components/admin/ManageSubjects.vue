@@ -460,7 +460,7 @@
               <button 
                 @click="removeStudentFromSubjectHandler(
                   (studentRel.student && studentRel.student.id) || studentRel.studentId || studentRel.id, 
-                  selectedSubject.value.id
+                  selectedSubject?.id || studentRel.subjectId
                 )" 
                 class="remove-student-btn"
               >
@@ -1104,6 +1104,27 @@ const bulkAssignStudents = async () => {
 
 const removeStudentFromSubjectHandler = async (studentId, subjectId) => {
   try {
+    // Safety check for required parameters
+    if (!studentId || !subjectId) {
+      console.error('Missing required parameters:', { studentId, subjectId });
+      
+      // Try to get subjectId from selectedSubject if it's still available
+      if (!subjectId && selectedSubject.value?.id) {
+        subjectId = selectedSubject.value.id;
+        console.log('Using subjectId from selectedSubject:', subjectId);
+      }
+      
+      // If we still don't have subjectId, show error
+      if (!subjectId) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Unable to identify the subject. Please try again.'
+        });
+        return;
+      }
+    }
+    
     console.log('Attempting to remove student from subject:', { studentId, subjectId });
     
     const result = await Swal.fire({
@@ -1374,6 +1395,720 @@ onMounted(async () => {
 @keyframes rotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.6rem;
+  }
+  
+  .header-container {
+    margin-bottom: 1.6rem;
+  }
+  
+  .header-content h1 {
+    font-size: 2rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    font-size: 6.4rem;
+    right: 4rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .filters-section {
+    padding: 1.2rem;
+    margin-bottom: 1.6rem;
+  }
+  
+  .search-box input {
+    padding: 0.6rem 0.8rem 0.6rem 2rem;
+    font-size: 0.9rem;
+  }
+  
+  .search-box .material-icons {
+    left: 0.8rem;
+    font-size: 1.1rem;
+  }
+  
+  .add-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  .subjects-grid {
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+  
+  .subject-card {
+    margin-bottom: 1rem;
+  }
+  
+  .subject-header {
+    padding: 0.8rem;
+    min-height: 80px;
+  }
+  
+  .subject-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .subject-meta {
+    gap: 0.5rem;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+  }
+  
+  .subject-body {
+    padding: 0.8rem;
+  }
+  
+  .subject-info {
+    gap: 0.8rem;
+  }
+  
+  .info-item {
+    margin-bottom: 0.4rem;
+  }
+  
+  .info-content {
+    margin-left: 0.4rem;
+  }
+  
+  .info-label {
+    font-size: 0.7rem;
+    margin-bottom: 0.2rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.8rem;
+  }
+  
+  .teachers-list,
+  .sections-list,
+  .students-list {
+    gap: 0.25rem;
+  }
+  
+  .section-item, .student-item, .teacher-item {
+    padding: 1px 4px;
+    font-size: 0.6rem;
+  }
+  
+  .assign-btn,
+  .schedule-btn {
+    padding: 1px 6px;
+    font-size: 0.6rem;
+  }
+  
+  .subject-actions {
+    padding: 0.6rem;
+    gap: 0.4rem;
+  }
+  
+  .action-btn {
+    padding: 0.5rem;
+    font-size: 0.7rem;
+  }
+  
+  .modal-content {
+    width: 450px;
+  }
+  
+  .modal-header {
+    padding: 1.2rem 1.6rem;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .subject-form,
+  .assign-form,
+  .schedule-form {
+    padding: 1.2rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+    padding: 0 1.6rem;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .form-actions {
+    padding: 1.2rem 1.6rem;
+    gap: 0.8rem;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  .search-input {
+    padding: 0.8rem 1.2rem 0.8rem 2.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .search-icon {
+    left: 0.8rem;
+    font-size: 1.1rem;
+  }
+  
+  .filter-select {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+    width: 130px;
+  }
+  
+  .student-selection-item {
+    padding: 0.8rem 1.2rem;
+  }
+  
+  .student-name {
+    font-size: 0.9rem;
+  }
+  
+  .student-details {
+    font-size: 0.8rem;
+  }
+  
+  .select-btn {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .selected-count {
+    padding: 0.8rem;
+    font-size: 0.9rem;
+  }
+  
+  .student-summary {
+    gap: 6px;
+  }
+  
+  .student-count {
+    font-size: 0.7rem;
+  }
+  
+  .view-all-btn {
+    padding: 2px 6px;
+    font-size: 0.6rem;
+    gap: 3px;
+  }
+  
+  .view-all-btn .material-icons {
+    font-size: 12px;
+  }
+  
+  .empty-list {
+    font-size: 0.7rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.4rem;
+  }
+  
+  .header-container {
+    margin-bottom: 1.4rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5.6rem;
+    right: 3.5rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .filters-section {
+    padding: 1rem;
+    margin-bottom: 1.4rem;
+  }
+  
+  .search-box input {
+    padding: 0.5rem 0.7rem 0.5rem 1.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .search-box .material-icons {
+    left: 0.7rem;
+    font-size: 1rem;
+  }
+  
+  .add-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .subjects-grid {
+    gap: 0.8rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+  
+  .subject-card {
+    margin-bottom: 0.8rem;
+  }
+  
+  .subject-header {
+    padding: 0.6rem;
+    min-height: 70px;
+  }
+  
+  .subject-header h2 {
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .subject-meta {
+    gap: 0.4rem;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.65rem;
+    padding: 1px 5px;
+  }
+  
+  .subject-body {
+    padding: 0.6rem;
+  }
+  
+  .subject-info {
+    gap: 0.6rem;
+  }
+  
+  .info-item {
+    margin-bottom: 0.3rem;
+  }
+  
+  .info-content {
+    margin-left: 0.3rem;
+  }
+  
+  .info-label {
+    font-size: 0.65rem;
+    margin-bottom: 0.15rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.7rem;
+  }
+  
+  .teachers-list,
+  .sections-list,
+  .students-list {
+    gap: 0.2rem;
+  }
+  
+  .section-item, .student-item, .teacher-item {
+    padding: 1px 3px;
+    font-size: 0.55rem;
+  }
+  
+  .assign-btn,
+  .schedule-btn {
+    padding: 1px 4px;
+    font-size: 0.55rem;
+  }
+  
+  .subject-actions {
+    padding: 0.5rem;
+    gap: 0.3rem;
+  }
+  
+  .action-btn {
+    padding: 0.4rem;
+    font-size: 0.65rem;
+  }
+  
+  .modal-content {
+    width: 400px;
+  }
+  
+  .modal-header {
+    padding: 1rem 1.4rem;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .subject-form,
+  .assign-form,
+  .schedule-form {
+    padding: 1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.8rem;
+    padding: 0 1.4rem;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .form-actions {
+    padding: 1rem 1.4rem;
+    gap: 0.6rem;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .search-input {
+    padding: 0.6rem 1rem 0.6rem 2.4rem;
+    font-size: 0.85rem;
+  }
+  
+  .search-icon {
+    left: 0.7rem;
+    font-size: 1rem;
+  }
+  
+  .filter-select {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+    width: 120px;
+  }
+  
+  .student-selection-item {
+    padding: 0.6rem 1rem;
+  }
+  
+  .student-name {
+    font-size: 0.85rem;
+  }
+  
+  .student-details {
+    font-size: 0.75rem;
+  }
+  
+  .select-btn {
+    padding: 3px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .selected-count {
+    padding: 0.6rem;
+    font-size: 0.85rem;
+  }
+  
+  .student-summary {
+    gap: 4px;
+  }
+  
+  .student-count {
+    font-size: 0.65rem;
+  }
+  
+  .view-all-btn {
+    padding: 1px 4px;
+    font-size: 0.55rem;
+    gap: 2px;
+  }
+  
+  .view-all-btn .material-icons {
+    font-size: 10px;
+  }
+  
+  .empty-list {
+    font-size: 0.65rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.2rem;
+  }
+  
+  .header-container {
+    margin-bottom: 1.2rem;
+  }
+  
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+  
+  .header-background {
+    font-size: 4.8rem;
+    right: 3rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .filters-section {
+    padding: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .search-box input {
+    padding: 0.4rem 0.6rem 0.4rem 1.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .search-box .material-icons {
+    left: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .add-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .subjects-grid {
+    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  
+  .subject-card {
+    margin-bottom: 0.6rem;
+  }
+  
+  .subject-header {
+    padding: 0.5rem;
+    min-height: 60px;
+  }
+  
+  .subject-header h2 {
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .subject-meta {
+    gap: 0.3rem;
+  }
+  
+  .subject-meta-item {
+    font-size: 0.6rem;
+    padding: 1px 4px;
+  }
+  
+  .subject-body {
+    padding: 0.5rem;
+  }
+  
+  .subject-info {
+    gap: 0.5rem;
+  }
+  
+  .info-item {
+    margin-bottom: 0.25rem;
+  }
+  
+  .info-content {
+    margin-left: 0.25rem;
+  }
+  
+  .info-label {
+    font-size: 0.6rem;
+    margin-bottom: 0.1rem;
+  }
+  
+  .info-item .material-icons-round {
+    font-size: 0.65rem;
+  }
+  
+  .teachers-list,
+  .sections-list,
+  .students-list {
+    gap: 0.15rem;
+  }
+  
+  .section-item, .student-item, .teacher-item {
+    padding: 1px 2px;
+    font-size: 0.5rem;
+  }
+  
+  .assign-btn,
+  .schedule-btn {
+    padding: 1px 3px;
+    font-size: 0.5rem;
+  }
+  
+  .subject-actions {
+    padding: 0.4rem;
+    gap: 0.25rem;
+  }
+  
+  .action-btn {
+    padding: 0.3rem;
+    font-size: 0.6rem;
+  }
+  
+  .modal-content {
+    width: 350px;
+  }
+  
+  .modal-header {
+    padding: 0.8rem 1.2rem;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .subject-form,
+  .assign-form,
+  .schedule-form {
+    padding: 0.8rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.6rem;
+    padding: 0 1.2rem;
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .form-actions {
+    padding: 0.8rem 1.2rem;
+    gap: 0.5rem;
+  }
+  
+  .cancel-btn,
+  .save-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .search-input {
+    padding: 0.5rem 0.8rem 0.5rem 2rem;
+    font-size: 0.8rem;
+  }
+  
+  .search-icon {
+    left: 0.6rem;
+    font-size: 0.9rem;
+  }
+  
+  .filter-select {
+    padding: 0.4rem;
+    font-size: 0.8rem;
+    width: 110px;
+  }
+  
+  .student-selection-item {
+    padding: 0.5rem 0.8rem;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+  }
+  
+  .student-details {
+    font-size: 0.7rem;
+  }
+  
+  .select-btn {
+    padding: 2px 5px;
+    font-size: 0.7rem;
+  }
+  
+  .selected-count {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
+  
+  .student-summary {
+    gap: 3px;
+  }
+  
+  .student-count {
+    font-size: 0.6rem;
+  }
+  
+  .view-all-btn {
+    padding: 1px 3px;
+    font-size: 0.5rem;
+    gap: 1px;
+  }
+  
+  .view-all-btn .material-icons {
+    font-size: 8px;
+  }
+  
+  .empty-list {
+    font-size: 0.6rem;
+  }
 }
 
 /* Mobile Responsiveness */

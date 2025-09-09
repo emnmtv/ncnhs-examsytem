@@ -96,13 +96,13 @@
             v-for="(question, qIndex) in paginatedQuestions" 
             :key="qIndex"
             class="question-item"
-            :class="{ 'correct': question.isCorrect, 'incorrect': !question.isCorrect }"
+            :class="getQuestionItemClass(question)"
           >
             <div class="question-header">
               <span class="question-number">Question {{ getActualQuestionNumber(qIndex) }}</span>
               <span class="question-status">
-                <span class="material-icons-round">{{ question.isCorrect ? 'check_circle' : 'cancel' }}</span>
-                {{ question.isCorrect ? 'Correct' : 'Incorrect' }}
+                <span class="material-icons-round">{{ getQuestionStatusIcon(question) }}</span>
+                {{ getQuestionStatusText(question) }}
               </span>
             </div>
             
@@ -179,6 +179,45 @@
               </div>
             </div>
             
+            <!-- Essay Question -->
+            <div v-else-if="question.questionType === 'essay'" class="answer-section essay-answer">
+              <div class="essay-response">
+                <div class="essay-header">
+                  <h4>Your Essay Response</h4>
+                  <div v-if="question.userAnswer" class="essay-stats">
+                    <span class="word-count">{{ getWordCount(question.userAnswer) }} words</span>
+                    <span class="char-count">{{ question.userAnswer.length }} characters</span>
+                    <span v-if="question.wordLimit" class="word-limit">/ {{ question.wordLimit }} limit</span>
+                  </div>
+                </div>
+                
+                <div class="essay-text" :class="{ 'no-answer': !question.userAnswer }">
+                  {{ question.userAnswer || 'No essay response provided' }}
+                </div>
+                
+                <div v-if="question.wordLimit && isWordLimitExceeded(question)" class="word-limit-warning">
+                  <span class="material-icons-round">warning</span>
+                  Response exceeds word limit
+                </div>
+              </div>
+              
+              <div v-if="question.essayScore !== undefined" class="essay-grading">
+                <div class="grading-header">
+                  <h4>Essay Grading</h4>
+                </div>
+                <div class="grade-info">
+                  <div class="score-display">
+                    <span class="score-label">Score:</span>
+                    <span class="score-value">{{ question.essayScore }}/{{ question.points || 1 }} points</span>
+                  </div>
+                  <div v-if="question.teacherFeedback" class="feedback-display">
+                    <span class="feedback-label">Teacher Feedback:</span>
+                    <div class="feedback-text">{{ question.teacherFeedback }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
             <!-- Short Answer or Enumeration -->
             <div v-else class="answer-section text-answer">
               <div class="answer-row">
@@ -220,9 +259,9 @@
                 <td>{{ formatAnswer(question) }}</td>
                 <td>{{ formatCorrectAnswer(question) }}</td>
                 <td>
-                  <span class="status-badge" :class="question.isCorrect ? 'correct' : 'incorrect'">
-                    <span class="material-icons-round">{{ question.isCorrect ? 'check_circle' : 'cancel' }}</span>
-                    {{ question.isCorrect ? 'Correct' : 'Incorrect' }}
+                  <span class="status-badge" :class="getQuestionStatusClass(question)">
+                    <span class="material-icons-round">{{ getQuestionStatusIcon(question) }}</span>
+                    {{ getQuestionStatusText(question) }}
                   </span>
                 </td>
               </tr>
@@ -372,7 +411,8 @@ export default {
         'multiple_choice': 'Multiple Choice',
         'multipleChoice': 'Multiple Choice',
         'true_false': 'True/False',
-        'enumeration': 'Short Answer'
+        'enumeration': 'Short Answer',
+        'essay': 'Essay'
       };
       return types[type] || type;
     },
@@ -387,10 +427,24 @@ export default {
         if (answer === 'false') return 'False';
       }
       
+      // Format essay answers with word count
+      if (question.questionType === 'essay') {
+        const wordCount = this.getWordCount(question.userAnswer);
+        const truncated = question.userAnswer.length > 100 
+          ? question.userAnswer.substring(0, 100) + '...' 
+          : question.userAnswer;
+        return `${truncated} (${wordCount} words)`;
+      }
+      
       return question.userAnswer;
     },
     
     formatCorrectAnswer(question) {
+      // Essay questions don't have a "correct" answer - they are graded by teachers
+      if (question.questionType === 'essay') {
+        return 'Teacher Graded';
+      }
+      
       if (!question.correctAnswer) return 'No correct answer';
       
       // Format true/false correct answers consistently
@@ -444,6 +498,74 @@ export default {
     isFalseCorrect(correctAnswer) {
       if (!correctAnswer) return false;
       return correctAnswer.toString().toLowerCase() === 'false';
+    },
+    
+    // Helper methods for essay questions
+    getWordCount(text) {
+      if (!text) return 0;
+      return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+    },
+    
+    isWordLimitExceeded(question) {
+      if (!question.userAnswer || !question.wordLimit) return false;
+      return this.getWordCount(question.userAnswer) > question.wordLimit;
+    },
+    
+    // Helper methods for question status
+    getQuestionStatusIcon(question) {
+      // For essay questions
+      if (question.questionType === 'essay') {
+        if (question.essayScore !== undefined && question.essayScore !== null) {
+          return 'check_circle'; // Graded
+        } else {
+          return 'pending'; // To be checked
+        }
+      }
+      
+      // For other question types
+      return question.isCorrect ? 'check_circle' : 'cancel';
+    },
+    
+    getQuestionStatusText(question) {
+      // For essay questions
+      if (question.questionType === 'essay') {
+        if (question.essayScore !== undefined && question.essayScore !== null) {
+          return 'Graded';
+        } else {
+          return 'To be checked';
+        }
+      }
+      
+      // For other question types
+      return question.isCorrect ? 'Correct' : 'Incorrect';
+    },
+    
+    getQuestionItemClass(question) {
+      // For essay questions
+      if (question.questionType === 'essay') {
+        if (question.essayScore !== undefined && question.essayScore !== null) {
+          return 'graded';
+        } else {
+          return 'pending';
+        }
+      }
+      
+      // For other question types
+      return question.isCorrect ? 'correct' : 'incorrect';
+    },
+    
+    getQuestionStatusClass(question) {
+      // For essay questions
+      if (question.questionType === 'essay') {
+        if (question.essayScore !== undefined && question.essayScore !== null) {
+          return 'graded';
+        } else {
+          return 'pending';
+        }
+      }
+      
+      // For other question types
+      return question.isCorrect ? 'correct' : 'incorrect';
     }
   },
   watch: {
@@ -716,6 +838,14 @@ export default {
   border-left: 4px solid #ef4444;
 }
 
+.question-item.pending {
+  border-left: 4px solid #f59e0b;
+}
+
+.question-item.graded {
+  border-left: 4px solid #10b981;
+}
+
 .question-header {
   display: flex;
   justify-content: space-between;
@@ -741,6 +871,14 @@ export default {
 
 .question-item.incorrect .question-status {
   color: #ef4444;
+}
+
+.question-item.pending .question-status {
+  color: #f59e0b;
+}
+
+.question-item.graded .question-status {
+  color: #10b981;
 }
 
 .question-content {
@@ -854,6 +992,156 @@ export default {
   color: #991b1b;
 }
 
+/* Essay Question Styles */
+.essay-answer {
+  background-color: #f8fafc;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.essay-response {
+  margin-bottom: 1.5rem;
+}
+
+.essay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.essay-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.essay-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.word-count {
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.char-count {
+  color: #6b7280;
+}
+
+.word-limit {
+  color: #f59e0b;
+  font-weight: 500;
+}
+
+.essay-text {
+  background-color: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.25rem;
+  line-height: 1.7;
+  font-size: 1rem;
+  color: #1f2937;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 120px;
+}
+
+.essay-text.no-answer {
+  color: #9ca3af;
+  font-style: italic;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.word-limit-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  color: #92400e;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.word-limit-warning .material-icons-round {
+  font-size: 18px;
+}
+
+.essay-grading {
+  background-color: #f0f9ff;
+  border: 1px solid #0ea5e9;
+  border-radius: 8px;
+  padding: 1.25rem;
+}
+
+.grading-header h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  margin: 0 0 1rem 0;
+}
+
+.grade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.score-label {
+  font-weight: 500;
+  color: #0c4a6e;
+}
+
+.score-value {
+  background-color: #0ea5e9;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.feedback-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feedback-label {
+  font-weight: 500;
+  color: #0c4a6e;
+  font-size: 0.875rem;
+}
+
+.feedback-text {
+  background-color: white;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #0c4a6e;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
 /* Table View Styles */
 .questions-table-container {
   overflow-x: auto;
@@ -922,6 +1210,16 @@ export default {
 .status-badge.incorrect {
   background-color: #fef2f2;
   color: #ef4444;
+}
+
+.status-badge.pending {
+  background-color: #fef3c7;
+  color: #f59e0b;
+}
+
+.status-badge.graded {
+  background-color: #ecfdf5;
+  color: #10b981;
 }
 
 .table-question-image {
@@ -1032,6 +1330,33 @@ export default {
   
   .truncate-text {
     max-width: 120px;
+  }
+  
+  /* Essay question responsive adjustments */
+  .essay-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .essay-stats {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .essay-text {
+    padding: 1rem;
+    min-height: 100px;
+  }
+  
+  .grade-info {
+    gap: 0.75rem;
+  }
+  
+  .score-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 }
 </style> 

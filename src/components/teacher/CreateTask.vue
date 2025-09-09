@@ -8,6 +8,12 @@
           <p class="subtitle">Create and assign new tasks to your students</p>
         </div>
       </div>
+      <div class="header-actions">
+        <button @click="$router.go(-1)" class="header-btn back-btn">
+          <span class="material-icons">arrow_back</span>
+          Back
+        </button>
+      </div>
       <div class="header-background">NEW TASK</div>
     </div>
 
@@ -509,6 +515,52 @@ onMounted(() => {
   font-weight: 700;
 }
 
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.header-btn {
+  background: #f5f5f5;
+  color: #333;
+  padding: 8px 15px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+}
+
+.header-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-btn .material-icons {
+  font-size: 1.2rem;
+}
+
+.back-btn {
+  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+  color: white;
+}
+
+.back-btn:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #343a40 100%);
+}
+
 .header-background {
   position: absolute;
   top: 20%;
@@ -555,6 +607,18 @@ onMounted(() => {
     font-size: 1.8rem;
   }
   
+  .header-actions {
+    position: static;
+    margin-top: 15px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
   .header-background {
     font-size: 3rem;
     top: 60%;

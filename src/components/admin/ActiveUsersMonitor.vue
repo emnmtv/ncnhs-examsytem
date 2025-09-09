@@ -756,6 +756,328 @@ const handleImageError = (event, user) => {
   color: #ccc;
 }
 
+/* High DPI and Small Laptop Screens */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .active-users-monitor {
+    padding: 1.6rem;
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .filters-section {
+    gap: 0.8rem;
+    margin-bottom: 1.6rem;
+  }
+
+  .search-box input {
+    padding: 0.6rem 0.8rem 0.6rem 2.2rem;
+    font-size: 0.9rem;
+  }
+
+  .search-box .material-icons {
+    left: 0.6rem;
+    font-size: 1.1rem;
+  }
+
+  .tab-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .filter-group select {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .view-controls {
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .view-toggle-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.9rem;
+  }
+
+  .users-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .user-card {
+    padding: 1.2rem;
+    gap: 0.8rem;
+  }
+
+  .user-avatar-container,
+  .user-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
+  .user-info h3 {
+    font-size: 1rem;
+  }
+
+  .email {
+    font-size: 0.85rem;
+  }
+
+  .details {
+    gap: 0.8rem;
+    margin-top: 0.4rem;
+  }
+
+  .detail-item {
+    font-size: 0.8rem;
+  }
+
+  .role-badge {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+  }
+
+  .activity-info {
+    margin-top: 0.6rem;
+  }
+
+  .last-active {
+    font-size: 0.75rem;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 0.6rem;
+    font-size: 0.9rem;
+  }
+
+  .exam-indicator {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .exam-badge {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .active-users-monitor {
+    padding: 1.4rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .filters-section {
+    gap: 0.6rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .search-box input {
+    padding: 0.5rem 0.7rem 0.5rem 2rem;
+    font-size: 0.85rem;
+  }
+
+  .search-box .material-icons {
+    left: 0.5rem;
+    font-size: 1rem;
+  }
+
+  .tab-btn {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .filter-group select {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .view-controls {
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .view-toggle-btn {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .users-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .user-card {
+    padding: 1rem;
+    gap: 0.6rem;
+  }
+
+  .user-avatar-container,
+  .user-avatar {
+    width: 38px;
+    height: 38px;
+  }
+
+  .user-info h3 {
+    font-size: 0.95rem;
+  }
+
+  .email {
+    font-size: 0.8rem;
+  }
+
+  .details {
+    gap: 0.6rem;
+    margin-top: 0.3rem;
+  }
+
+  .detail-item {
+    font-size: 0.75rem;
+  }
+
+  .role-badge {
+    padding: 0.15rem 0.35rem;
+    font-size: 0.65rem;
+  }
+
+  .activity-info {
+    margin-top: 0.5rem;
+  }
+
+  .last-active {
+    font-size: 0.7rem;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .exam-indicator {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.35rem;
+  }
+
+  .exam-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.35rem;
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .active-users-monitor {
+    padding: 1.2rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .filters-section {
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .search-box input {
+    padding: 0.45rem 0.6rem 0.45rem 1.8rem;
+    font-size: 0.8rem;
+  }
+
+  .search-box .material-icons {
+    left: 0.45rem;
+    font-size: 0.9rem;
+  }
+
+  .tab-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .filter-group select {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .view-controls {
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .view-toggle-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .users-grid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .user-card {
+    padding: 0.8rem;
+    gap: 0.5rem;
+  }
+
+  .user-avatar-container,
+  .user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .user-info h3 {
+    font-size: 0.9rem;
+  }
+
+  .email {
+    font-size: 0.75rem;
+  }
+
+  .details {
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
+  .detail-item {
+    font-size: 0.7rem;
+  }
+
+  .role-badge {
+    padding: 0.1rem 0.3rem;
+    font-size: 0.6rem;
+  }
+
+  .activity-info {
+    margin-top: 0.4rem;
+  }
+
+  .last-active {
+    font-size: 0.65rem;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 0.4rem;
+    font-size: 0.8rem;
+  }
+
+  .exam-indicator {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .exam-badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+  }
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   .active-users-monitor {
@@ -809,11 +1131,11 @@ const handleImageError = (event, user) => {
 
   .users-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.8rem;
   }
 
   .users-table {
-    margin-top: 1rem;
+    margin-top: 0.8rem;
     overflow-x: auto;
   }
 
@@ -825,41 +1147,132 @@ const handleImageError = (event, user) => {
   .users-table th,
   .users-table td {
     white-space: nowrap;
-    padding: 0.75rem;
+    padding: 0.6rem;
+    font-size: 0.8rem;
   }
 
   /* Make user cards more compact on mobile */
   .user-card {
-    padding: 1rem;
+    padding: 0.8rem;
+    gap: 0.6rem;
   }
 
   .user-card .user-info {
+    font-size: 0.85rem;
+  }
+
+  .user-card h3 {
     font-size: 0.9rem;
+  }
+
+  .user-card .email {
+    font-size: 0.8rem;
+  }
+
+  .user-card .details {
+    gap: 0.4rem;
+  }
+
+  .user-card .detail-item {
+    font-size: 0.75rem;
+  }
+
+  .user-card .role-badge {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.3rem;
+  }
+
+  .user-card .last-active {
+    font-size: 0.7rem;
   }
 
   /* Adjust empty state for mobile */
   .empty-state {
-    padding: 2rem 1rem;
+    padding: 1.5rem 0.8rem;
   }
 
   .empty-state .material-icons {
-    font-size: 36px;
+    font-size: 32px;
   }
 }
 
 /* Additional styles for very small screens */
 @media (max-width: 480px) {
+  .active-users-monitor {
+    padding: 0.8rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.4rem;
+  }
+
   .tab-btn {
-    font-size: 0.8rem;
-    padding: 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.3rem;
   }
 
   .view-toggle-btn {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
   }
 
   .view-toggle-btn .material-icons {
-    font-size: 18px;
+    font-size: 16px;
+  }
+
+  .search-box input {
+    padding: 0.4rem 0.5rem 0.4rem 1.6rem;
+    font-size: 0.8rem;
+  }
+
+  .search-box .material-icons {
+    left: 0.4rem;
+    font-size: 0.9rem;
+  }
+
+  .user-card {
+    padding: 0.6rem;
+    gap: 0.4rem;
+  }
+
+  .user-avatar-container,
+  .user-avatar {
+    width: 30px;
+    height: 30px;
+  }
+
+  .user-card h3 {
+    font-size: 0.85rem;
+  }
+
+  .user-card .email {
+    font-size: 0.75rem;
+  }
+
+  .user-card .detail-item {
+    font-size: 0.7rem;
+  }
+
+  .user-card .role-badge {
+    font-size: 0.6rem;
+    padding: 0.05rem 0.25rem;
+  }
+
+  .user-card .last-active {
+    font-size: 0.65rem;
+  }
+
+  .users-table th,
+  .users-table td {
+    padding: 0.4rem;
+    font-size: 0.75rem;
+  }
+
+  .empty-state {
+    padding: 1.2rem 0.6rem;
+  }
+
+  .empty-state .material-icons {
+    font-size: 28px;
   }
 }
 

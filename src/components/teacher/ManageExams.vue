@@ -11,6 +11,7 @@
       <div class="header-background">EXAMS</div>
     </div>
 
+
     <!-- Add tab navigation -->
     <div class="exam-tabs">
       <button 
@@ -37,6 +38,17 @@
             class="search-input"
           />
           <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="filter-container">
+          <select v-model="selectedSubjectFilter" @change="applySubjectFilter" class="subject-filter">
+            <option value="">All Subjects</option>
+            <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
+              {{ getSubjectDisplayName(subject) }}
+            </option>
+          </select>
+          <button v-if="selectedSubjectFilter" @click="clearSubjectFilter" class="clear-filter-btn">
             <i class="fas fa-times"></i>
           </button>
         </div>
@@ -682,8 +694,8 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, computed, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { 
   fetchTeacherExams, 
   fetchArchivedTeacherExams,
@@ -711,6 +723,9 @@ export default {
   name: 'ManageExams',
   
   setup() {
+    const router = useRouter();
+    const route = useRoute();
+    
     const toggleDropdown = (event) => {
       event.stopPropagation();
       
@@ -772,13 +787,13 @@ export default {
       });
     };
     
-    const router = useRouter();
     const exams = ref([]);
     const archivedExams = ref([]);
     const activeTab = ref('active');
     const loading = ref(true);
     const error = ref(null);
     const searchQuery = ref('');
+    const selectedSubjectFilter = ref('');
     const socket = ref(null);
     const showAccessModal = ref(false);
     const selectedExam = ref(null);
@@ -817,18 +832,47 @@ export default {
     // Initialize socket connection
     onMounted(() => {
       socket.value = socketManager.getSocket();
+      applyUrlFilters(); // Apply URL filters first
       loadExams();
       loadGradeSections();
       loadSubjects(); // Load subjects on component mount
     });
 
-    // Computed property for currently displayed exams based on active tab and search
+    // Watch for route changes to apply filters
+    watch(() => route.query, () => {
+      applyUrlFilters();
+    }, { immediate: false });
+
+    // Computed property for currently displayed exams based on active tab, search, and subject filter
     const displayedExams = computed(() => {
       let examList = [];
       if (activeTab.value === 'active') {
         examList = exams.value || [];
       } else {
         examList = archivedExams.value || [];
+      }
+
+      // Apply subject filter if selected
+      if (selectedSubjectFilter.value) {
+        examList = examList.filter(exam => {
+          // Check if exam has a subjectId property
+          if (exam.subjectId) {
+            return exam.subjectId === parseInt(selectedSubjectFilter.value);
+          }
+          
+          // Check if classCode matches any subject code
+          const selectedSubject = availableSubjects.value.find(s => s.id === parseInt(selectedSubjectFilter.value));
+          if (selectedSubject && exam.classCode) {
+            const subjectCode = selectedSubject.code || selectedSubject.subjectCode || selectedSubject.classCode;
+            const subjectName = selectedSubject.subjectName || selectedSubject.name || selectedSubject.title;
+            
+            return exam.classCode === subjectCode || 
+                   exam.classCode === subjectName ||
+                   exam.classCode === `${subjectName} (${subjectCode})` ||
+                   exam.classCode === `${subjectCode} - ${subjectName}`;
+          }
+          return false;
+        });
       }
 
       // Apply search filter if search query exists
@@ -854,6 +898,14 @@ export default {
         }
       } else if (tab === 'archived') {
         await loadArchivedExams(); // Always reload archived exams when switching to that tab
+      }
+    };
+
+    // Apply URL filters
+    const applyUrlFilters = () => {
+      const subjectId = route.query.subject;
+      if (subjectId) {
+        selectedSubjectFilter.value = subjectId;
       }
     };
 
@@ -1340,6 +1392,17 @@ export default {
       return subject ? (subject.subjectName || subject.name || subject.title || `Subject ${subject.id}`) : `Subject #${subjectId}`;
     };
 
+    const getSubjectDisplayName = (subject) => {
+      const subjectName = subject.subjectName || subject.name || subject.title || `Subject ${subject.id}`;
+      const classCode = subject.code || subject.subjectCode || subject.classCode;
+      
+      if (classCode) {
+        return `${subjectName} (${classCode})`;
+      }
+      return subjectName;
+    };
+
+
     const saveAccessSettings = async () => {
       try {
         if (!restrictAccess.value) {
@@ -1609,6 +1672,15 @@ export default {
       searchQuery.value = '';
     };
 
+    const applySubjectFilter = () => {
+      // The filtering is handled by the computed property
+      // This method can be used for additional logic if needed
+    };
+
+    const clearSubjectFilter = () => {
+      selectedSubjectFilter.value = '';
+    };
+
     const confirmArchive = async (exam) => {
       const result = await Swal.fire({
         title: 'Archive Exam?',
@@ -1739,9 +1811,13 @@ export default {
       removeSubjectAccess,
       toggleSubjectAccessItem,
       getSubjectName,
+      getSubjectDisplayName,
       copyTestCode,
       searchQuery,
-      clearSearch
+      clearSearch,
+      selectedSubjectFilter,
+      applySubjectFilter,
+      clearSubjectFilter
     };
   }
 };
@@ -1919,6 +1995,57 @@ export default {
 }
 
 .clear-search-btn:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.filter-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+  cursor: pointer;
+}
+
+.subject-filter:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+  transform: translateY(-1px);
+}
+
+.clear-filter-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  z-index: 1;
+}
+
+.clear-filter-btn:hover {
   background: #f5f5f5;
   color: #666;
 }
@@ -3090,6 +3217,12 @@ input:checked + .slider:before {
     left: 14px;
     font-size: 0.85rem;
   }
+
+  .subject-filter {
+    min-width: 200px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
   
   .template-btn, .import-btn, .create-btn {
     padding: 0.6rem 1rem;
@@ -3312,6 +3445,12 @@ input:checked + .slider:before {
   .search-icon {
     left: 12px;
     font-size: 0.8rem;
+  }
+
+  .subject-filter {
+    min-width: 180px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
   
   .template-btn, .import-btn, .create-btn {
@@ -3947,6 +4086,7 @@ input:checked + .slider:before {
   .manage-exams {
     padding: 10px 5px; /* Further reduce padding on mobile */
   }
+
   .access-modal,
   .settings-modal {
     width: 95%;
@@ -3987,6 +4127,16 @@ input:checked + .slider:before {
     max-width: none;
     order: 1;
     margin-bottom: 0.5rem;
+  }
+
+  .filter-container {
+    order: 2;
+    margin-bottom: 0.5rem;
+  }
+
+  .subject-filter {
+    width: 100%;
+    min-width: auto;
   }
   
   .search-input {

@@ -112,6 +112,10 @@
                 <div>
                   <p><strong>Essay Question</strong></p>
                   <p>Provide a detailed written response. This will be manually graded by your teacher.</p>
+                  <p v-if="currentQuestion.wordLimit" class="word-limit-notice">
+                    <span class="material-icons-round">text_fields</span>
+                    Word limit: {{ currentQuestion.wordLimit }} words
+                  </p>
                 </div>
               </div>
             </div>
@@ -119,16 +123,22 @@
               v-model="answers[currentQuestion.questionId]" 
               placeholder="Write your essay response here..."
               class="essay-answer-input"
+              :class="{ 'word-limit-exceeded': isWordLimitExceeded(currentQuestion.questionId) }"
               rows="10"
               @input="handleEssayInput(currentQuestion.questionId)"
             ></textarea>
             <div class="essay-meta">
-              <span class="word-count">
+              <span class="word-count" :class="{ 'word-limit-exceeded': isWordLimitExceeded(currentQuestion.questionId) }">
                 Words: {{ getWordCount(answers[currentQuestion.questionId] || '') }}
+                <span v-if="currentQuestion.wordLimit">/ {{ currentQuestion.wordLimit }}</span>
               </span>
               <span class="points-info" v-if="currentQuestion.points">
                 Worth {{ currentQuestion.points }} point{{ currentQuestion.points !== 1 ? 's' : '' }}
               </span>
+            </div>
+            <div v-if="isWordLimitExceeded(currentQuestion.questionId)" class="word-limit-warning">
+              <span class="material-icons-round">warning</span>
+              <span>You have exceeded the word limit. Please reduce your response to {{ currentQuestion.wordLimit }} words or less.</span>
             </div>
           </div>
           
@@ -799,6 +809,15 @@ export default {
       return text.trim().split(/\s+/).filter(word => word.length > 0).length;
     },
 
+    isWordLimitExceeded(questionId) {
+      const question = this.shuffledQuestions.find(q => q.questionId === questionId);
+      if (!question || !question.wordLimit) return false;
+      
+      const answer = this.answers[questionId] || '';
+      const wordCount = this.getWordCount(answer);
+      return wordCount > question.wordLimit;
+    },
+
     openFullscreenImage(imageUrl) {
       this.fullscreenImage = imageUrl;
       // Prevent scrolling when modal is open
@@ -918,7 +937,7 @@ export default {
 
 <style scoped>
 .exam-session {
-  max-width: 750px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 16px;
   font-family: 'Roboto', sans-serif;
@@ -1528,9 +1547,52 @@ export default {
   font-weight: 500;
 }
 
+.word-count.word-limit-exceeded {
+  color: #f44336;
+  font-weight: 600;
+}
+
 .points-info {
   color: #4CAF50;
   font-weight: 600;
+}
+
+.word-limit-notice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0 0;
+  font-size: 0.9rem;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.word-limit-notice .material-icons-round {
+  font-size: 16px;
+}
+
+.essay-answer-input.word-limit-exceeded {
+  border-color: #f44336;
+  box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.1);
+}
+
+.word-limit-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 4px;
+  color: #c62828;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.word-limit-warning .material-icons-round {
+  font-size: 18px;
+  color: #f44336;
 }
 
 /* Mobile responsiveness for essay components */
@@ -1571,7 +1633,7 @@ export default {
 /* High DPI and Zoom levels (125%, 150%) for laptops */
 @media screen and (max-width: 1536px) and (min-width: 1025px) {
   .exam-session {
-    max-width: 650px;
+    max-width: 900px;
     padding: 12px;
   }
   
@@ -1708,7 +1770,7 @@ export default {
 /* Compact layout for 14-inch laptops and lower resolutions */
 @media screen and (max-width: 1366px) and (min-width: 1025px) {
   .exam-session {
-    max-width: 580px;
+    max-width: 800px;
     padding: 10px;
   }
   
@@ -1883,7 +1945,7 @@ export default {
 /* Very high zoom levels (150%+) or very compact displays */
 @media screen and (max-width: 1280px) and (min-width: 1025px) {
   .exam-session {
-    max-width: 480px;
+    max-width: 700px;
     padding: 8px;
   }
   

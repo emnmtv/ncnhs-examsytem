@@ -38,6 +38,33 @@
       </div>
     </div>
 
+    <!-- Search and Filter Controls -->
+    <div class="search-filter-section">
+      <div class="search-container">
+        <span class="material-icons search-icon">search</span>
+        <input 
+          v-model="searchQuery" 
+          type="text" 
+          placeholder="Search exams by title, class code, or teacher..." 
+          class="search-input"
+        />
+        <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="filter-container">
+        <select v-model="selectedSubjectFilter" @change="applySubjectFilter" class="subject-filter">
+          <option value="">All Subjects</option>
+          <option v-for="subject in availableSubjects" :key="subject.id" :value="subject.id">
+            {{ getSubjectDisplayName(subject) }}
+          </option>
+        </select>
+        <button v-if="selectedSubjectFilter" @click="clearSubjectFilter" class="clear-filter-btn">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </div>
+
     <div v-if="loading" class="loading-state">
       <span class="material-icons-round rotating">sync</span>
       <p>Loading your exam history...</p>
@@ -187,17 +214,54 @@ export default {
       examHistory: [],
       currentView: 'grid', // 'grid' or 'table'
       currentPage: 1,
-      itemsPerPage: 8
+      itemsPerPage: 8,
+      searchQuery: '',
+      selectedSubjectFilter: '',
+      availableSubjects: []
     };
   },
   computed: {
+    filteredExams() {
+      let filtered = this.examHistory;
+
+      // Apply search filter
+      if (this.searchQuery.trim()) {
+        const query = this.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(exam => 
+          exam.exam.examTitle.toLowerCase().includes(query) ||
+          exam.exam.testCode.toLowerCase().includes(query) ||
+          (exam.exam.classCode && exam.exam.classCode.toLowerCase().includes(query)) ||
+          `${exam.exam.user.firstName} ${exam.exam.user.lastName}`.toLowerCase().includes(query)
+        );
+      }
+
+      // Apply subject filter
+      if (this.selectedSubjectFilter) {
+        const selectedSubject = this.availableSubjects.find(s => s.id === parseInt(this.selectedSubjectFilter));
+        if (selectedSubject) {
+          const subjectCode = selectedSubject.code || selectedSubject.subjectCode || selectedSubject.classCode;
+          const subjectName = selectedSubject.subjectName || selectedSubject.name || selectedSubject.title;
+          
+          filtered = filtered.filter(exam => {
+            if (!exam.exam.classCode) return false;
+            
+            return exam.exam.classCode === subjectCode || 
+                   exam.exam.classCode === subjectName ||
+                   exam.exam.classCode === `${subjectName} (${subjectCode})` ||
+                   exam.exam.classCode === `${subjectCode} - ${subjectName}`;
+          });
+        }
+      }
+
+      return filtered;
+    },
     totalPages() {
-      return Math.ceil(this.examHistory.length / this.itemsPerPage);
+      return Math.ceil(this.filteredExams.length / this.itemsPerPage);
     },
     paginatedExams() {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end = start + this.itemsPerPage;
-      return this.examHistory.slice(start, end);
+      return this.filteredExams.slice(start, end);
     }
   },
   mounted() {
@@ -229,6 +293,26 @@ export default {
       try {
         const response = await getStudentExamHistory();
         this.examHistory = response.examHistory;
+        
+        // Extract unique subjects from exam history for filter
+        const subjectsMap = new Map();
+        this.examHistory.forEach(exam => {
+          if (exam.exam.classCode) {
+            // Create a subject object from the class code
+            const subjectId = exam.exam.id; // Use exam ID as subject ID
+            if (!subjectsMap.has(subjectId)) {
+              subjectsMap.set(subjectId, {
+                id: subjectId,
+                name: exam.exam.examTitle,
+                code: exam.exam.classCode,
+                subjectName: exam.exam.examTitle,
+                subjectCode: exam.exam.classCode
+              });
+            }
+          }
+        });
+        this.availableSubjects = Array.from(subjectsMap.values());
+        
         // Reset to first page when data changes
         this.currentPage = 1;
       } catch (error) {
@@ -275,11 +359,46 @@ export default {
     // Convert paginated index back to original index in the full array
     getOriginalIndex(paginatedIndex) {
       return ((this.currentPage - 1) * this.itemsPerPage) + paginatedIndex;
+    },
+
+    // Get subject display name with class code
+    getSubjectDisplayName(subject) {
+      const subjectName = subject.subjectName || subject.name || subject.title || `Subject ${subject.id}`;
+      const classCode = subject.code || subject.subjectCode || subject.classCode;
+      
+      if (classCode) {
+        return `${subjectName} (${classCode})`;
+      }
+      return subjectName;
+    },
+
+    // Clear search
+    clearSearch() {
+      this.searchQuery = '';
+    },
+
+    // Clear subject filter
+    clearSubjectFilter() {
+      this.selectedSubjectFilter = '';
+    },
+
+    // Apply subject filter (for select change)
+    applySubjectFilter() {
+      // Filter is applied automatically through computed property
+      this.currentPage = 1; // Reset to first page when filter changes
     }
   },
   watch: {
     // Reset to first page when switching views
     currentView() {
+      this.currentPage = 1;
+    },
+    // Reset to first page when search changes
+    searchQuery() {
+      this.currentPage = 1;
+    },
+    // Reset to first page when subject filter changes
+    selectedSubjectFilter() {
       this.currentPage = 1;
     }
   }
@@ -348,6 +467,110 @@ export default {
 .subtitle {
   color: #666;
   font-size: 1.1rem;
+}
+
+/* Search and Filter Section */
+.search-filter-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  gap: 20px;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 45px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 220px;
+  cursor: pointer;
+}
+
+.subject-filter:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-filter-btn {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+}
+
+.clear-filter-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
 }
 
 .controls-section {
@@ -773,35 +996,302 @@ export default {
   background-color: #F44336;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
   .exam-history-container {
-    padding: 0rem;
+    padding: 16px;
+  }
+  
+  .header-content h1 {
+    font-size: 2.2rem;
+    margin-bottom: 0.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 2.2rem;
+  }
+  
+  .header-background {
+    font-size: 6.5rem;
+    right: 4rem;
+  }
+  
+  .subtitle {
+    font-size: 1rem;
+  }
+  
+  .divider {
+    margin: 1.2rem 0;
+  }
+  
+  .search-filter-section {
+    margin-bottom: 20px;
+    gap: 16px;
+  }
+  
+  .search-input {
+    padding: 10px 14px 10px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .subject-filter {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    min-width: 200px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 16px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.9rem;
+  }
+  
+  .exam-body {
+    padding: 16px;
+  }
+  
+  .score-circle {
+    width: 70px;
+    height: 70px;
+    font-size: 1.3rem;
+  }
+  
+  .score-message {
+    font-size: 1rem;
+  }
+  
+  .view-details-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .toggle-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .exam-history-container {
+    padding: 14px;
   }
   
   .header-content h1 {
     font-size: 2rem;
+    margin-bottom: 0.7rem;
   }
   
   .header-content h1 .material-icons {
     font-size: 2rem;
   }
+  
   .header-background {
-  position: absolute;
-  top: 30%;
-  right: 0.3rem;
-
-  font-size: 4rem;
-  font-weight: 900;
-
-}
+    font-size: 6rem;
+    right: 3rem;
+  }
+  
+  .subtitle {
+    font-size: 0.95rem;
+  }
   
   .divider {
-    margin: 0.5rem 0;
+    margin: 1rem 0;
+  }
+  
+  .search-filter-section {
+    margin-bottom: 18px;
+    gap: 14px;
+  }
+  
+  .search-input {
+    padding: 9px 12px 9px 38px;
+    font-size: 0.85rem;
+  }
+  
+  .subject-filter {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+    min-width: 180px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  
+  .exam-header {
+    padding: 14px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.85rem;
+  }
+  
+  .exam-body {
+    padding: 14px;
+  }
+  
+  .score-circle {
+    width: 65px;
+    height: 65px;
+    font-size: 1.2rem;
+  }
+  
+  .score-message {
+    font-size: 0.95rem;
+  }
+  
+  .view-details-btn {
+    padding: 9px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .toggle-btn {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .exam-history-container {
+    padding: 12px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    font-size: 5rem;
+    right: 2rem;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
+  }
+  
+  .search-filter-section {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.8rem;
+  }
+  
+  .subject-filter {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    min-width: 160px;
+  }
+  
+  .exams-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  
+  .exam-header {
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
+  }
+  
+  .exam-body {
+    padding: 12px;
+  }
+  
+  .score-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 1.1rem;
+  }
+  
+  .score-message {
+    font-size: 0.9rem;
+  }
+  
+  .view-details-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .toggle-btn {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+  .exam-history-container {
+    padding: 10px 5px; /* Further reduce padding on mobile */
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .header-background {
+    position: absolute;
+    top: 30%;
+    right: 0.3rem;
+    font-size: 4rem;
+    font-weight: 900;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
   }
   
   .controls-section {
     padding: 0.5rem;
+    margin-bottom: 15px;
   }
   
   .controls-group {
@@ -815,20 +1305,81 @@ export default {
   .toggle-btn {
     flex: 1;
     padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .search-filter-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .search-container {
+    max-width: none;
+  }
+
+  .search-input {
+    padding: 10px 12px 10px 40px;
+    font-size: 0.9rem;
+  }
+
+  .subject-filter {
+    min-width: 200px;
+    padding: 10px 12px;
     font-size: 0.9rem;
   }
   
   .exams-grid {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .exam-card {
+    border-radius: 10px;
+  }
+  
+  .exam-header {
+    padding: 15px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .exam-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.85rem;
+  }
+  
+  .exam-body {
+    padding: 15px;
   }
   
   .score-display {
     flex-direction: column;
     text-align: center;
+    gap: 15px;
   }
   
   .score-circle {
-    margin: 0 auto 15px;
+    width: 70px;
+    height: 70px;
+    font-size: 1.3rem;
+    margin: 0 auto;
+  }
+  
+  .score-message {
+    font-size: 1rem;
+  }
+  
+  .view-details-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
   }
   
   .exams-table th:nth-child(3),
@@ -836,6 +1387,97 @@ export default {
   .exams-table th:nth-child(4),
   .exams-table td:nth-child(4) {
     display: none;
+  }
+  
+  .pagination {
+    margin-top: 1.5rem;
+    gap: 0.3rem;
+  }
+  
+  .page-btn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .page-info {
+    font-size: 0.8rem;
+    padding: 0 0.8rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .exam-history-container {
+    padding: 8px 4px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+  
+  .header-background {
+    font-size: 3.5rem;
+  }
+  
+  .subtitle {
+    font-size: 0.85rem;
+  }
+  
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.85rem;
+  }
+  
+  .subject-filter {
+    min-width: 160px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .toggle-btn {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .exam-header {
+    padding: 12px;
+  }
+  
+  .exam-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .exam-meta-item {
+    font-size: 0.8rem;
+  }
+  
+  .exam-body {
+    padding: 12px;
+  }
+  
+  .score-circle {
+    width: 60px;
+    height: 60px;
+    font-size: 1.2rem;
+  }
+  
+  .view-details-btn {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+  
+  .page-btn {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .page-info {
+    font-size: 0.75rem;
+    padding: 0 0.6rem;
   }
 }
 </style>

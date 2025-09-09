@@ -305,6 +305,12 @@
             
             <p class="question-text">{{ answer.question?.questionText || answer.questionText }}</p>
             
+            <!-- Word Limit Display for Essay Questions -->
+            <div v-if="isEssayQuestion(answer) && (answer.question?.wordLimit || answer.wordLimit)" class="word-limit-display">
+              <span class="material-icons">text_fields</span>
+              <span>Word Limit: {{ answer.question?.wordLimit || answer.wordLimit }} words</span>
+            </div>
+            
             <div v-if="answer.question?.imageUrl || answer.imageUrl" class="question-image">
               <img :src="getImageUrl(answer.question?.imageUrl || answer.imageUrl)" :alt="'Image for question ' + answer.questionId">
             </div>
@@ -327,43 +333,80 @@
           <div class="answer-section">
             <!-- Essay Question Handling -->
             <div v-if="isEssayQuestion(answer)" class="essay-answer-section">
-              <div class="essay-response">
-                <div class="answer-label">Student's Essay Response:</div>
-                <div class="essay-text" :class="{ 'no-answer': !answer.userAnswer }">
-                  {{ answer.userAnswer || 'No response provided' }}
+              <!-- Student Response Section -->
+              <div class="essay-response-container">
+                <div class="essay-response-header">
+                  <h4 class="answer-label">
+                    <span class="material-icons">description</span>
+                    Student's Essay Response
+                  </h4>
+                  <div v-if="answer.userAnswer" class="essay-stats">
+                    <span class="word-count" :class="{ 'exceeded': isWordLimitExceeded(answer) }">
+                      {{ getWordCount(answer.userAnswer) }} words
+                      <span v-if="answer.question?.wordLimit || answer.wordLimit">
+                        / {{ answer.question?.wordLimit || answer.wordLimit }}
+                      </span>
+                    </span>
+                    <span class="char-count">{{ answer.userAnswer.length }} characters</span>
+                  </div>
                 </div>
-                <div v-if="answer.userAnswer" class="essay-meta">
-                  <span class="word-count">Words: {{ getWordCount(answer.userAnswer) }}</span>
-                  <span class="char-count">Characters: {{ answer.userAnswer.length }}</span>
+                
+                <div class="essay-text-container">
+                  <div class="essay-text" :class="{ 
+                    'no-answer': !answer.userAnswer,
+                    'exceeded-limit': isWordLimitExceeded(answer)
+                  }">
+                    {{ answer.userAnswer || 'No response provided' }}
+                  </div>
+                  
+                  <!-- Word Limit Warning -->
+                  <div v-if="isWordLimitExceeded(answer)" class="word-limit-warning">
+                    <span class="material-icons">warning</span>
+                    <span>Response exceeds word limit</span>
+                  </div>
                 </div>
               </div>
               
-                              <!-- Essay Scoring -->
-                <div class="essay-scoring">
+              <!-- Essay Scoring Section -->
+              <div class="essay-scoring-container">
+                <div class="essay-scoring-header">
+                  <h4 class="scoring-label">
+                    <span class="material-icons">grade</span>
+                    Essay Scoring
+                  </h4>
+                </div>
+                
+                <div class="essay-scoring-content">
+                  <!-- Score Input -->
                   <div class="essay-score-input">
-                    <label>Score:</label>
-                    <input 
-                      type="number" 
-                      v-model.number="answer.essayScore"
-                      :min="0"
-                      :max="getQuestionPoints(answer)"
-                      class="score-input-field"
-                    />
-                    <span class="max-points">/ {{ getQuestionPoints(answer) }} points</span>
+                    <label for="essay-score">Score:</label>
+                    <div class="score-input-group">
+                      <input 
+                        id="essay-score"
+                        type="number" 
+                        v-model.number="answer.essayScore"
+                        :min="0"
+                        :max="getQuestionPoints(answer)"
+                        class="score-input-field"
+                        placeholder="0"
+                      />
+                      <span class="max-points">/ {{ getQuestionPoints(answer) }} points</span>
+                    </div>
                   </div>
                   
                   <!-- Teacher Feedback -->
                   <div class="essay-feedback">
-                    <label>Teacher Feedback:</label>
+                    <label for="essay-feedback">Teacher Feedback:</label>
                     <textarea 
+                      id="essay-feedback"
                       v-model="answer.teacherFeedback"
-                      placeholder="Provide feedback for the student's response..."
+                      placeholder="Provide constructive feedback for the student's response..."
                       class="feedback-textarea"
-                      rows="3"
+                      rows="4"
                     ></textarea>
                   </div>
                   
-                  <!-- Grade Button -->
+                  <!-- Grade Actions -->
                   <div class="essay-actions">
                     <button 
                       @click="saveEssayGrade(answer)"
@@ -378,10 +421,11 @@
                     
                     <div v-if="answer.isGraded" class="grade-status">
                       <span class="material-icons">check_circle</span>
-                      Graded
+                      <span>Graded</span>
                     </div>
                   </div>
                 </div>
+              </div>
             </div>
             
             <!-- Regular Question Handling -->
@@ -924,6 +968,13 @@ export default {
       return text.trim().split(/\s+/).filter(word => word.length > 0).length;
     };
 
+    const isWordLimitExceeded = (answer) => {
+      if (!answer.userAnswer) return false;
+      const wordLimit = answer.question?.wordLimit || answer.wordLimit;
+      if (!wordLimit) return false;
+      return getWordCount(answer.userAnswer) > wordLimit;
+    };
+
     const getQuestionPoints = (answer) => {
       return answer.question?.points || answer.points || 1;
     };
@@ -1194,6 +1245,7 @@ export default {
       canNavigateNext,
       isEssayQuestion,
       getWordCount,
+      isWordLimitExceeded,
       getQuestionPoints,
       toggleEssayFilter,
       navigateStudent,
@@ -1210,7 +1262,7 @@ export default {
 <style scoped>
 .student-answer-details {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
   font-family: 'Inter', sans-serif;
   background: #f5f7fa;
@@ -1673,6 +1725,8 @@ export default {
   overflow: hidden;
   border-left: 5px solid transparent;
   transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .answer-item:hover {
@@ -1691,8 +1745,10 @@ export default {
 }
 
 .question-section {
-  padding: 25px;
+  padding: 30px;
   border-bottom: 1px solid #e2e8f0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .question-header {
@@ -1803,7 +1859,28 @@ export default {
 }
 
 .answer-section {
-  padding: 25px;
+  padding: 30px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Word Limit Display in Question Section */
+.word-limit-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff3e0;
+  color: #ef6c00;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 10px 0;
+  border: 1px solid #ffcc02;
+}
+
+.word-limit-display .material-icons {
+  font-size: 18px;
 }
 
 /* Essay-specific styles */
@@ -1815,26 +1892,86 @@ export default {
 .essay-answer-section {
   display: flex;
   flex-direction: column;
-  gap: 25px;
+  gap: 30px;
+  width: 100%;
 }
 
-.essay-response {
+/* Student Response Container */
+.essay-response-container {
   background: #fafafa;
   border-radius: 12px;
-  padding: 20px;
+  padding: 30px;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.essay-response-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.essay-response-header .answer-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #ef6c00;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.essay-response-header .answer-label .material-icons {
+  font-size: 22px;
+}
+
+.essay-stats {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.word-count, .char-count {
+  background: #f5f5f5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #666;
+}
+
+.word-count.exceeded {
+  background: #ffebee;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+}
+
+.essay-text-container {
+  position: relative;
 }
 
 .essay-text {
   background: white;
-  border: 1px solid #e0e0e0;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
-  padding: 15px;
-  margin: 10px 0;
-  min-height: 100px;
+  padding: 25px;
+  min-height: 150px;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: 1.8;
   font-family: 'Inter', sans-serif;
+  font-size: 1.05rem;
+  color: #333;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  transition: border-color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .essay-text.no-answer {
@@ -1844,88 +1981,142 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f9f9f9;
 }
 
-.essay-meta {
+.essay-text.exceeded-limit {
+  border-color: #f44336;
+  background: #fff5f5;
+}
+
+.word-limit-warning {
   display: flex;
-  gap: 20px;
+  align-items: center;
+  gap: 8px;
+  background: #ffebee;
+  color: #d32f2f;
+  padding: 10px 15px;
+  border-radius: 6px;
   margin-top: 10px;
   font-size: 0.9rem;
-  color: #666;
+  font-weight: 500;
+  border: 1px solid #ffcdd2;
 }
 
-.word-count, .char-count {
-  background: #f5f5f5;
-  padding: 4px 8px;
-  border-radius: 4px;
+.word-limit-warning .material-icons {
+  font-size: 18px;
 }
 
-.essay-scoring {
+/* Essay Scoring Container */
+.essay-scoring-container {
   background: #f8f9fa;
   border-radius: 12px;
-  padding: 20px;
+  padding: 30px;
   border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.essay-scoring-header {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.scoring-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: #4CAF50;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.scoring-label .material-icons {
+  font-size: 22px;
+}
+
+.essay-scoring-content {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
 }
 
 .essay-score-input {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.essay-score-input label {
-  font-weight: 600;
-  color: #444;
-  min-width: 60px;
-}
-
-.score-input-field {
-  width: 80px;
-  padding: 8px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
-.score-input-field:focus {
-  outline: none;
-  border-color: #4CAF50;
-}
-
-.max-points {
-  color: #666;
-  font-weight: 500;
-}
-
-.essay-feedback {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+.essay-score-input label {
+  font-weight: 600;
+  color: #444;
+  font-size: 1rem;
+}
+
+.score-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.score-input-field {
+  width: 100px;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1.1rem;
+  transition: border-color 0.2s ease;
+}
+
+.score-input-field:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.max-points {
+  color: #666;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.essay-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .essay-feedback label {
   font-weight: 600;
   color: #444;
+  font-size: 1rem;
 }
 
 .feedback-textarea {
   width: 100%;
-  padding: 15px;
+  padding: 20px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-family: 'Inter', sans-serif;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 1.05rem;
+  line-height: 1.7;
   resize: vertical;
-  min-height: 80px;
+  min-height: 120px;
+  transition: border-color 0.2s ease;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .feedback-textarea:focus {
   outline: none;
   border-color: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
 }
 
 .feedback-textarea::placeholder {
@@ -1936,21 +2127,21 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 20px;
-  padding-top: 15px;
+  padding-top: 20px;
   border-top: 1px solid #e0e0e0;
 }
 
 .grade-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 24px;
+  gap: 10px;
+  padding: 14px 28px;
   background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
   color: white;
   border: none;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
@@ -1982,14 +2173,14 @@ export default {
 .grade-status {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #4CAF50;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 .grade-status .material-icons {
-  font-size: 18px;
+  font-size: 20px;
 }
 
 .spinning {
@@ -2402,6 +2593,7 @@ export default {
 @media screen and (max-width: 1536px) and (min-width: 1025px) {
   .student-answer-details {
     padding: 16px;
+    max-width: 1300px;
   }
   
   .header {
@@ -2755,6 +2947,7 @@ export default {
 @media screen and (max-width: 1366px) and (min-width: 1025px) {
   .student-answer-details {
     padding: 14px;
+    max-width: 1200px;
   }
   
   .header {
@@ -3108,6 +3301,7 @@ export default {
 @media screen and (max-width: 1280px) and (min-width: 1025px) {
   .student-answer-details {
     padding: 12px;
+    max-width: 1100px;
   }
   
   .header {
@@ -3680,51 +3874,63 @@ export default {
     gap: 20px;
   }
   
-  .essay-response {
-    padding: 15px;
+  .essay-response-container {
+    padding: 20px;
   }
   
-  .essay-text {
-    padding: 12px;
-    min-height: 80px;
-  }
-  
-  .essay-meta {
+  .essay-response-header {
     flex-direction: column;
-    gap: 8px;
-  }
-  
-  .essay-scoring {
-    padding: 15px;
-  }
-  
-  .essay-score-input {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
+    align-items: flex-start;
+    gap: 15px;
     margin-bottom: 15px;
   }
   
-  .essay-score-input label {
-    min-width: auto;
+  .essay-stats {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .essay-text {
+    padding: 15px;
+    min-height: 100px;
+    font-size: 0.95rem;
+  }
+  
+  .essay-scoring-container {
+    padding: 20px;
+  }
+  
+  .essay-scoring-content {
+    gap: 20px;
+  }
+  
+  .essay-score-input {
+    gap: 8px;
+  }
+  
+  .score-input-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
   
   .score-input-field {
-    width: 100%;
-    max-width: 120px;
-    align-self: center;
+    width: 120px;
+    padding: 10px 14px;
+    font-size: 1rem;
   }
   
   .feedback-textarea {
     padding: 12px;
-    min-height: 60px;
+    min-height: 80px;
+    font-size: 0.95rem;
   }
   
   .essay-actions {
     flex-direction: column;
     gap: 15px;
     align-items: stretch;
-    margin-top: 15px;
     padding-top: 15px;
   }
   
@@ -3736,6 +3942,16 @@ export default {
   
   .grade-status {
     justify-content: center;
+  }
+  
+  .word-limit-display {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .word-limit-warning {
+    padding: 8px 12px;
+    font-size: 0.85rem;
   }
 }
 

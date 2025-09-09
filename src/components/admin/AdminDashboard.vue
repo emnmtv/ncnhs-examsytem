@@ -1733,59 +1733,1363 @@ td {
   color: #1976D2;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .admin-dashboard {
+    padding: 16px;
+  }
+  
   .dashboard-header {
-    flex-direction: column;
-    gap: 20px;
-    text-align: center;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-actions {
+    gap: 16px;
+  }
+  
+  .date-input {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  
+  .refresh-btn {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  
+  .overview-section, .performance-section, .exam-analytics-section,
+  .attendance-section, .task-analytics-section, .system-usage-section,
+  .survey-analytics-section, .insights-summary {
+    padding: 20px;
+  }
+  
+  .overview-section h2, .performance-section h2, .exam-analytics-section h2,
+  .attendance-section h2, .task-analytics-section h2, .system-usage-section h2,
+  .survey-analytics-section h2, .insights-summary h2 {
+    font-size: 1.3rem;
+    margin-bottom: 16px;
   }
   
   .overview-cards {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+  }
+  
+  .overview-card {
+    padding: 16px;
+  }
+  
+  .card-icon .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .card-content h3 {
+    font-size: 1.6rem;
+  }
+  
+  .card-content p {
+    font-size: 13px;
+  }
+  
+  .insights-grid {
+    gap: 16px;
+  }
+  
+  .insight-card {
+    padding: 16px;
+  }
+  
+  .insight-content h4 {
+    font-size: 1rem;
+  }
+  
+  .insight-content p {
+    font-size: 0.9rem;
+  }
+  
+  .performance-overview {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .performance-card {
+    padding: 16px;
+  }
+  
+  .performance-metrics {
+    gap: 12px;
+  }
+  
+  .metric {
+    padding: 12px;
+  }
+  
+  .metric-value {
+    font-size: 1.6rem;
+  }
+  
+  .metric-label {
+    font-size: 11px;
+  }
+  
+  .highlight-card {
+    padding: 16px;
+  }
+  
+  .highlight-value {
+    font-size: 1.3rem;
+  }
+  
+  .highlight-score {
+    font-size: 1.8rem;
+  }
+  
+  .performance-charts {
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  
+  .chart-container {
+    padding: 16px;
+  }
+  
+  .chart-wrapper {
+    height: 350px;
+  }
+  
+  .chart-container h3 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+  }
+  
+  .grade-distribution-table h3 {
+    font-size: 1.1rem;
+    margin-bottom: 16px;
+  }
+  
+  th, td {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
+  
+  .performers-section {
+    gap: 16px;
+  }
+  
+  .performers-card {
+    padding: 16px;
+  }
+  
+  .performer-item {
+    padding: 8px;
+  }
+  
+  .rank {
+    width: 26px;
+    height: 26px;
+    font-size: 0.8rem;
+  }
+  
+  .student-name {
+    font-size: 0.9rem;
+  }
+  
+  .student-details {
+    font-size: 11px;
+  }
+  
+  .score {
+    font-size: 0.9rem;
+  }
+  
+  .exams {
+    font-size: 11px;
+  }
+  
+  .exam-stats-grid {
+    gap: 16px;
+  }
+  
+  .exam-stat-card {
+    padding: 16px;
+  }
+  
+  .exam-header h4 {
+    font-size: 1rem;
+  }
+  
+  .exam-metrics {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  
+  .exam-metrics .metric-value {
+    font-size: 1.3rem;
+  }
+  
+  .attendance-overview {
+    gap: 16px;
+  }
+  
+  .attendance-card {
+    padding: 16px;
+  }
+  
+  .rate-value {
+    font-size: 2.5rem;
+  }
+  
+  .subject-attendance-item {
+    padding: 8px;
+  }
+  
+  .task-summary {
+    gap: 16px;
+  }
+  
+  .task-stat {
+    padding: 16px;
+  }
+  
+  .stat-value {
+    font-size: 1.8rem;
+  }
+  
+  .stat-label {
+    font-size: 13px;
+  }
+  
+  .subject-task-item {
+    padding: 12px;
+  }
+  
+  .task-stats {
+    gap: 16px;
+    font-size: 13px;
+  }
+  
+  .usage-grid {
+    gap: 16px;
+  }
+  
+  .usage-card {
+    padding: 16px;
+  }
+  
+  .count-value {
+    font-size: 1.8rem;
+  }
+  
+  .count-label {
+    font-size: 13px;
+  }
+  
+  .survey-summary {
+    gap: 16px;
+  }
+  
+  .survey-stat {
+    padding: 16px;
+  }
+  
+  .survey-item {
+    padding: 12px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .admin-dashboard {
+    padding: 14px;
+  }
+  
+  .dashboard-header {
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .header-actions {
+    gap: 14px;
+  }
+  
+  .date-input {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+  
+  .refresh-btn {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+  
+  .overview-section, .performance-section, .exam-analytics-section,
+  .attendance-section, .task-analytics-section, .system-usage-section,
+  .survey-analytics-section, .insights-summary {
+    padding: 18px;
+  }
+  
+  .overview-section h2, .performance-section h2, .exam-analytics-section h2,
+  .attendance-section h2, .task-analytics-section h2, .system-usage-section h2,
+  .survey-analytics-section h2, .insights-summary h2 {
+    font-size: 1.2rem;
+    margin-bottom: 14px;
+  }
+  
+  .overview-cards {
+    gap: 14px;
+  }
+  
+  .overview-card {
+    padding: 14px;
+  }
+  
+  .card-icon .material-icons {
+    font-size: 1.6rem;
+  }
+  
+  .card-content h3 {
+    font-size: 1.4rem;
+  }
+  
+  .card-content p {
+    font-size: 12px;
+  }
+  
+  .insights-grid {
+    gap: 14px;
+  }
+  
+  .insight-card {
+    padding: 14px;
+  }
+  
+  .insight-content h4 {
+    font-size: 0.95rem;
+  }
+  
+  .insight-content p {
+    font-size: 0.85rem;
+  }
+  
+  .performance-overview {
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .performance-card {
+    padding: 14px;
+  }
+  
+  .performance-metrics {
+    gap: 10px;
+  }
+  
+  .metric {
+    padding: 10px;
+  }
+  
+  .metric-value {
+    font-size: 1.4rem;
+  }
+  
+  .metric-label {
+    font-size: 10px;
+  }
+  
+  .highlight-card {
+    padding: 14px;
+  }
+  
+  .highlight-value {
+    font-size: 1.2rem;
+  }
+  
+  .highlight-score {
+    font-size: 1.6rem;
+  }
+  
+  .performance-charts {
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .chart-container {
+    padding: 14px;
+  }
+  
+  .chart-wrapper {
+    height: 300px;
+  }
+  
+  .chart-container h3 {
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+  
+  .grade-distribution-table h3 {
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+  
+  th, td {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+  
+  .performers-section {
+    gap: 14px;
+  }
+  
+  .performers-card {
+    padding: 14px;
+  }
+  
+  .performer-item {
+    padding: 7px;
+  }
+  
+  .rank {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+  
+  .student-name {
+    font-size: 0.85rem;
+  }
+  
+  .student-details {
+    font-size: 10px;
+  }
+  
+  .score {
+    font-size: 0.85rem;
+  }
+  
+  .exams {
+    font-size: 10px;
+  }
+  
+  .exam-stats-grid {
+    gap: 14px;
+  }
+  
+  .exam-stat-card {
+    padding: 14px;
+  }
+  
+  .exam-header h4 {
+    font-size: 0.95rem;
+  }
+  
+  .exam-metrics {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .exam-metrics .metric-value {
+    font-size: 1.2rem;
+  }
+  
+  .attendance-overview {
+    gap: 14px;
+  }
+  
+  .attendance-card {
+    padding: 14px;
+  }
+  
+  .rate-value {
+    font-size: 2.2rem;
+  }
+  
+  .subject-attendance-item {
+    padding: 7px;
+  }
+  
+  .task-summary {
+    gap: 14px;
+  }
+  
+  .task-stat {
+    padding: 14px;
+  }
+  
+  .stat-value {
+    font-size: 1.6rem;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .subject-task-item {
+    padding: 10px;
+  }
+  
+  .task-stats {
+    gap: 14px;
+    font-size: 12px;
+  }
+  
+  .usage-grid {
+    gap: 14px;
+  }
+  
+  .usage-card {
+    padding: 14px;
+  }
+  
+  .count-value {
+    font-size: 1.6rem;
+  }
+  
+  .count-label {
+    font-size: 12px;
+  }
+  
+  .survey-summary {
+    gap: 14px;
+  }
+  
+  .survey-stat {
+    padding: 14px;
+  }
+  
+  .survey-item {
+    padding: 10px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .admin-dashboard {
+    padding: 12px;
+  }
+  
+  .dashboard-header {
+    padding: 12px;
+    margin-bottom: 18px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.4rem;
+  }
+  
+  .header-actions {
+    gap: 12px;
+  }
+  
+  .date-input {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  
+  .refresh-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .overview-section, .performance-section, .exam-analytics-section,
+  .attendance-section, .task-analytics-section, .system-usage-section,
+  .survey-analytics-section, .insights-summary {
+    padding: 16px;
+  }
+  
+  .overview-section h2, .performance-section h2, .exam-analytics-section h2,
+  .attendance-section h2, .task-analytics-section h2, .system-usage-section h2,
+  .survey-analytics-section h2, .insights-summary h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+  
+  .overview-cards {
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 12px;
+  }
+  
+  .card-icon .material-icons {
+    font-size: 1.4rem;
+  }
+  
+  .card-content h3 {
+    font-size: 1.2rem;
+  }
+  
+  .card-content p {
+    font-size: 11px;
+  }
+  
+  .insights-grid {
+    gap: 12px;
+  }
+  
+  .insight-card {
+    padding: 12px;
+  }
+  
+  .insight-content h4 {
+    font-size: 0.9rem;
+  }
+  
+  .insight-content p {
+    font-size: 0.8rem;
+  }
+  
+  .performance-overview {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  
+  .performance-card {
+    padding: 12px;
+  }
+  
+  .performance-metrics {
+    gap: 8px;
+  }
+  
+  .metric {
+    padding: 8px;
+  }
+  
+  .metric-value {
+    font-size: 1.2rem;
+  }
+  
+  .metric-label {
+    font-size: 9px;
+  }
+  
+  .highlight-card {
+    padding: 12px;
+  }
+  
+  .highlight-value {
+    font-size: 1.1rem;
+  }
+  
+  .highlight-score {
+    font-size: 1.4rem;
+  }
+  
+  .performance-charts {
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  
+  .chart-container {
+    padding: 12px;
+  }
+  
+  .chart-wrapper {
+    height: 280px;
+  }
+  
+  .chart-container h3 {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  
+  .grade-distribution-table h3 {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+  }
+  
+  th, td {
+    padding: 6px;
+    font-size: 0.8rem;
+  }
+  
+  .performers-section {
+    gap: 12px;
+  }
+  
+  .performers-card {
+    padding: 12px;
+  }
+  
+  .performer-item {
+    padding: 6px;
+  }
+  
+  .rank {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+  }
+  
+  .student-details {
+    font-size: 9px;
+  }
+  
+  .score {
+    font-size: 0.8rem;
+  }
+  
+  .exams {
+    font-size: 9px;
+  }
+  
+  .exam-stats-grid {
+    gap: 12px;
+  }
+  
+  .exam-stat-card {
+    padding: 12px;
+  }
+  
+  .exam-header h4 {
+    font-size: 0.9rem;
+  }
+  
+  .exam-metrics {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .exam-metrics .metric-value {
+    font-size: 1.1rem;
+  }
+  
+  .attendance-overview {
+    gap: 12px;
+  }
+  
+  .attendance-card {
+    padding: 12px;
+  }
+  
+  .rate-value {
+    font-size: 2rem;
+  }
+  
+  .subject-attendance-item {
+    padding: 6px;
+  }
+  
+  .task-summary {
+    gap: 12px;
+  }
+  
+  .task-stat {
+    padding: 12px;
+  }
+  
+  .stat-value {
+    font-size: 1.4rem;
+  }
+  
+  .stat-label {
+    font-size: 11px;
+  }
+  
+  .subject-task-item {
+    padding: 8px;
+  }
+  
+  .task-stats {
+    gap: 12px;
+    font-size: 11px;
+  }
+  
+  .usage-grid {
+    gap: 12px;
+  }
+  
+  .usage-card {
+    padding: 12px;
+  }
+  
+  .count-value {
+    font-size: 1.4rem;
+  }
+  
+  .count-label {
+    font-size: 11px;
+  }
+  
+  .survey-summary {
+    gap: 12px;
+  }
+  
+  .survey-stat {
+    padding: 12px;
+  }
+  
+  .survey-item {
+    padding: 8px;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .admin-dashboard {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .dashboard-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+    padding: 15px 10px;
+    margin-bottom: 15px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  
+  .date-filters {
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .date-input {
+    width: 100%;
+    padding: 8px;
+    font-size: 14px;
+  }
+  
+  .refresh-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+  }
+  
+  .overview-section, .performance-section, .exam-analytics-section,
+  .attendance-section, .task-analytics-section, .system-usage-section,
+  .survey-analytics-section, .insights-summary {
+    padding: 15px 10px;
+    margin: 0 0 15px 0;
+  }
+  
+  .overview-section h2, .performance-section h2, .exam-analytics-section h2,
+  .attendance-section h2, .task-analytics-section h2, .system-usage-section h2,
+  .survey-analytics-section h2, .insights-summary h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+  
+  .overview-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .overview-card {
+    padding: 12px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .card-icon {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+  
+  .card-icon .material-icons {
+    font-size: 1.5rem;
+  }
+  
+  .card-content h3 {
+    font-size: 1.3rem;
+  }
+  
+  .card-content p {
+    font-size: 11px;
   }
   
   .insights-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .insight-card {
+    padding: 12px;
+  }
+  
+  .insight-content h4 {
+    font-size: 0.95rem;
+  }
+  
+  .insight-content p {
+    font-size: 0.8rem;
   }
   
   .performance-overview {
     grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  
+  .performance-card {
+    padding: 12px;
   }
   
   .performance-metrics {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  
+  .metric {
+    padding: 8px;
+  }
+  
+  .metric-value {
+    font-size: 1.2rem;
+  }
+  
+  .metric-label {
+    font-size: 9px;
+  }
+  
+  .highlight-card {
+    padding: 12px;
+  }
+  
+  .highlight-value {
+    font-size: 1rem;
+  }
+  
+  .highlight-score {
+    font-size: 1.3rem;
   }
   
   .performance-charts {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .chart-container {
+    padding: 12px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    position: relative;
   }
   
   .chart-wrapper {
-    height: 250px;
+    height: 200px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
   }
   
-  .performers-section,
-  .attendance-overview,
-  .usage-grid {
+  .chart-container h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .grade-distribution-table h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .table-container {
+    font-size: 10px;
+    overflow-x: auto;
+  }
+  
+  table {
+    min-width: 500px;
+  }
+  
+  th, td {
+    padding: 6px 4px;
+    font-size: 10px;
+  }
+  
+  .performers-section {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   
-  .task-summary,
-  .survey-summary {
-    grid-template-columns: repeat(2, 1fr);
+  .performers-card {
+    padding: 12px;
+  }
+  
+  .performer-item {
+    padding: 6px;
+  }
+  
+  .rank {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+  }
+  
+  .student-details {
+    font-size: 9px;
+  }
+  
+  .score {
+    font-size: 0.8rem;
+  }
+  
+  .exams {
+    font-size: 9px;
   }
   
   .exam-stats-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   
-  .table-container {
-    font-size: 12px;
+  .exam-stat-card {
+    padding: 12px;
+  }
+  
+  .exam-header h4 {
+    font-size: 0.9rem;
+  }
+  
+  .exam-metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .exam-metrics .metric-value {
+    font-size: 1rem;
+  }
+  
+  .attendance-overview {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .attendance-card {
+    padding: 12px;
+  }
+  
+  .rate-value {
+    font-size: 2rem;
+  }
+  
+  .subject-attendance-item {
+    padding: 6px;
+  }
+  
+  .task-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .task-stat {
+    padding: 12px;
+  }
+  
+  .stat-value {
+    font-size: 1.3rem;
+  }
+  
+  .stat-label {
+    font-size: 10px;
+  }
+  
+  .subject-task-item {
+    padding: 8px;
+  }
+  
+  .task-stats {
+    gap: 8px;
+    font-size: 10px;
+  }
+  
+  .usage-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .usage-card {
+    padding: 12px;
+  }
+  
+  .count-value {
+    font-size: 1.3rem;
+  }
+  
+  .count-label {
+    font-size: 10px;
+  }
+  
+  .survey-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .survey-stat {
+    padding: 12px;
+  }
+  
+  .survey-item {
+    padding: 8px;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .admin-dashboard {
+    padding: 0;
+    margin: 0;
+  }
+  
+  .dashboard-header {
+    padding: 10px 5px;
+    margin-bottom: 10px;
+  }
+  
+  .dashboard-header h1 {
+    font-size: 1.3rem;
+  }
+  
+  .overview-section, .performance-section, .exam-analytics-section,
+  .attendance-section, .task-analytics-section, .system-usage-section,
+  .survey-analytics-section, .insights-summary {
+    padding: 10px 5px;
+    margin: 0 0 10px 0;
+  }
+  
+  .overview-section h2, .performance-section h2, .exam-analytics-section h2,
+  .attendance-section h2, .task-analytics-section h2, .system-usage-section h2,
+  .survey-analytics-section h2, .insights-summary h2 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  
+  .overview-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .overview-card {
+    padding: 8px;
+  }
+  
+  .card-icon .material-icons {
+    font-size: 1.2rem;
+  }
+  
+  .card-content h3 {
+    font-size: 1.1rem;
+  }
+  
+  .card-content p {
+    font-size: 10px;
+  }
+  
+  .insight-card {
+    padding: 8px;
+  }
+  
+  .insight-content h4 {
+    font-size: 0.85rem;
+  }
+  
+  .insight-content p {
+    font-size: 0.75rem;
+  }
+  
+  .performance-card {
+    padding: 8px;
+  }
+  
+  .performance-metrics {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  
+  .metric {
+    padding: 6px;
+  }
+  
+  .metric-value {
+    font-size: 1rem;
+  }
+  
+  .metric-label {
+    font-size: 8px;
+  }
+  
+  .highlight-card {
+    padding: 8px;
+  }
+  
+  .highlight-value {
+    font-size: 0.9rem;
+  }
+  
+  .highlight-score {
+    font-size: 1.1rem;
+  }
+  
+  .chart-container {
+    padding: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .chart-wrapper {
+    height: 150px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .chart-container h3 {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  
+  .grade-distribution-table h3 {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
   }
   
   th, td {
-    padding: 8px 6px;
+    padding: 4px 2px;
+    font-size: 9px;
+  }
+  
+  .performers-card {
+    padding: 8px;
+  }
+  
+  .performer-item {
+    padding: 4px;
+  }
+  
+  .rank {
+    width: 18px;
+    height: 18px;
+    font-size: 0.6rem;
+  }
+  
+  .student-name {
+    font-size: 0.75rem;
+  }
+  
+  .student-details {
+    font-size: 8px;
+  }
+  
+  .score {
+    font-size: 0.75rem;
+  }
+  
+  .exams {
+    font-size: 8px;
+  }
+  
+  .exam-stat-card {
+    padding: 8px;
+  }
+  
+  .exam-header h4 {
+    font-size: 0.8rem;
+  }
+  
+  .exam-metrics {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .exam-metrics .metric-value {
+    font-size: 0.9rem;
+  }
+  
+  .attendance-card {
+    padding: 8px;
+  }
+  
+  .rate-value {
+    font-size: 1.5rem;
+  }
+  
+  .subject-attendance-item {
+    padding: 4px;
+  }
+  
+  .task-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .task-stat {
+    padding: 8px;
+  }
+  
+  .stat-value {
+    font-size: 1.1rem;
+  }
+  
+  .stat-label {
+    font-size: 9px;
+  }
+  
+  .subject-task-item {
+    padding: 6px;
+  }
+  
+  .task-stats {
+    gap: 6px;
+    font-size: 9px;
+  }
+  
+  .usage-card {
+    padding: 8px;
+  }
+  
+  .count-value {
+    font-size: 1.1rem;
+  }
+  
+  .count-label {
+    font-size: 9px;
+  }
+  
+  .survey-summary {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .survey-stat {
+    padding: 8px;
+  }
+  
+  .survey-item {
+    padding: 6px;
   }
 }
 </style> 

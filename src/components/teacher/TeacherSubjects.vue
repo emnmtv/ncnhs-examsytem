@@ -50,15 +50,56 @@
         <div class="subject-header">
           <div class="texture-layer"></div>
           <h2>{{ subject.subject.name }}</h2>
-          <div class="subject-meta">
-            <span class="subject-meta-item">
-              <span class="material-icons">code</span>
-              {{ subject.subject.code }}
-            </span>
-            <span v-if="subject.subject.description" class="subject-meta-item">
-              <span class="material-icons">description</span>
-              {{ subject.subject.description }}
-            </span>
+          <div class="subject-meta-container">
+            <div class="subject-meta">
+              <span class="subject-meta-item">
+                <span class="material-icons">code</span>
+                {{ subject.subject.code }}
+              </span>
+              <span v-if="subject.subject.description" class="subject-meta-item">
+                <span class="material-icons">description</span>
+                {{ subject.subject.description }}
+              </span>
+            </div>
+            <div class="subject-actions-dropdown">
+              <button class="dropdown-toggle" @click="toggleDropdown($event)">
+                <span class="material-icons">more_vert</span>
+              </button>
+              <div class="dropdown-menu" @click.stop>
+                <router-link 
+                  :to="`/subject/${subject.subject.id}/tasks`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">assignment</span>
+                  View Tasks
+                </router-link>
+                <router-link 
+                  :to="`/class-list?subject=${subject.subject.id}`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">people</span>
+                  View Classlist
+                </router-link>
+                <router-link 
+                  :to="`/create-task/${subject.subject.id}`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">add_task</span>
+                  Create New Task
+                </router-link>
+                <router-link 
+                  :to="`/manage-exams?subject=${subject.subject.id}`" 
+                  class="dropdown-item"
+                  @click="closeAllDropdowns()"
+                >
+                  <span class="material-icons">quiz</span>
+                  View Exams
+                </router-link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -137,16 +178,6 @@
           </div>
         </div>
 
-        <div class="subject-actions">
-          <router-link :to="`/subject/${subject.subject.id}/tasks`" class="action-btn tasks-btn">
-            <span class="material-icons">assignment</span>
-            View Tasks
-          </router-link>
-          <router-link :to="`/create-task/${subject.subject.id}`" class="action-btn create-btn">
-            <span class="material-icons">add_task</span>
-            Create New Task
-          </router-link>
-        </div>
       </div>
     </div>
   </div>
@@ -220,6 +251,68 @@ const loadSubjects = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// Dropdown functionality
+const toggleDropdown = (event) => {
+  event.stopPropagation();
+  
+  // Close all other open dropdowns first
+  document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+    const parentDropdown = menu.closest('.subject-actions-dropdown');
+    const currentDropdown = event.target.closest('.subject-actions-dropdown');
+    if (parentDropdown !== currentDropdown) {
+      menu.classList.remove('show');
+    }
+  });
+  
+  // Toggle the clicked dropdown
+  const dropdownContainer = event.target.closest('.subject-actions-dropdown');
+  const dropdown = dropdownContainer.querySelector('.dropdown-menu');
+  const isCurrentlyOpen = dropdown.classList.contains('show');
+  
+  if (isCurrentlyOpen) {
+    dropdown.classList.remove('show');
+    return;
+  }
+  
+  dropdown.classList.add('show');
+  
+  // Reset any previous positioning styles
+  dropdown.style.position = '';
+  dropdown.style.top = '';
+  dropdown.style.right = '';
+  dropdown.style.left = '';
+  
+  // Check if dropdown would overflow and adjust position
+  setTimeout(() => {
+    const dropdownRect = dropdown.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    if (dropdownRect.right > viewportWidth - 10) {
+      dropdown.style.left = '-150px';
+      dropdown.style.right = 'auto';
+    }
+  }, 10);
+  
+  // Add click outside listener to close dropdown
+  const closeDropdownHandler = (e) => {
+    if (!dropdown.contains(e.target) && !dropdownContainer.contains(e.target)) {
+      dropdown.classList.remove('show');
+      document.removeEventListener('click', closeDropdownHandler);
+    }
+  };
+  
+  // Delay adding the event listener to prevent immediate closing
+  setTimeout(() => {
+    document.addEventListener('click', closeDropdownHandler);
+  }, 100);
+};
+
+const closeAllDropdowns = () => {
+  document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+    menu.classList.remove('show');
+  });
 };
 
 onMounted(() => {
@@ -337,10 +430,10 @@ onMounted(() => {
 /* Card Styling */
 .subject-card {
   background: white;
-  border-radius: 16px;
-  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+  overflow: visible;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-              0 4px 16px -2px rgba(0, 0, 0, 0.08);
+               0 4px 16px -2px rgba(0, 0, 0, 0.08);
   transition: all 0.3s;
   display: flex;
   flex-direction: column;
@@ -356,9 +449,10 @@ onMounted(() => {
   background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   padding: 20px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   color: white;
   min-height: 120px;
+  border-radius: 16px 16px 0 0;
 }
 
 /* Main paint swipe */
@@ -443,12 +537,20 @@ onMounted(() => {
   max-width: 100%; /* Ensure text stays within container */
 }
 
+.subject-meta-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+  gap: 10px;
+}
+
 .subject-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  position: relative;
-  z-index: 1;
+  flex: 1;
 }
 
 .subject-meta-item {
@@ -679,49 +781,86 @@ onMounted(() => {
   color: #7b1fa2;
 }
 
-.subject-actions {
-  padding: 15px;
-  background: #f5f5f5;
-  border-top: 1px solid #eee;
-  display: flex;
-  gap: 8px;
+/* Dropdown styles */
+.subject-actions-dropdown {
+  position: relative;
+  z-index: 999;
+  margin-left: 10px;
 }
 
-.action-btn {
-  flex: 1;
-  padding: 12px;
+.dropdown-toggle {
+  background: rgba(255, 255, 255, 0.2);
   border: none;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.tasks-btn {
-  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   color: white;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.tasks-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(11, 204, 78, 0.2);
+.dropdown-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
-.create-btn {
-  background: #e8f5e9;
-  color: #2e7d32;
+.dropdown-toggle .material-icons {
+  font-size: 18px;
 }
 
-.create-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
-  background: #d5ecd7;
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: none;
+  flex-direction: column;
+  min-width: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.dropdown-menu.show {
+  display: flex;
+}
+
+.dropdown-item {
+  padding: 9px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  color: #333;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f5f5f5;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item .material-icons {
+  font-size: 0.95rem;
+  color: #159750;
 }
 
 .attendance-btn {
@@ -731,6 +870,448 @@ onMounted(() => {
 
 .attendance-btn:hover {
   background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+}
+
+/* High DPI and Small Laptop Screens */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.6rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+
+  .header-background {
+    font-size: 6rem;
+    right: 4rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .divider {
+    margin: 1.2rem 0;
+  }
+
+  .header-actions {
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .header-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+  }
+
+  .header-btn .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.6rem;
+    margin-top: 1.6rem;
+  }
+
+  .subject-header {
+    padding: 1.6rem;
+    min-height: 100px;
+  }
+
+  .subject-header h2 {
+    font-size: 1.2rem;
+    margin-bottom: 12px;
+  }
+
+  .subject-meta-container {
+    gap: 8px;
+  }
+
+  .subject-meta {
+    gap: 6px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+  }
+
+  .subject-body {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .subject-info {
+    gap: 20px;
+  }
+
+  .info-item {
+    gap: 12px;
+  }
+
+  .info-content {
+    gap: 10px;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 1.2rem;
+  }
+
+  .section-chip {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+  }
+
+  .students-count {
+    padding: 5px 12px;
+    font-size: 0.85rem;
+  }
+
+  .count-badge {
+    padding: 3px 8px;
+    font-size: 0.85rem;
+  }
+
+  .schedule-info {
+    padding: 12px;
+  }
+
+  .schedule-type-badge {
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+
+  .schedule-details {
+    font-size: 0.9rem;
+  }
+
+  .dropdown-toggle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 16px;
+  }
+
+  .dropdown-menu {
+    min-width: 150px;
+    max-height: 260px;
+  }
+
+  .dropdown-item {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.9rem;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.4rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+
+  .header-background {
+    font-size: 5rem;
+    right: 3rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .divider {
+    margin: 1rem 0;
+  }
+
+  .header-actions {
+    gap: 10px;
+    margin-top: 6px;
+  }
+
+  .header-btn {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+
+  .header-btn .material-icons {
+    font-size: 1rem;
+  }
+
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.4rem;
+    margin-top: 1.4rem;
+  }
+
+  .subject-header {
+    padding: 1.4rem;
+    min-height: 90px;
+  }
+
+  .subject-header h2 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+
+  .subject-meta-container {
+    gap: 6px;
+  }
+
+  .subject-meta {
+    gap: 5px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+
+  .subject-body {
+    padding: 18px;
+    gap: 18px;
+  }
+
+  .subject-info {
+    gap: 18px;
+  }
+
+  .info-item {
+    gap: 10px;
+  }
+
+  .info-content {
+    gap: 8px;
+  }
+
+  .info-label {
+    font-size: 0.75rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 1.1rem;
+  }
+
+  .section-chip {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .students-count {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+
+  .count-badge {
+    padding: 2px 6px;
+    font-size: 0.8rem;
+  }
+
+  .schedule-info {
+    padding: 10px;
+  }
+
+  .schedule-type-badge {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+  }
+
+  .schedule-details {
+    font-size: 0.85rem;
+  }
+
+  .dropdown-toggle {
+    width: 26px;
+    height: 26px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 15px;
+  }
+
+  .dropdown-menu {
+    min-width: 140px;
+    max-height: 240px;
+  }
+
+  .dropdown-item {
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    gap: 5px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-subjects {
+    padding: 1.2rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .header-background {
+    font-size: 4rem;
+    right: 2rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .divider {
+    margin: 0.8rem 0;
+  }
+
+  .header-actions {
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .header-btn {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+
+  .header-btn .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .subjects-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.2rem;
+    margin-top: 1.2rem;
+  }
+
+  .subject-header {
+    padding: 1.2rem;
+    min-height: 80px;
+  }
+
+  .subject-header h2 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+
+  .subject-meta-container {
+    gap: 4px;
+  }
+
+  .subject-meta {
+    gap: 4px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+  }
+
+  .subject-body {
+    padding: 15px;
+    gap: 15px;
+  }
+
+  .subject-info {
+    gap: 15px;
+  }
+
+  .info-item {
+    gap: 8px;
+  }
+
+  .info-content {
+    gap: 6px;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 1rem;
+  }
+
+  .section-chip {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+
+  .students-count {
+    padding: 3px 8px;
+    font-size: 0.75rem;
+  }
+
+  .count-badge {
+    padding: 2px 5px;
+    font-size: 0.75rem;
+  }
+
+  .schedule-info {
+    padding: 8px;
+  }
+
+  .schedule-type-badge {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+
+  .schedule-details {
+    font-size: 0.8rem;
+  }
+
+  .dropdown-toggle {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 14px;
+  }
+
+  .dropdown-menu {
+    min-width: 130px;
+    max-height: 220px;
+  }
+
+  .dropdown-item {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.8rem;
+  }
 }
 
 /* Responsive design */
@@ -767,7 +1348,114 @@ onMounted(() => {
 
   .subjects-grid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 0.8rem;
+  }
+
+  .subject-header {
+    padding: 1rem;
+    min-height: 70px;
+  }
+
+  .subject-header h2 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .subject-meta-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .subject-meta {
+    gap: 4px;
+  }
+
+  .subject-meta-item {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+  }
+
+  .subject-body {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .subject-info {
+    gap: 12px;
+  }
+
+  .info-item {
+    gap: 6px;
+  }
+
+  .info-content {
+    gap: 5px;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+  }
+
+  .info-item .material-icons-round {
+    font-size: 0.9rem;
+  }
+
+  .section-chip {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .students-count {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .count-badge {
+    padding: 2px 4px;
+    font-size: 0.7rem;
+  }
+
+  .schedule-info {
+    padding: 6px;
+  }
+
+  .schedule-type-badge {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+  }
+
+  .schedule-details {
+    font-size: 0.75rem;
+  }
+
+  .subject-actions-dropdown {
+    margin-left: 0;
+    align-self: flex-end;
+  }
+
+  .dropdown-toggle {
+    width: 24px;
+    height: 24px;
+  }
+
+  .dropdown-toggle .material-icons {
+    font-size: 14px;
+  }
+
+  .dropdown-menu {
+    min-width: 120px;
+    max-height: 200px;
+  }
+
+  .dropdown-item {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+
+  .dropdown-item .material-icons {
+    font-size: 0.8rem;
   }
 }
 </style>

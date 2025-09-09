@@ -62,16 +62,24 @@
             </div>
             
             <div class="form-group">
-              <label for="classCode">Class Code</label>
-              <input 
-                v-model="examData.classCode" 
-                type="text" 
-                id="classCode" 
-                placeholder="e.g., 10A-MATH" 
-                required 
-                class="uppercase-input"
-              />
-              <small>Identifier for the class taking this exam (automatically uppercase)</small>
+              <label for="subjectSelect">Subject</label>
+              <select 
+                v-model="selectedSubjectId" 
+                id="subjectSelect" 
+                class="form-select"
+                :disabled="loadingSubjects"
+              >
+                <option value="">Select a subject (optional)</option>
+                <option 
+                  v-for="subject in teacherSubjects" 
+                  :key="subject.subject.id" 
+                  :value="subject.subject.id"
+                >
+                  {{ subject.subject.name }} ({{ subject.subject.code }})
+                </option>
+              </select>
+              <small v-if="loadingSubjects">Loading subjects...</small>
+              <small v-else>Select the subject this exam is for (optional)</small>
             </div>
           </div>
           
@@ -592,6 +600,27 @@
                       </div>
                     </div>
                   </div>
+                  
+                  <!-- Word Limit Input -->
+                  <div class="word-limit-section">
+                    <label for="wordLimit" class="word-limit-label">
+                      <span class="material-icons-round">text_fields</span>
+                      Word Limit (Optional)
+                    </label>
+                    <div class="word-limit-input-container">
+                      <input
+                        v-model.number="question.wordLimit"
+                        type="number"
+                        id="wordLimit"
+                        min="1"
+                        max="10000"
+                        placeholder="e.g., 500"
+                        class="word-limit-input"
+                      />
+                      <span class="word-limit-unit">words</span>
+                    </div>
+                    <p class="word-limit-help">Set a maximum word count for student responses. Leave empty for no limit.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -953,7 +982,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems } from '../../services/authService';
+import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems, getTeacherAssignedSubjects } from '../../services/authService';
 import aiService from '../../services/aiService';
 import fileProcessingService from '../../services/textProcessingService';
 import Swal from 'sweetalert2';
@@ -967,7 +996,6 @@ export default {
     const isEditing = ref(false);
     const examData = ref({
       testCode: '',
-      classCode: '',
       title: '',
       isDraft: false,
       userId: localStorage.getItem('userId'),
@@ -998,6 +1026,11 @@ export default {
     const selectedBankSubject = ref('');
     const selectedBankDifficulty = ref('');
     const STORAGE_KEY = 'exam_creation_progress'; // Key for local storage
+    
+    // Teacher subjects data
+    const teacherSubjects = ref([]);
+    const selectedSubjectId = ref('');
+    const loadingSubjects = ref(false);
 
     // Document upload functionality
     const documentFileInput = ref(null);
@@ -1028,6 +1061,9 @@ export default {
         console.error('Error loading AI models:', error);
       }
       
+      // Load teacher subjects
+      await loadTeacherSubjects();
+      
       const examId = route.query.examId;
       if (examId) {
         isEditing.value = true;
@@ -1037,7 +1073,6 @@ export default {
           if (exam) {
             examData.value = {
               testCode: exam.testCode,
-              classCode: exam.classCode,
               title: exam.examTitle,
               isDraft: exam.isDraft,
               userId: exam.userId,
@@ -1048,6 +1083,14 @@ export default {
               attemptSpacing: exam.attemptSpacing || null,
               studentExamHistory: exam.studentExamHistory !== undefined ? exam.studentExamHistory : true
             };
+            
+            // Set selected subject if classCode matches a subject code
+            if (exam.classCode && teacherSubjects.value.length > 0) {
+              const matchingSubject = teacherSubjects.value.find(s => s.subject.code === exam.classCode);
+              if (matchingSubject) {
+                selectedSubjectId.value = matchingSubject.subject.id.toString();
+              }
+            }
             questions.value = exam.questions.map(q => ({
               text: q.questionText,
               type: q.questionType,
@@ -1055,7 +1098,8 @@ export default {
               correctAnswer: q.correctAnswer,
               imageUrl: q.imageUrl ? '/uploads/' + q.imageUrl.split('/').pop() : null, // Fix image URL format
               points: q.points || 1, // Include points, default to 1 if not present
-              partId: q.partId || '' // Include partId if present
+              partId: q.partId || '', // Include partId if present
+              wordLimit: q.wordLimit || null // Include wordLimit if present
             }));
             
             // Load parts if they exist
@@ -1250,10 +1294,7 @@ export default {
       saveProgressToLocalStorage();
     });
 
-    watch(() => examData.value.classCode, (newValue) => {
-      if (newValue) {
-        examData.value.classCode = newValue.toUpperCase();
-      }
+    watch(() => selectedSubjectId.value, () => {
       saveProgressToLocalStorage();
     });
 
@@ -1279,7 +1320,7 @@ export default {
       if (isEditing.value) return; // Don't save if editing an existing exam
       
       // Only save if there's meaningful data entered
-      const hasExamData = examData.value.testCode || examData.value.classCode || examData.value.title;
+      const hasExamData = examData.value.testCode || examData.value.title || selectedSubjectId.value;
       const hasQuestions = questions.value.length > 0;
       
       if (!hasExamData && !hasQuestions) return; // Don't save empty forms
@@ -1287,7 +1328,8 @@ export default {
       const progress = {
         examData: examData.value,
         questions: questions.value,
-        parts: parts.value
+        parts: parts.value,
+        selectedSubjectId: selectedSubjectId.value
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
     };
@@ -1301,6 +1343,9 @@ export default {
           examData.value = progress.examData;
           questions.value = progress.questions;
           parts.value = progress.parts || [];
+          if (progress.selectedSubjectId) {
+            selectedSubjectId.value = progress.selectedSubjectId;
+          }
           return true;
         } catch (e) {
           console.error('Error parsing saved progress:', e);
@@ -1417,7 +1462,7 @@ export default {
         error.value = null;
 
         // Validate required fields
-        if (!examData.value.testCode || !examData.value.classCode || !examData.value.title) {
+        if (!examData.value.testCode || !examData.value.title) {
           throw new Error('Please fill in all required fields');
         }
 
@@ -1436,13 +1481,23 @@ export default {
           correctAnswer: q.type === 'essay' ? '' : q.correctAnswer, // Essay questions don't need correct answers
           imageUrl: q.imageUrl, // Include imageUrl in formatted questions
           points: q.points || 1, // Include points
-          partId: q.partId || null // Include partId if assigned
+          partId: q.partId || null, // Include partId if assigned
+          wordLimit: q.wordLimit || null // Include wordLimit for essay questions
         }));
 
         if (isEditing.value) {
+          // Get classCode from selected subject if available
+          let classCode = null;
+          if (selectedSubjectId.value) {
+            const selectedSubject = teacherSubjects.value.find(s => s.subject.id === parseInt(selectedSubjectId.value));
+            if (selectedSubject) {
+              classCode = selectedSubject.subject.code;
+            }
+          }
+          
           await updateExam(route.query.examId, {
             testCode: examData.value.testCode,
-            classCode: examData.value.classCode,
+            classCode: classCode,
             examTitle: examData.value.title,
             questions: formattedQuestions,
             isDraft: isDraft,
@@ -1456,9 +1511,18 @@ export default {
             parts: parts.value.length > 0 ? parts.value : null
           });
         } else {
+          // Get classCode from selected subject if available
+          let classCode = null;
+          if (selectedSubjectId.value) {
+            const selectedSubject = teacherSubjects.value.find(s => s.subject.id === parseInt(selectedSubjectId.value));
+            if (selectedSubject) {
+              classCode = selectedSubject.subject.code;
+            }
+          }
+          
           await createExam(
             examData.value.testCode,
-            examData.value.classCode,
+            classCode,
             examData.value.title,
             formattedQuestions,
             localStorage.getItem('userId'),
@@ -1501,7 +1565,7 @@ export default {
     };
 
     const validateExam = () => {
-      if (!examData.value.testCode || !examData.value.classCode || !examData.value.title) {
+      if (!examData.value.testCode || !examData.value.title) {
         return false;
       }
       if (!questions.value.length) {
@@ -1549,6 +1613,7 @@ export default {
       } else if (question.type === 'essay') {
         question.options = [];
         question.correctAnswer = ''; // Essay questions don't need correct answers
+        question.wordLimit = question.wordLimit || null; // Initialize wordLimit if not set
       } else if (question.type === 'multipleChoice' && 
                  (!Array.isArray(question.options) || question.options.join(',') === 'true,false')) {
         // Only reset multiple choice options if coming from true/false or if options are invalid
@@ -1591,7 +1656,8 @@ export default {
         correctAnswer: '',
         imageUrl: null,
         points: 1,
-        partId: ''
+        partId: '',
+        wordLimit: null
       });
     };
 
@@ -1680,7 +1746,6 @@ export default {
     const resetForm = () => {
       examData.value = {
         testCode: '',
-        classCode: '',
         title: '',
         isDraft: false,
         userId: localStorage.getItem('userId'),
@@ -1691,6 +1756,7 @@ export default {
         attemptSpacing: null,
         studentExamHistory: true
       };
+      selectedSubjectId.value = '';
       questions.value = [];
       parts.value = [];
       
@@ -1709,6 +1775,20 @@ export default {
       } catch (error) {
         console.error('Error loading bank questions:', error);
         Swal.fire('Error', 'Failed to load questions from bank', 'error');
+      }
+    };
+
+    // Load teacher's assigned subjects
+    const loadTeacherSubjects = async () => {
+      try {
+        loadingSubjects.value = true;
+        const subjects = await getTeacherAssignedSubjects();
+        teacherSubjects.value = subjects || [];
+      } catch (error) {
+        console.error('Error loading teacher subjects:', error);
+        teacherSubjects.value = [];
+      } finally {
+        loadingSubjects.value = false;
       }
     };
 
@@ -2444,6 +2524,9 @@ export default {
       selectedBankDifficulty,
       bankFolders,
       bankSubjects,
+      teacherSubjects,
+      selectedSubjectId,
+      loadingSubjects,
       filteredBankQuestions,
       toggleQuestionSelection,
       importSelectedQuestions,
@@ -2652,6 +2735,28 @@ export default {
 
 .form-group:last-child {
   margin-bottom: 0;
+}
+
+.form-select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  background-color: white;
+  transition: border-color 0.3s ease;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 2px rgba(21, 151, 80, 0.2);
+}
+
+.form-select:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
 }
 
 .full-width {
@@ -2997,6 +3102,65 @@ small {
 .essay-notice div p:last-child {
   color: #666;
   font-size: 0.9rem;
+}
+
+/* Word Limit Section Styling */
+.word-limit-section {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+}
+
+.word-limit-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.word-limit-label .material-icons-round {
+  font-size: 18px;
+  color: #6c757d;
+}
+
+.word-limit-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.word-limit-input {
+  width: 120px;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.word-limit-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.word-limit-unit {
+  font-size: 0.9rem;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.word-limit-help {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6c757d;
+  line-height: 1.4;
 }
 
 /* Points Section Styling */

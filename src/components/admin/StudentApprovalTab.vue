@@ -14,7 +14,7 @@
           </div>
           <div class="stat-item">
             <span class="stat-number">{{ stats.rejected }}</span>
-            <span class="stat-label">Rejected</span>
+            <span class="stat-label">Denied</span>
           </div>
           <div class="stat-item total">
             <span class="stat-number">{{ stats.total }}</span>
@@ -169,7 +169,7 @@
                       @click="showRejectModal(student)"
                       class="action-button reject"
                       :disabled="processingStudents.has(student.id)"
-                      title="Reject"
+                      title="Deny"
                     >
                       <span class="material-icons">close</span>
                     </button>
@@ -212,6 +212,7 @@
                   <th>Section</th>
                   <th>Approved</th>
                   <th>Approved By</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -240,6 +241,16 @@
                   <td>{{ student.section || 'N/A' }}</td>
                   <td>{{ formatDate(student.approvedAt) }}</td>
                   <td>{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</td>
+                  <td class="actions-cell">
+                    <button 
+                      @click="showRejectModal(student)"
+                      class="action-button reject"
+                      :disabled="processingStudents.has(student.id)"
+                      title="Deny"
+                    >
+                      <span class="material-icons">close</span>
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -247,21 +258,21 @@
         </div>
       </div>
 
-      <!-- Rejected Tab -->
+      <!-- Denied Tab -->
       <div v-else-if="activeTab === 'rejected'" class="registrations-list">
         <div v-if="filteredRejectedRegistrations.length === 0" class="empty-state">
           <div class="empty-icon">
             <span class="material-icons">cancel_outline</span>
           </div>
-          <h3>No Rejected Registrations</h3>
+          <h3>No Denied Registrations</h3>
           <p v-if="searchQuery || selectedGrade || selectedSection || dateFilter">
-            No rejected registrations match your current filters.
+            No denied registrations match your current filters.
           </p>
-          <p v-else>No student registrations have been rejected yet.</p>
+          <p v-else>No student registrations have been denied yet.</p>
         </div>
         <div v-else>
           <div class="list-header">
-            <h3>Rejected Registrations ({{ filteredRejectedRegistrations.length }})</h3>
+            <h3>Denied Registrations ({{ filteredRejectedRegistrations.length }})</h3>
             <button @click="loadData" class="refresh-button">
               <span class="material-icons">refresh</span>
               Refresh
@@ -276,8 +287,8 @@
                   <th>LRN</th>
                   <th>Grade</th>
                   <th>Section</th>
-                  <th>Rejected</th>
-                  <th>Rejected By</th>
+                  <th>Denied</th>
+                  <th>Denied By</th>
                   <th>Reason</th>
                   <th>Actions</th>
                 </tr>
@@ -298,7 +309,7 @@
                       </div>
                       <div class="student-details">
                         <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
-                        <div class="status-badge rejected">Rejected</div>
+                        <div class="status-badge rejected">Denied</div>
                       </div>
                     </div>
                   </td>
@@ -331,7 +342,7 @@
     <div v-if="showRejectModalFlag" class="modal-overlay" @click="closeRejectModal">
       <div class="modal-content" @click.stop>
         <div class="modal-header">
-          <h3>Reject Student Registration</h3>
+          <h3>{{ selectedStudent && selectedStudent.id && approvedRegistrations.some(s => s.id === selectedStudent.id) ? 'Deny Approved Student' : 'Deny Student Registration' }}</h3>
           <button @click="closeRejectModal" class="close-button">
             <span class="material-icons">close</span>
           </button>
@@ -342,7 +353,7 @@
               <img 
                 v-if="selectedStudent?.profilePicture" 
                 :src="getFullImageUrl(selectedStudent.profilePicture)" 
-                :alt="`${selectedStudent?.firstName} ${selectedStudent?.lastName}`"
+                :alt="`${selectedStudent?.firstName || ''} ${selectedStudent?.lastName || ''}`"
               >
               <div v-else class="avatar-placeholder">
                 {{ getInitials(selectedStudent?.firstName, selectedStudent?.lastName) }}
@@ -354,11 +365,11 @@
             </div>
           </div>
           <div class="form-group">
-            <label for="rejectionReason">Rejection Reason *</label>
+            <label for="rejectionReason">Denial Reason *</label>
             <textarea
               id="rejectionReason"
               v-model="rejectionReason"
-              placeholder="Please provide a reason for rejection..."
+              placeholder="Please provide a reason for denial..."
               rows="4"
               required
             ></textarea>
@@ -372,7 +383,7 @@
             :disabled="!rejectionReason.trim() || processing"
           >
             <span v-if="processing" class="loading-spinner-small"></span>
-            Reject Registration
+            Deny Registration
           </button>
         </div>
       </div>
@@ -423,7 +434,7 @@ export default {
       tabs: [
         { key: 'pending', label: 'Pending', icon: 'schedule', count: 0 },
         { key: 'approved', label: 'Approved', icon: 'check_circle', count: 0 },
-        { key: 'rejected', label: 'Rejected', icon: 'cancel', count: 0 }
+        { key: 'rejected', label: 'Denied', icon: 'cancel', count: 0 }
       ]
     };
   },
@@ -486,9 +497,9 @@ export default {
         const isRejectedStudent = this.rejectedRegistrations.some(student => student.id === studentId);
         
         const result = await Swal.fire({
-          title: isRejectedStudent ? 'Approve Rejected Registration?' : 'Approve Registration?',
+          title: isRejectedStudent ? 'Approve Denied Registration?' : 'Approve Registration?',
           text: isRejectedStudent 
-            ? 'Are you sure you want to approve this previously rejected student registration?'
+            ? 'Are you sure you want to approve this previously denied student registration?'
             : 'Are you sure you want to approve this student registration?',
           icon: 'question',
           showCancelButton: true,
@@ -505,7 +516,7 @@ export default {
             icon: 'success',
             title: 'Registration Approved!',
             text: isRejectedStudent 
-              ? 'The previously rejected student registration has been approved successfully.'
+              ? 'The previously denied student registration has been approved successfully.'
               : 'The student registration has been approved successfully.',
             confirmButtonColor: '#19a759',
             position: 'top-end',
@@ -551,38 +562,80 @@ export default {
         return;
       }
 
+      // Safety check for selectedStudent
+      if (!this.selectedStudent || !this.selectedStudent.id) {
+        console.error('No student selected for rejection');
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'No student selected. Please try again.',
+          confirmButtonColor: '#4CAF50'
+        });
+        return;
+      }
+
+      // Store the student ID in a local variable to prevent null reference issues
+      const studentId = this.selectedStudent.id;
+      
       try {
-        this.processingStudents.add(this.selectedStudent.id);
-        await rejectStudentRegistration(this.selectedStudent.id, this.rejectionReason.trim());
+        // Check if this is an approved student being rejected
+        const isApprovedStudent = this.approvedRegistrations.some(student => student.id === studentId);
         
-        await Swal.fire({
-          icon: 'success',
-          title: 'Registration Rejected!',
-          text: 'The student registration has been rejected successfully.',
+        const result = await Swal.fire({
+          title: isApprovedStudent ? 'Deny Approved Student?' : 'Deny Registration?',
+          text: isApprovedStudent 
+            ? 'Are you sure you want to deny this previously approved student? This will move them to the denied list.'
+            : 'Are you sure you want to deny this student registration?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Yes, Deny',
           confirmButtonColor: '#dc3545',
-          position: 'top-end',
-          toast: true,
-          timer: 3000,
-          timerProgressBar: true
+          cancelButtonText: 'Cancel'
         });
 
-        this.closeRejectModal();
-        // Reload data to update the lists
-        await this.loadData();
+        if (result.isConfirmed) {
+          this.processingStudents.add(studentId);
+          await rejectStudentRegistration(studentId, this.rejectionReason.trim());
+          
+          // Close modal immediately without waiting for SweetAlert
+          this.closeRejectModal();
+          
+          // Show success message after modal is closed
+          await Swal.fire({
+            icon: 'success',
+            title: 'Student Denied!',
+            text: isApprovedStudent 
+              ? 'The previously approved student has been denied successfully.'
+              : 'The student registration has been denied successfully.',
+            confirmButtonColor: '#dc3545',
+            position: 'top-end',
+            toast: true,
+            timer: 3000,
+            timerProgressBar: true
+          });
+
+          // Reload data to update the lists
+          await this.loadData();
+        }
       } catch (error) {
         console.error('Error rejecting student:', error);
         await Swal.fire({
           icon: 'error',
-          title: 'Rejection Failed',
-          text: error.message || 'Failed to reject student registration.',
+          title: 'Denial Failed',
+          text: error.message || 'Failed to deny student registration.',
           confirmButtonColor: '#dc3545',
           position: 'top-end',
           toast: true,
           timer: 5000,
           timerProgressBar: true
         });
+        // Close modal even if there's an error
+        this.closeRejectModal();
       } finally {
-        this.processingStudents.delete(this.selectedStudent.id);
+        // Use the local variable instead of this.selectedStudent.id
+        if (studentId) {
+          this.processingStudents.delete(studentId);
+        }
       }
     },
 
@@ -1388,6 +1441,513 @@ export default {
 }
 
 /* Responsive Design */
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .student-approval {
+    padding: 1.6rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.6rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-actions {
+    gap: 0.8rem;
+  }
+  
+  .stats-overview {
+    gap: 1.2rem;
+  }
+  
+  .stat-item {
+    padding: 1.2rem 1.4rem;
+    min-width: 70px;
+  }
+  
+  .stat-number {
+    font-size: 1.6rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+  }
+  
+  .filters-section {
+    padding: 1.2rem;
+    gap: 0.8rem;
+    margin-bottom: 1.6rem;
+  }
+  
+  .search-box {
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .search-box .material-icons {
+    font-size: 1.1rem;
+  }
+  
+  .uppercase-input {
+    font-size: 0.85rem;
+  }
+  
+  .filter-group {
+    gap: 0.8rem;
+  }
+  
+  .filter-group select {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    min-width: 100px;
+  }
+  
+  .reset-filters-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .tabs {
+    gap: 0.4rem;
+    margin-bottom: 1.6rem;
+  }
+  
+  .tab-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.85rem;
+  }
+  
+  .tab-icon {
+    font-size: 1rem;
+  }
+  
+  .tab-count {
+    font-size: 0.65rem;
+    padding: 1px 4px;
+  }
+  
+  .list-header {
+    margin-bottom: 1.2rem;
+  }
+  
+  .list-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .refresh-button {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .registrations-table {
+    font-size: 0.85rem;
+  }
+  
+  .registrations-table th {
+    padding: 1rem 1.2rem;
+    font-size: 0.75rem;
+  }
+  
+  .registrations-table td {
+    padding: 1rem 1.2rem;
+  }
+  
+  .student-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .student-name {
+    font-size: 0.85rem;
+  }
+  
+  .status-badge {
+    font-size: 0.6rem;
+    padding: 2px 6px;
+  }
+  
+  .action-button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+    min-width: 32px;
+    height: 32px;
+  }
+  
+  .rejection-reason {
+    font-size: 0.75rem;
+    max-width: 150px;
+  }
+  
+  .modal-content {
+    max-width: 450px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1.2rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+  }
+  
+  .form-group textarea {
+    font-size: 0.85rem;
+    padding: 0.8rem 1rem;
+  }
+  
+  .cancel-button,
+  .confirm-reject-button {
+    padding: 0.8rem 1.2rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .student-approval {
+    padding: 1.4rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.4rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .header-actions {
+    gap: 0.7rem;
+  }
+  
+  .stats-overview {
+    gap: 1rem;
+  }
+  
+  .stat-item {
+    padding: 1rem 1.2rem;
+    min-width: 65px;
+  }
+  
+  .stat-number {
+    font-size: 1.4rem;
+  }
+  
+  .stat-label {
+    font-size: 0.65rem;
+  }
+  
+  .filters-section {
+    padding: 1rem;
+    gap: 0.7rem;
+    margin-bottom: 1.4rem;
+  }
+  
+  .search-box {
+    padding: 0.5rem 0.7rem;
+  }
+  
+  .search-box .material-icons {
+    font-size: 1rem;
+  }
+  
+  .uppercase-input {
+    font-size: 0.8rem;
+  }
+  
+  .filter-group {
+    gap: 0.7rem;
+  }
+  
+  .filter-group select {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    min-width: 90px;
+  }
+  
+  .reset-filters-btn {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.8rem;
+  }
+  
+  .tabs {
+    gap: 0.35rem;
+    margin-bottom: 1.4rem;
+  }
+  
+  .tab-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+  
+  .tab-icon {
+    font-size: 0.9rem;
+  }
+  
+  .tab-count {
+    font-size: 0.6rem;
+    padding: 1px 3px;
+  }
+  
+  .list-header {
+    margin-bottom: 1rem;
+  }
+  
+  .list-header h3 {
+    font-size: 1rem;
+  }
+  
+  .refresh-button {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .registrations-table {
+    font-size: 0.8rem;
+  }
+  
+  .registrations-table th {
+    padding: 0.8rem 1rem;
+    font-size: 0.7rem;
+  }
+  
+  .registrations-table td {
+    padding: 0.8rem 1rem;
+  }
+  
+  .student-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .student-name {
+    font-size: 0.8rem;
+  }
+  
+  .status-badge {
+    font-size: 0.55rem;
+    padding: 2px 5px;
+  }
+  
+  .action-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    min-width: 28px;
+    height: 28px;
+  }
+  
+  .rejection-reason {
+    font-size: 0.7rem;
+    max-width: 130px;
+  }
+  
+  .modal-content {
+    max-width: 400px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
+  }
+  
+  .form-group textarea {
+    font-size: 0.8rem;
+    padding: 0.7rem 0.8rem;
+  }
+  
+  .cancel-button,
+  .confirm-reject-button {
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .student-approval {
+    padding: 1.2rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.4rem;
+  }
+  
+  .header-actions {
+    gap: 0.6rem;
+  }
+  
+  .stats-overview {
+    gap: 0.8rem;
+  }
+  
+  .stat-item {
+    padding: 0.8rem 1rem;
+    min-width: 60px;
+  }
+  
+  .stat-number {
+    font-size: 1.2rem;
+  }
+  
+  .stat-label {
+    font-size: 0.6rem;
+  }
+  
+  .filters-section {
+    padding: 0.8rem;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .search-box {
+    padding: 0.4rem 0.6rem;
+  }
+  
+  .search-box .material-icons {
+    font-size: 0.9rem;
+  }
+  
+  .uppercase-input {
+    font-size: 0.75rem;
+  }
+  
+  .filter-group {
+    gap: 0.6rem;
+  }
+  
+  .filter-group select {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+  
+  .reset-filters-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .tabs {
+    gap: 0.3rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .tab-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+  }
+  
+  .tab-icon {
+    font-size: 0.8rem;
+  }
+  
+  .tab-count {
+    font-size: 0.55rem;
+    padding: 1px 2px;
+  }
+  
+  .list-header {
+    margin-bottom: 0.8rem;
+  }
+  
+  .list-header h3 {
+    font-size: 0.9rem;
+  }
+  
+  .refresh-button {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .registrations-table {
+    font-size: 0.75rem;
+  }
+  
+  .registrations-table th {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.65rem;
+  }
+  
+  .registrations-table td {
+    padding: 0.6rem 0.8rem;
+  }
+  
+  .student-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .student-name {
+    font-size: 0.75rem;
+  }
+  
+  .status-badge {
+    font-size: 0.5rem;
+    padding: 1px 4px;
+  }
+  
+  .action-button {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+    min-width: 24px;
+    height: 24px;
+  }
+  
+  .rejection-reason {
+    font-size: 0.65rem;
+    max-width: 110px;
+  }
+  
+  .modal-content {
+    max-width: 350px;
+  }
+  
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 0.8rem;
+  }
+  
+  .modal-header h3 {
+    font-size: 0.9rem;
+  }
+  
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  
+  .form-group textarea {
+    font-size: 0.75rem;
+    padding: 0.6rem 0.7rem;
+  }
+  
+  .cancel-button,
+  .confirm-reject-button {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   .student-approval {
     padding: 1rem;

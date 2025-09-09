@@ -2,10 +2,16 @@
   <div class="subject-tasks">
     <div class="header-container">
       <div class="header-content">
-        <h1>
-          Subject Tasks
-          <span class="material-icons">task</span>
-        </h1>
+        <div class="title-row">
+          <button @click="goBack" class="back-btn">
+            <span class="material-icons">arrow_back</span>
+            Back
+          </button>
+          <h1>
+            Subject Tasks
+            <span class="material-icons">task</span>
+          </h1>
+        </div>
         <div class="divider"></div>
         <div class="header-text">
           <p class="subtitle">View and manage tasks for {{ subject?.name }}</p>
@@ -246,6 +252,11 @@ const getFullFileUrl = (fileUrl) => {
   return `${getBaseApiUrl()}/${cleanUrl}`;
 };
 
+// Go back function
+const goBack = () => {
+  router.go(-1);
+};
+
 
 onMounted(() => {
   loadTasks();
@@ -270,11 +281,44 @@ onMounted(() => {
   z-index: 1;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 1rem;
+}
+
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.back-btn .material-icons {
+  font-size: 1.2rem;
+}
+
 .header-content h1 {
   color: #159750;
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -693,6 +737,325 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
+/* 150% DPI and High Resolution Screens */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .subject-tasks {
+    padding: 1.6rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+
+  .header-background {
+    font-size: 6rem;
+    right: 4rem;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+  }
+
+  .divider {
+    margin: 1.2rem 0;
+  }
+
+  .title-row {
+    gap: 16px;
+  }
+
+  .back-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .back-btn .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .tasks-header {
+    margin-bottom: 1.6rem;
+  }
+
+  .search-box {
+    padding: 0.6rem 0.8rem;
+  }
+
+  .search-box input {
+    font-size: 0.9rem;
+    width: 280px;
+  }
+
+  .create-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+
+  .tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .task-header {
+    padding: 16px;
+  }
+
+  .task-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .task-body {
+    padding: 20px;
+  }
+
+  .task-info {
+    gap: 16px;
+  }
+
+  .info-item {
+    gap: 12px;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+  }
+
+  .task-meta {
+    gap: 0.8rem;
+  }
+
+  .meta-item {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+  }
+
+  .task-actions {
+    padding: 12px;
+    gap: 6px;
+  }
+
+  .action-btn {
+    padding: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .subject-tasks {
+    padding: 1.4rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+
+  .header-background {
+    font-size: 5rem;
+    right: 3rem;
+  }
+
+  .subtitle {
+    font-size: 0.95rem;
+  }
+
+  .divider {
+    margin: 1rem 0;
+  }
+
+  .title-row {
+    gap: 14px;
+  }
+
+  .back-btn {
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+
+  .back-btn .material-icons {
+    font-size: 1rem;
+  }
+
+  .tasks-header {
+    margin-bottom: 1.4rem;
+  }
+
+  .search-box {
+    padding: 0.5rem 0.7rem;
+  }
+
+  .search-box input {
+    font-size: 0.85rem;
+    width: 260px;
+  }
+
+  .create-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+
+  .task-header {
+    padding: 14px;
+  }
+
+  .task-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .task-body {
+    padding: 18px;
+  }
+
+  .task-info {
+    gap: 14px;
+  }
+
+  .info-item {
+    gap: 10px;
+  }
+
+  .info-label {
+    font-size: 0.75rem;
+  }
+
+  .task-meta {
+    gap: 0.7rem;
+  }
+
+  .meta-item {
+    font-size: 0.75rem;
+    padding: 2px 6px;
+  }
+
+  .task-actions {
+    padding: 10px;
+    gap: 5px;
+  }
+
+  .action-btn {
+    padding: 7px;
+    font-size: 0.8rem;
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .subject-tasks {
+    padding: 1.2rem;
+  }
+
+  .header-content h1 {
+    font-size: 1.6rem;
+  }
+
+  .header-content h1 .material-icons {
+    font-size: 1.6rem;
+  }
+
+  .header-background {
+    font-size: 4rem;
+    right: 2rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  .divider {
+    margin: 0.8rem 0;
+  }
+
+  .title-row {
+    gap: 12px;
+  }
+
+  .back-btn {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+
+  .back-btn .material-icons {
+    font-size: 0.9rem;
+  }
+
+  .tasks-header {
+    margin-bottom: 1.2rem;
+  }
+
+  .search-box {
+    padding: 0.4rem 0.6rem;
+  }
+
+  .search-box input {
+    font-size: 0.8rem;
+    width: 240px;
+  }
+
+  .create-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+  }
+
+  .tasks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.8rem;
+  }
+
+  .task-header {
+    padding: 12px;
+  }
+
+  .task-header h3 {
+    font-size: 1rem;
+  }
+
+  .task-body {
+    padding: 16px;
+  }
+
+  .task-info {
+    gap: 12px;
+  }
+
+  .info-item {
+    gap: 8px;
+  }
+
+  .info-label {
+    font-size: 0.7rem;
+  }
+
+  .task-meta {
+    gap: 0.6rem;
+  }
+
+  .meta-item {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+  }
+
+  .task-actions {
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .action-btn {
+    padding: 6px;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   .subject-tasks {
     padding: 10px;
@@ -714,6 +1077,16 @@ onMounted(() => {
   
   .divider {
     margin: 1rem 0;
+  }
+
+  .title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .back-btn {
+    align-self: flex-start;
   }
   
   .tasks-header {

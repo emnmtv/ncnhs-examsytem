@@ -33,6 +33,15 @@
           Part Results
         </button>
         
+        <button 
+          v-if="archiveEnabled" 
+          @click="viewArchivedResults" 
+          class="archived-results-btn"
+        >
+          <span class="material-icons">restore</span>
+          Archived Results
+        </button>
+        
         <!-- Update export button with FontAwesome icons -->
         <div class="export-container">
           <button @click="toggleExportOptions" class="export-btn">
@@ -1579,6 +1588,17 @@ export default {
       });
     };
 
+    const viewArchivedResults = () => {
+      router.push({
+        name: 'RestoreArchivedExamResults',
+        query: {
+          examId: route.params.examId,
+          testCode: route.query.testCode,
+          title: route.query.title
+        }
+      });
+    };
+
     // Toggle export options dropdown
     const toggleExportOptions = () => {
       showExportOptions.value = !showExportOptions.value;
@@ -2172,6 +2192,7 @@ export default {
       isMobile,
       viewStudentAnswers,
       viewPartResults,
+      viewArchivedResults,
       // Add export-related functionality to returned object
       showExportOptions,
       exportOptions,
@@ -2268,7 +2289,7 @@ export default {
 
 .bulk-archive-btn {
   padding: 10px 18px;
-  background: #ff9800;
+  background: #4CAF50;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -2277,19 +2298,19 @@ export default {
   gap: 8px;
   color: white;
   font-weight: 600;
-  box-shadow: 0 2px 5px rgba(255, 152, 0, 0.2);
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
   transition: all 0.2s;
 }
 
 .bulk-archive-btn:hover {
-  background: #f57c00;
+  background: #45a049;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
 .part-results-btn {
   padding: 10px 18px;
-  background: #2196f3;
+  background: #4CAF50;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -2298,14 +2319,35 @@ export default {
   gap: 8px;
   color: white;
   font-weight: 600;
-  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
   transition: all 0.2s;
 }
 
 .part-results-btn:hover {
-  background: #1976d2;
+  background: #45a049;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.archived-results-btn {
+  padding: 10px 18px;
+  background: #4CAF50;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+  transition: all 0.2s;
+}
+
+.archived-results-btn:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
 .header-actions {
@@ -2396,7 +2438,7 @@ export default {
   align-items: center;
   gap: 5px;
   padding: 6px 12px;
-  background: #6c757d;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
@@ -2404,13 +2446,13 @@ export default {
   font-size: 0.9em;
   font-weight: 500;
   transition: all 0.2s;
-  box-shadow: 0 2px 4px rgba(108, 117, 125, 0.2);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.2);
 }
 
 .archive-result-btn:hover {
-  background: #5a6268;
+  background: #45a049;
   transform: translateY(-1px);
-  box-shadow: 0 3px 6px rgba(108, 117, 125, 0.3);
+  box-shadow: 0 3px 6px rgba(76, 175, 80, 0.3);
 }
 
 .archive-confirm-btn {
@@ -2418,20 +2460,20 @@ export default {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: #6c757d;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
-  box-shadow: 0 2px 5px rgba(108, 117, 125, 0.2);
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
 }
 
 .archive-confirm-btn:hover:not(:disabled) {
-  background: #5a6268;
+  background: #45a049;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
 .archive-confirm-btn:disabled {
@@ -2819,6 +2861,7 @@ tr:hover {
   .back-btn,
   .bulk-archive-btn,
   .part-results-btn,
+  .archived-results-btn,
   .export-btn {
     padding: 8px 14px;
     font-size: 0.9rem;
@@ -3072,6 +3115,7 @@ tr:hover {
   .back-btn,
   .bulk-archive-btn,
   .part-results-btn,
+  .archived-results-btn,
   .export-btn {
     padding: 6px 12px;
     font-size: 0.85rem;
@@ -3325,6 +3369,7 @@ tr:hover {
   .back-btn,
   .bulk-archive-btn,
   .part-results-btn,
+  .archived-results-btn,
   .export-btn {
     padding: 5px 10px;
     font-size: 0.8rem;
@@ -4970,7 +5015,7 @@ tr:hover {
     justify-content: space-between;
   }
 
-  .back-btn, .export-btn, .bulk-archive-btn, .part-results-btn {
+  .back-btn, .export-btn, .bulk-archive-btn, .part-results-btn, .archived-results-btn {
     padding: 8px 12px;
     font-size: 0.9rem;
   }
@@ -5588,7 +5633,7 @@ tr:hover {
   align-items: center;
   gap: 5px;
   padding: 6px 12px;
-  background: #ff9800;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
@@ -5598,7 +5643,7 @@ tr:hover {
 }
 
 .archive-result-btn:hover {
-  background: #f57c00;
+  background: #45a049;
 }
 
 /* Result Actions for Grid View */
@@ -5727,19 +5772,19 @@ tr:hover {
   align-items: center;
   gap: 6px;
   padding: 10px 20px;
-  background: #b1b1b8;
+  background: #4CAF50;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
   transition: all 0.2s;
-  box-shadow: 0 2px 5px rgba(255, 152, 0, 0.2);
+  box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
 }
 
 .archive-confirm-btn:hover:not(:disabled) {
-  background: #7e7c81;
-  box-shadow: 0 4px 8px rgba(255, 152, 0, 0.3);
+  background: #45a049;
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
 }
 
 .archive-confirm-btn:disabled {

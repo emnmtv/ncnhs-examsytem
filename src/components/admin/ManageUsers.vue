@@ -4497,6 +4497,351 @@ const generateAndDownloadTemplate = () => {
 }
 
 /* Responsive Design */
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .manage-users {
+    padding: 1.6rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.6rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-actions {
+    gap: 0.8rem;
+  }
+  
+  .register-main-btn,
+  .ai-batch-main-btn {
+    padding: 0.75rem 1.2rem;
+    font-size: 0.9rem;
+  }
+  
+  .filters-section {
+    padding: 1.2rem;
+    gap: 1rem;
+    margin-bottom: 1.6rem;
+  }
+  
+  .search-box input {
+    padding: 0.7rem 1rem 0.7rem 2.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .tabs {
+    gap: 0.5rem;
+  }
+  
+  .tab-btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .filter-group {
+    gap: 0.8rem;
+  }
+  
+  .filter-group select {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .users-grid {
+    gap: 1.2rem;
+  }
+  
+  .user-card {
+    padding: 1.2rem;
+  }
+  
+  .user-info h3 {
+    font-size: 1rem;
+  }
+  
+  .email {
+    font-size: 0.85rem;
+  }
+  
+  .user-details {
+    font-size: 0.8rem;
+  }
+  
+  .action-buttons {
+    gap: 0.4rem;
+  }
+  
+  .action-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .table-container {
+    font-size: 0.85rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.6rem 0.5rem;
+  }
+  
+  .modal {
+    padding: 1.2rem;
+  }
+  
+  .modal h2 {
+    font-size: 1.3rem;
+  }
+  
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .form-group label {
+    font-size: 0.9rem;
+    margin-bottom: 0.4rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .manage-users {
+    padding: 1.4rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.4rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.6rem;
+  }
+  
+  .header-actions {
+    gap: 0.7rem;
+  }
+  
+  .register-main-btn,
+  .ai-batch-main-btn {
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .filters-section {
+    padding: 1rem;
+    gap: 0.8rem;
+    margin-bottom: 1.4rem;
+  }
+  
+  .search-box input {
+    padding: 0.6rem 0.8rem 0.6rem 2.2rem;
+    font-size: 0.85rem;
+  }
+  
+  .tabs {
+    gap: 0.4rem;
+  }
+  
+  .tab-btn {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .filter-group {
+    gap: 0.6rem;
+  }
+  
+  .filter-group select {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+  }
+  
+  .users-grid {
+    gap: 1rem;
+  }
+  
+  .user-card {
+    padding: 1rem;
+  }
+  
+  .user-info h3 {
+    font-size: 0.95rem;
+  }
+  
+  .email {
+    font-size: 0.8rem;
+  }
+  
+  .user-details {
+    font-size: 0.75rem;
+  }
+  
+  .action-buttons {
+    gap: 0.3rem;
+  }
+  
+  .action-btn {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .table-container {
+    font-size: 0.8rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.5rem 0.4rem;
+  }
+  
+  .modal {
+    padding: 1rem;
+  }
+  
+  .modal h2 {
+    font-size: 1.2rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.8rem;
+  }
+  
+  .form-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .manage-users {
+    padding: 1.2rem;
+  }
+  
+  .page-header {
+    margin-bottom: 1.2rem;
+  }
+  
+  .page-header h1 {
+    font-size: 1.4rem;
+  }
+  
+  .header-actions {
+    gap: 0.6rem;
+  }
+  
+  .register-main-btn,
+  .ai-batch-main-btn {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.8rem;
+  }
+  
+  .filters-section {
+    padding: 0.8rem;
+    gap: 0.6rem;
+    margin-bottom: 1.2rem;
+  }
+  
+  .search-box input {
+    padding: 0.5rem 0.6rem 0.5rem 2rem;
+    font-size: 0.8rem;
+  }
+  
+  .tabs {
+    gap: 0.3rem;
+  }
+  
+  .tab-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+  
+  .filter-group {
+    gap: 0.5rem;
+  }
+  
+  .filter-group select {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .users-grid {
+    gap: 0.8rem;
+  }
+  
+  .user-card {
+    padding: 0.8rem;
+  }
+  
+  .user-info h3 {
+    font-size: 0.9rem;
+  }
+  
+  .email {
+    font-size: 0.75rem;
+  }
+  
+  .user-details {
+    font-size: 0.7rem;
+  }
+  
+  .action-buttons {
+    gap: 0.25rem;
+  }
+  
+  .action-btn {
+    padding: 0.3rem 0.4rem;
+    font-size: 0.7rem;
+  }
+  
+  .table-container {
+    font-size: 0.75rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.4rem 0.3rem;
+  }
+  
+  .modal {
+    padding: 0.8rem;
+  }
+  
+  .modal h2 {
+    font-size: 1.1rem;
+  }
+  
+  .form-group {
+    margin-bottom: 0.6rem;
+  }
+  
+  .form-group label {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .form-group input,
+  .form-group select {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
 @media (max-width: 768px) {
   .manage-users {
     padding: 1rem;
