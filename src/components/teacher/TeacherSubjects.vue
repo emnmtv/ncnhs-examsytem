@@ -9,11 +9,20 @@
         </div>
       </div>
       <div class="header-actions">
-        <router-link to="/attendance-records" class="header-btn attendance-btn">
+        <!-- Action Buttons Toggle -->
+        <div class="action-toggle-container">
+          <label class="action-toggle">
+            <input type="checkbox" v-model="actionButtonsEnabled" @change="toggleActionButtons">
+            <span class="action-toggle-slider"></span>
+            <span class="action-toggle-label">Show Actions</span>
+          </label>
+        </div>
+        
+        <router-link v-if="actionButtonsEnabled" to="/attendance-records" class="header-btn attendance-btn">
           <span class="material-icons">fact_check</span>
           Attendance Records
         </router-link>
-        <router-link to="/class-list" class="header-btn class-list-btn">
+        <router-link v-if="actionButtonsEnabled" to="/class-list" class="header-btn class-list-btn">
           <span class="material-icons">people</span>
           Class List
         </router-link>
@@ -191,6 +200,7 @@ const subjects = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const directStudentsCounts = ref({});
+const actionButtonsEnabled = ref(false); // Toggle for showing action buttons
 
 // Formatting functions
 const formatScheduleType = (type) => {
@@ -315,6 +325,12 @@ const closeAllDropdowns = () => {
   });
 };
 
+// Toggle action buttons function
+const toggleActionButtons = () => {
+  // This function can be expanded if needed for additional logic
+  console.log('Action buttons toggled:', actionButtonsEnabled.value);
+};
+
 onMounted(() => {
   loadSubjects();
 });
@@ -389,6 +405,61 @@ onMounted(() => {
 
 .header-btn .material-icons {
   font-size: 1.2rem;
+}
+
+/* Action Toggle Styles */
+.action-toggle-container {
+  display: flex;
+  align-items: center;
+  margin-right: 15px;
+}
+
+.action-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.action-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.action-toggle-slider {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background: #e0e0e0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.action-toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.action-toggle input[type="checkbox"]:checked + .action-toggle-slider {
+  background: #4CAF50;
+}
+
+.action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
+  transform: translateX(26px);
+}
+
+.action-toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
 }
 
 .header-background {
@@ -904,6 +975,28 @@ onMounted(() => {
     margin-top: 8px;
   }
 
+  .action-toggle-container {
+    margin-right: 12px;
+  }
+
+  .action-toggle-label {
+    font-size: 0.85rem;
+  }
+
+  .action-toggle-slider {
+    width: 45px;
+    height: 22px;
+  }
+
+  .action-toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
+    transform: translateX(23px);
+  }
+
   .header-btn {
     padding: 6px 12px;
     font-size: 0.85rem;
@@ -1049,6 +1142,28 @@ onMounted(() => {
   .header-actions {
     gap: 10px;
     margin-top: 6px;
+  }
+
+  .action-toggle-container {
+    margin-right: 10px;
+  }
+
+  .action-toggle-label {
+    font-size: 0.8rem;
+  }
+
+  .action-toggle-slider {
+    width: 42px;
+    height: 20px;
+  }
+
+  .action-toggle-slider::before {
+    width: 16px;
+    height: 16px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
+    transform: translateX(22px);
   }
 
   .header-btn {
@@ -1198,6 +1313,28 @@ onMounted(() => {
     margin-top: 4px;
   }
 
+  .action-toggle-container {
+    margin-right: 8px;
+  }
+
+  .action-toggle-label {
+    font-size: 0.75rem;
+  }
+
+  .action-toggle-slider {
+    width: 40px;
+    height: 18px;
+  }
+
+  .action-toggle-slider::before {
+    width: 14px;
+    height: 14px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
+    transform: translateX(20px);
+  }
+
   .header-btn {
     padding: 4px 8px;
     font-size: 0.75rem;
@@ -1339,6 +1476,31 @@ onMounted(() => {
     margin-top: 15px;
     width: 100%;
     justify-content: center;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .action-toggle-container {
+    margin-right: 0;
+    margin-bottom: 10px;
+  }
+
+  .action-toggle-label {
+    font-size: 0.85rem;
+  }
+
+  .action-toggle-slider {
+    width: 42px;
+    height: 22px;
+  }
+
+  .action-toggle-slider::before {
+    width: 18px;
+    height: 18px;
+  }
+
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
+    transform: translateX(20px);
   }
 
   .header-btn {

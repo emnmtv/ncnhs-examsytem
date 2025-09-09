@@ -12,8 +12,8 @@
             <div class="action-toggle-container">
               <label class="action-toggle">
                 <input type="checkbox" v-model="actionButtonsEnabled" @change="toggleActionButtons">
-                <span class="toggle-slider"></span>
-                <span class="toggle-label">Show Actions</span>
+                <span class="action-toggle-slider"></span>
+                <span class="action-toggle-label">Show Actions</span>
               </label>
             </div>
             
@@ -232,6 +232,15 @@
 
     <!-- Filter Controls -->
     <div v-else class="filter-controls">
+      <!-- Pagination Toggle -->
+      <div class="pagination-toggle">
+        <label class="toggle-switch">
+          <input type="checkbox" :checked="pagination.enabled" @change="togglePagination">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Pagination</span>
+      </div>
+      
       <!-- Filter Applied Indicator -->
       <div v-if="selectedSubjectId" class="filter-applied-indicator">
         <span class="material-icons">filter_alt</span>
@@ -302,70 +311,184 @@
     <!-- Class List -->
     <div v-if="!loading && !error && hasStudents" class="class-list-container">
       
-      <!-- Subject Cards -->
-      <div v-for="subject in filteredSubjects" :key="subject.subject.id" class="subject-card">
-        <div class="subject-header">
-          <div class="texture-layer"></div>
-          <h2>{{ subject.subject.name }}</h2>
-          <div class="subject-meta">
-            <span class="subject-meta-item">
-              <span class="material-icons">code</span>
-              {{ subject.subject.code }}
-            </span>
+      <!-- Paginated Students List -->
+      <div v-if="pagination.enabled" class="paginated-students-container">
+        <div class="students-group">
+          <h3 class="group-title">
+            <span class="material-icons">people</span>
+            Students <span class="student-count">({{ getAllStudentsForPagination.length }})</span>
+          </h3>
+          <div class="students-table-container">
+            <table class="students-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th class="hide-on-mobile">Grade & Section</th>
+                  <th class="hide-on-mobile">Type</th>
+                  <th class="hide-on-mobile">Subject</th>
+                  <th v-if="actionButtonsEnabled">Attendance</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="student in paginatedStudents" :key="`${student.id}-${student.studentType || 'section'}`">
+                  <td>{{ student.lastName || '' }}, {{ student.firstName || '' }}</td>
+                  <td class="hide-on-mobile">Grade {{ student.gradeLevel || 'N/A' }}-{{ student.section || 'N/A' }}</td>
+                  <td class="hide-on-mobile">
+                    <span class="student-type-badge" :class="student.studentType || 'section'">
+                      {{ student.studentType === 'direct' ? 'Direct' : 'Section' }}
+                    </span>
+                  </td>
+                  <td class="hide-on-mobile">{{ student.subjectName || 'N/A' }}</td>
+                  <td v-if="actionButtonsEnabled" class="actions">
+                    <button 
+                      class="attendance-btn" 
+                      :class="{ 'present': isStudentPresent(student.id, student.subjectId) }"
+                      @click="toggleAttendance(student.id, student.subjectId)"
+                      :title="isStudentPresent(student.id, student.subjectId) ? 'Mark Absent' : 'Mark Present'">
+                      <span class="material-icons">
+                        {{ isStudentPresent(student.id, student.subjectId) ? 'check_circle' : 'radio_button_unchecked' }}
+                      </span>
+                      <span class="attendance-status">
+                        {{ isStudentPresent(student.id, student.subjectId) ? 'Present' : 'Not marked' }}
+                      </span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-
-        <div class="subject-body">
-          <!-- Combined Students List -->
-          <div v-if="hasStudentsInSubject(subject)" class="students-group">
-            <h3 class="group-title">
-              <span class="material-icons">people</span>
-              Students <span class="student-count">({{ getTotalStudentsCount(subject) }})</span>
-            </h3>
-                <div class="students-table-container">
-                  <table class="students-table">
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                    <th class="hide-on-mobile">Grade & Section</th>
-                    <th class="hide-on-mobile">Type</th>
-                    <th v-if="actionButtonsEnabled">Attendance</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                  <tr v-for="student in getAllStudents(subject)" :key="`${student.id}-${student.studentType || 'section'}`">
-                    <td>{{ student.lastName || '' }}, {{ student.firstName || '' }}</td>
-                    <td class="hide-on-mobile">Grade {{ student.gradeLevel || 'N/A' }}-{{ student.section || 'N/A' }}</td>
-                    <td class="hide-on-mobile">
-                      <span class="student-type-badge" :class="student.studentType || 'section'">
-                        {{ student.studentType === 'direct' ? 'Direct' : 'Section' }}
-                            </span>
-                        </td>
-                    <td v-if="actionButtonsEnabled" class="actions">
-                      <button 
-                        class="attendance-btn" 
-                        :class="{ 'present': isStudentPresent(student.id, subject.subject.id) }"
-                        @click="toggleAttendance(student.id, subject.subject.id)"
-                        :title="isStudentPresent(student.id, subject.subject.id) ? 'Mark Absent' : 'Mark Present'">
-                        <span class="material-icons">
-                          {{ isStudentPresent(student.id, subject.subject.id) ? 'check_circle' : 'radio_button_unchecked' }}
-                        </span>
-                        <span class="attendance-status">
-                          {{ isStudentPresent(student.id, subject.subject.id) ? 'Present' : 'Not marked' }}
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+      </div>
+      
+      <!-- Subject Cards (when pagination is disabled) -->
+      <div v-else>
+        <div v-for="subject in filteredSubjects" :key="subject.subject.id" class="subject-card">
+          <div class="subject-header">
+            <div class="texture-layer"></div>
+            <h2>{{ subject.subject.name }}</h2>
+            <div class="subject-meta">
+              <span class="subject-meta-item">
+                <span class="material-icons">code</span>
+                {{ subject.subject.code }}
+              </span>
             </div>
           </div>
 
-          <!-- No Students Message -->
-          <div v-if="!hasStudentsInSubject(subject)" class="no-students-message">
-            <span class="material-icons">sentiment_dissatisfied</span>
-            <p>No students found for the selected filters</p>
+          <div class="subject-body">
+            <!-- Combined Students List -->
+            <div v-if="hasStudentsInSubject(subject)" class="students-group">
+              <h3 class="group-title">
+                <span class="material-icons">people</span>
+                Students <span class="student-count">({{ getTotalStudentsCount(subject) }})</span>
+              </h3>
+                  <div class="students-table-container">
+                    <table class="students-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                      <th class="hide-on-mobile">Grade & Section</th>
+                      <th class="hide-on-mobile">Type</th>
+                      <th v-if="actionButtonsEnabled">Attendance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                    <tr v-for="student in getAllStudents(subject)" :key="`${student.id}-${student.studentType || 'section'}`">
+                      <td>{{ student.lastName || '' }}, {{ student.firstName || '' }}</td>
+                      <td class="hide-on-mobile">Grade {{ student.gradeLevel || 'N/A' }}-{{ student.section || 'N/A' }}</td>
+                      <td class="hide-on-mobile">
+                        <span class="student-type-badge" :class="student.studentType || 'section'">
+                          {{ student.studentType === 'direct' ? 'Direct' : 'Section' }}
+                              </span>
+                          </td>
+                      <td v-if="actionButtonsEnabled" class="actions">
+                        <button 
+                          class="attendance-btn" 
+                          :class="{ 'present': isStudentPresent(student.id, subject.subject.id) }"
+                          @click="toggleAttendance(student.id, subject.subject.id)"
+                          :title="isStudentPresent(student.id, subject.subject.id) ? 'Mark Absent' : 'Mark Present'">
+                          <span class="material-icons">
+                            {{ isStudentPresent(student.id, subject.subject.id) ? 'check_circle' : 'radio_button_unchecked' }}
+                          </span>
+                          <span class="attendance-status">
+                            {{ isStudentPresent(student.id, subject.subject.id) ? 'Present' : 'Not marked' }}
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- No Students Message -->
+            <div v-if="!hasStudentsInSubject(subject)" class="no-students-message">
+              <span class="material-icons">sentiment_dissatisfied</span>
+              <p>No students found for the selected filters</p>
+            </div>
           </div>
+        </div>
+      </div>
+      
+      <!-- Pagination Controls -->
+      <div v-if="pagination.enabled && (getAllStudentsForPagination.length > pagination.itemsPerPage)" class="pagination-controls">
+        <div class="pagination-info">
+          <span>{{ displayRange }}</span>
+        </div>
+        
+        <div class="pagination-buttons">
+          <button 
+            @click="changePage(1)" 
+            class="pagination-btn first" 
+            :disabled="pagination.currentPage === 1"
+          >
+            <span class="material-icons">first_page</span>
+          </button>
+          
+          <button 
+            @click="changePage(pagination.currentPage - 1)" 
+            class="pagination-btn prev" 
+            :disabled="pagination.currentPage === 1"
+          >
+            <span class="material-icons">chevron_left</span>
+          </button>
+          
+          <div class="pagination-pages">
+            <button 
+              v-for="page in totalPages" 
+              :key="page" 
+              @click="changePage(page)" 
+              class="page-btn" 
+              :class="{ active: pagination.currentPage === page }"
+              v-show="Math.abs(page - pagination.currentPage) < 3 || page === 1 || page === totalPages"
+            >
+              {{ page }}
+            </button>
+            <span v-if="pagination.currentPage > 4 && totalPages > 6">...</span>
+            <span v-if="pagination.currentPage < totalPages - 3 && totalPages > 6">...</span>
+          </div>
+          
+          <button 
+            @click="changePage(pagination.currentPage + 1)" 
+            class="pagination-btn next" 
+            :disabled="pagination.currentPage === totalPages"
+          >
+            <span class="material-icons">chevron_right</span>
+          </button>
+          
+          <button 
+            @click="changePage(totalPages)" 
+            class="pagination-btn last" 
+            :disabled="pagination.currentPage === totalPages"
+          >
+            <span class="material-icons">last_page</span>
+          </button>
+        </div>
+        
+        <div class="items-per-page">
+          <label>Items per page:</label>
+          <select :value="pagination.itemsPerPage" @change="changeItemsPerPage(parseInt($event.target.value))">
+            <option v-for="n in [10, 20, 50, 100]" :key="n" :value="n">{{ n }}</option>
+          </select>
         </div>
       </div>
     </div>
@@ -394,6 +517,13 @@ const selectedSection = ref('');
 const actionButtonsEnabled = ref(false); // Toggle for showing action buttons
 const attendanceMarked = ref({});  // Track which students are marked present
 const todaySessions = ref({}); // Track today's sessions by subjectId
+
+// Pagination state
+const pagination = ref({
+  currentPage: 1,
+  itemsPerPage: 20,
+  enabled: true
+});
 
 // Export functionality
 const showExportOptions = ref(false);
@@ -955,6 +1085,54 @@ const getTotalStudentsCount = (subject) => {
   return count;
 };
 
+// Pagination computed properties
+const totalPages = computed(() => {
+  if (!pagination.value.enabled) return 1;
+  
+  const totalItems = getAllStudentsForPagination.value.length;
+  return Math.ceil(totalItems / pagination.value.itemsPerPage) || 1;
+});
+
+// Get all students for pagination (before pagination is applied)
+const getAllStudentsForPagination = computed(() => {
+  let allStudents = [];
+  
+  filteredSubjects.value.forEach(subject => {
+    const students = getAllStudents(subject);
+    // Add subject information to each student for paginated view
+    const studentsWithSubject = students.map(student => ({
+      ...student,
+      subjectName: subject.subject.name,
+      subjectCode: subject.subject.code,
+      subjectId: subject.subject.id
+    }));
+    allStudents.push(...studentsWithSubject);
+  });
+  
+  return allStudents;
+});
+
+// Paginated students
+const paginatedStudents = computed(() => {
+  if (!pagination.value.enabled) {
+    return getAllStudentsForPagination.value;
+  }
+  
+  const startIndex = (pagination.value.currentPage - 1) * pagination.value.itemsPerPage;
+  const endIndex = startIndex + pagination.value.itemsPerPage;
+  return getAllStudentsForPagination.value.slice(startIndex, endIndex);
+});
+
+// Display range for pagination
+const displayRange = computed(() => {
+  const total = getAllStudentsForPagination.value.length;
+  if (total === 0) return "0-0 of 0";
+  
+  const start = (pagination.value.currentPage - 1) * pagination.value.itemsPerPage + 1;
+  const end = Math.min(start + pagination.value.itemsPerPage - 1, total);
+  return `${start}-${end} of ${total}`;
+});
+
 // Load classes
 const loadClasses = async () => {
   try {
@@ -1018,6 +1196,8 @@ const loadClasses = async () => {
 // Watch for filter changes to refresh student lists
 watch([selectedSubjectId, selectedSource, selectedGrade, selectedSection, searchQuery], () => {
   // Filter is handled by computed properties, no need to reload data
+  // Reset pagination when filters change
+  pagination.value.currentPage = 1;
 }, { deep: true });
 
 // Watch for subjects to be loaded and then load sessions
@@ -1051,6 +1231,22 @@ const clearSubjectFilter = () => {
   selectedSubjectId.value = '';
   // Update URL to remove the subject query parameter
   router.replace({ query: { ...route.query, subject: undefined } });
+};
+
+// Pagination functions
+const changePage = (page) => {
+  if (page < 1 || page > totalPages.value) return;
+  pagination.value.currentPage = page;
+};
+
+const changeItemsPerPage = (items) => {
+  pagination.value.itemsPerPage = items;
+  pagination.value.currentPage = 1; // Reset to first page when changing items per page
+};
+
+const togglePagination = () => {
+  pagination.value.enabled = !pagination.value.enabled;
+  pagination.value.currentPage = 1; // Reset to first page when toggling pagination
 };
 
 // Export functionality
@@ -2262,7 +2458,7 @@ onMounted(() => {
   display: none;
 }
 
-.toggle-slider {
+.action-toggle-slider {
   position: relative;
   width: 50px;
   height: 24px;
@@ -2271,7 +2467,7 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.toggle-slider::before {
+.action-toggle-slider::before {
   content: '';
   position: absolute;
   top: 2px;
@@ -2284,15 +2480,15 @@ onMounted(() => {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.action-toggle input[type="checkbox"]:checked + .toggle-slider {
+.action-toggle input[type="checkbox"]:checked + .action-toggle-slider {
   background: #4CAF50;
 }
 
-.action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+.action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
   transform: translateX(26px);
 }
 
-.toggle-label {
+.action-toggle-label {
   font-size: 0.9rem;
   font-weight: 500;
   color: #333;
@@ -2531,21 +2727,21 @@ onMounted(() => {
   }
 
 
-  .toggle-label {
+  .action-toggle-label {
     font-size: 0.85rem;
   }
 
-  .toggle-slider {
+  .action-toggle-slider {
     width: 45px;
     height: 22px;
   }
 
-  .toggle-slider::before {
+  .action-toggle-slider::before {
     width: 18px;
     height: 18px;
   }
 
-  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
     transform: translateX(23px);
   }
 }
@@ -2778,21 +2974,21 @@ onMounted(() => {
   }
 
 
-  .toggle-label {
+  .action-toggle-label {
     font-size: 0.8rem;
   }
 
-  .toggle-slider {
+  .action-toggle-slider {
     width: 42px;
     height: 20px;
   }
 
-  .toggle-slider::before {
+  .action-toggle-slider::before {
     width: 16px;
     height: 16px;
   }
 
-  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
     transform: translateX(22px);
   }
 }
@@ -3025,21 +3221,21 @@ onMounted(() => {
   }
 
 
-  .toggle-label {
+  .action-toggle-label {
     font-size: 0.75rem;
   }
 
-  .toggle-slider {
+  .action-toggle-slider {
     width: 40px;
     height: 18px;
   }
 
-  .toggle-slider::before {
+  .action-toggle-slider::before {
     width: 14px;
     height: 14px;
   }
 
-  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
     transform: translateX(20px);
   }
 }
@@ -3240,21 +3436,21 @@ onMounted(() => {
     gap: 8px;
   }
 
-  .toggle-label {
+  .action-toggle-label {
     font-size: 0.85rem;
   }
 
-  .toggle-slider {
+  .action-toggle-slider {
     width: 42px;
     height: 22px;
   }
 
-  .toggle-slider::before {
+  .action-toggle-slider::before {
     width: 18px;
     height: 18px;
   }
 
-  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
     transform: translateX(20px);
   }
 }
@@ -3319,21 +3515,21 @@ onMounted(() => {
     gap: 6px;
   }
 
-  .toggle-label {
+  .action-toggle-label {
     font-size: 0.8rem;
   }
 
-  .toggle-slider {
+  .action-toggle-slider {
     width: 40px;
     height: 20px;
   }
 
-  .toggle-slider::before {
+  .action-toggle-slider::before {
     width: 16px;
     height: 16px;
   }
 
-  .action-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  .action-toggle input[type="checkbox"]:checked + .action-toggle-slider::before {
     transform: translateX(18px);
   }
   
@@ -3771,6 +3967,310 @@ onMounted(() => {
 
 .modal-error .material-icons {
   font-size: 18px;
+}
+
+/* Pagination Toggle Styles */
+.pagination-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: #159750;
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+.toggle-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  user-select: none;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  margin-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  min-width: 40px;
+  height: 40px;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #159750;
+  color: white;
+  border-color: #159750;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+  color: #999;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.page-btn:hover {
+  background: #f0f0f0;
+  border-color: #159750;
+}
+
+.page-btn.active {
+  background: #159750;
+  color: white;
+  border-color: #159750;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.items-per-page label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.items-per-page select {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.items-per-page select:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 2px rgba(21, 151, 80, 0.1);
+}
+
+/* Paginated Students Container */
+.paginated-students-container {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+  margin-bottom: 20px;
+}
+
+.paginated-students-container .students-group {
+  margin-bottom: 0;
+}
+
+.paginated-students-container .group-title {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 20px;
+  margin: 0;
+  border-radius: 0;
+  border-bottom: none;
+}
+
+.paginated-students-container .group-title .material-icons {
+  color: white;
+}
+
+.paginated-students-container .group-title .student-count {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.paginated-students-container .students-table-container {
+  padding: 0;
+}
+
+.paginated-students-container .students-table {
+  margin: 0;
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+  .pagination-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .pagination-buttons {
+    justify-content: center;
+    order: 2;
+  }
+  
+  .pagination-info {
+    text-align: center;
+    order: 1;
+  }
+  
+  .items-per-page {
+    justify-content: center;
+    order: 3;
+  }
+  
+  .pagination-btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    min-width: 36px;
+    height: 36px;
+  }
+  
+  .page-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination-toggle {
+    margin-right: 10px;
+  }
+  
+  .toggle-switch {
+    width: 42px;
+    height: 22px;
+  }
+  
+  .toggle-slider:before {
+    height: 16px;
+    width: 16px;
+  }
+  
+  input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+  
+  .toggle-label {
+    font-size: 0.85rem;
+  }
+  
+  .pagination-btn {
+    padding: 5px 8px;
+    font-size: 0.8rem;
+    min-width: 32px;
+    height: 32px;
+  }
+  
+  .page-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+  
+  .pagination-pages {
+    gap: 2px;
+  }
+  
+  .pagination-buttons {
+    gap: 4px;
+  }
 }
 
 /* Additional styles for very small screens */
