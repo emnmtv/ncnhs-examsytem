@@ -1255,11 +1255,119 @@ export default {
       }
     });
 
-    const importDocumentQuestions = () => {
+    // Function to check for duplicate questions and answers
+    const checkForDuplicates = (newQuestions) => {
+      const duplicates = {
+        questions: [],
+        answers: []
+      };
+
+      newQuestions.forEach((newQuestion, newIndex) => {
+        // Check for duplicate question text
+        const existingQuestion = questions.value.find(existing => 
+          existing.text.toLowerCase().trim() === newQuestion.text.toLowerCase().trim()
+        );
+        
+        if (existingQuestion) {
+          duplicates.questions.push({
+            index: newIndex,
+            text: newQuestion.text,
+            existingIndex: questions.value.indexOf(existingQuestion)
+          });
+        }
+
+        // Check for duplicate answers within the new questions
+        const duplicateAnswer = newQuestions.find((otherQuestion, otherIndex) => 
+          otherIndex !== newIndex && 
+          otherQuestion.text.toLowerCase().trim() === newQuestion.text.toLowerCase().trim()
+        );
+        
+        if (duplicateAnswer) {
+          duplicates.answers.push({
+            index: newIndex,
+            text: newQuestion.text
+          });
+        }
+      });
+
+      return duplicates;
+    };
+
+    // Function to show duplicate validation dialog
+    const showDuplicateValidationDialog = (duplicates) => {
+      const duplicateQuestionsText = duplicates.questions.map(dup => 
+        `• "${dup.text.substring(0, 50)}${dup.text.length > 50 ? '...' : ''}"`
+      ).join('\n');
+
+      const duplicateAnswersText = duplicates.answers.map(dup => 
+        `• "${dup.text.substring(0, 50)}${dup.text.length > 50 ? '...' : ''}"`
+      ).join('\n');
+
+      let warningMessage = '';
+      if (duplicates.questions.length > 0) {
+        warningMessage += `**Duplicate Questions Found (${duplicates.questions.length}):**\n${duplicateQuestionsText}\n\n`;
+      }
+      if (duplicates.answers.length > 0) {
+        warningMessage += `**Duplicate Questions in Import (${duplicates.answers.length}):**\n${duplicateAnswersText}\n\n`;
+      }
+
+      warningMessage += 'Do you want to proceed with importing these questions? Duplicate questions will be added anyway.';
+
+      return Swal.fire({
+        title: 'Duplicate Questions Detected',
+        html: warningMessage.replace(/\n/g, '<br>'),
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Import All',
+        cancelButtonText: 'Cancel Import',
+        confirmButtonColor: '#0bcc4e',
+        cancelButtonColor: '#d33',
+        customClass: {
+          popup: 'duplicate-validation-popup',
+          title: 'duplicate-validation-title',
+          content: 'duplicate-validation-content',
+          confirmButton: 'duplicate-validation-confirm',
+          cancelButton: 'duplicate-validation-cancel'
+        }
+      });
+    };
+
+    const importDocumentQuestions = async () => {
       if (!documentResult.value || documentResult.value.length === 0) return;
 
+      // Check for duplicates
+      const duplicates = checkForDuplicates(documentResult.value);
+      
+      // If duplicates found, show warning dialog
+      if (duplicates.questions.length > 0 || duplicates.answers.length > 0) {
+        const result = await showDuplicateValidationDialog(duplicates);
+        
+        if (!result.isConfirmed) {
+          // User cancelled the import
+          Swal.fire({
+            icon: 'info',
+            title: 'Import Cancelled',
+            text: 'No questions were imported.',
+            timer: 2000,
+            showConfirmButton: false
+          });
+          return;
+        }
+      }
+
       // Add extracted questions to the exam
-      documentResult.value.forEach(extractedQuestion => {
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      documentResult.value.forEach((extractedQuestion, index) => {
+        // Check if this question is a duplicate of existing questions
+        const isDuplicate = duplicates.questions.some(dup => dup.index === index);
+        
+        if (isDuplicate) {
+          skippedCount++;
+          return;
+        }
+
         questions.value.push({
           text: extractedQuestion.text,
           type: extractedQuestion.type,
@@ -1269,17 +1377,37 @@ export default {
           points: extractedQuestion.points || 1,
           partId: ''
         });
+        addedCount++;
       });
 
       closeDocumentUploadModal();
       
-      Swal.fire({
-        icon: 'success',
-        title: 'Questions Added',
-        text: `${documentResult.value.length} questions have been added to your exam.`,
-        timer: 2000,
-        showConfirmButton: false
-      });
+      // Show appropriate success message
+      if (skippedCount > 0) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Questions Imported with Warnings',
+          html: `
+            <div style="text-align: left;">
+              <p><strong>Successfully added:</strong> ${addedCount} questions</p>
+              <p><strong>Skipped duplicates:</strong> ${skippedCount} questions</p>
+              <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+                Duplicate questions were automatically skipped to prevent redundancy.
+              </p>
+            </div>
+          `,
+          timer: 4000,
+          showConfirmButton: true
+        });
+      } else {
+        Swal.fire({
+          icon: 'success',
+          title: 'Questions Added Successfully',
+          text: `${addedCount} questions have been added to your exam.`,
+          timer: 2000,
+          showConfirmButton: false
+        });
+      }
     };
 
     const closeDocumentUploadModal = () => {
@@ -7177,5 +7305,80 @@ small {
     opacity: 1 !important;
     max-height: 200px !important;
   }
+}
+
+/* Duplicate Validation Dialog Styles */
+:global(.duplicate-validation-popup) {
+  border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  max-width: 600px !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+:global(.duplicate-validation-title) {
+  color: #d32f2f !important;
+  font-size: 1.4rem !important;
+  font-weight: 600 !important;
+  margin-bottom: 15px !important;
+}
+
+:global(.duplicate-validation-content) {
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+  color: #333 !important;
+  text-align: left !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  padding: 10px 0 !important;
+}
+
+:global(.duplicate-validation-content strong) {
+  color: #d32f2f !important;
+  font-weight: 600 !important;
+}
+
+:global(.duplicate-validation-content ul) {
+  margin: 10px 0 !important;
+  padding-left: 20px !important;
+}
+
+:global(.duplicate-validation-content li) {
+  margin: 5px 0 !important;
+  color: #666 !important;
+  font-style: italic !important;
+}
+
+:global(.duplicate-validation-confirm) {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+}
+
+:global(.duplicate-validation-confirm:hover) {
+  background: linear-gradient(135deg, #159750 0%, #0bcc4e 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(11, 204, 78, 0.3) !important;
+}
+
+:global(.duplicate-validation-cancel) {
+  background: #f5f5f5 !important;
+  color: #666 !important;
+  border: 1px solid #ddd !important;
+  border-radius: 8px !important;
+  padding: 10px 20px !important;
+  font-weight: 500 !important;
+  font-size: 0.9rem !important;
+  transition: all 0.2s ease !important;
+}
+
+:global(.duplicate-validation-cancel:hover) {
+  background: #e0e0e0 !important;
+  color: #333 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 </style>

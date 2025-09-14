@@ -18,8 +18,27 @@
       </div>
     </div>
 
+    <!-- Zoom Controls (hidden when printing) -->
+    <div class="zoom-controls no-print">
+      <div class="zoom-info">
+        <span class="zoom-label">Zoom:</span>
+        <span class="zoom-percentage">{{ Math.round(zoomLevel * 100) }}%</span>
+      </div>
+      <div class="zoom-buttons">
+        <button @click="zoomOut" class="zoom-btn" :disabled="zoomLevel <= 0.5">
+          <span class="material-icons-round">remove</span>
+        </button>
+        <button @click="resetZoom" class="zoom-btn reset">
+          <span class="material-icons-round">refresh</span>
+        </button>
+        <button @click="zoomIn" class="zoom-btn" :disabled="zoomLevel >= 2">
+          <span class="material-icons-round">add</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Printable Content -->
-    <div class="printable-area" ref="printArea">
+    <div class="printable-area" ref="printArea" :class="{ 'zoom-small': zoomLevel < 1, 'zoom-large': zoomLevel > 1 }" :style="{ '--zoom-factor': zoomLevel }">
       <!-- Official School Header -->
       <div class="school-header">
         <div class="header-content">
@@ -194,6 +213,7 @@ export default {
     const error = ref(null);
     const printArea = ref(null);
     const showAnswers = ref(false);
+    const zoomLevel = ref(1);
 
     const loadExam = async () => {
       try {
@@ -280,13 +300,33 @@ export default {
     // Get current quarter based on date
     const getCurrentQuarter = () => {
       const month = new Date().getMonth();
-      if (month >= 0 && month <= 2) return "1st"; // Jan-Mar
-      if (month >= 3 && month <= 5) return "2nd"; // Apr-Jun
-      if (month >= 6 && month <= 8) return "3rd"; // Jul-Sep
+      if (month >= 0 && month <= 5) return "1st"; // Jan-Mar
+      if (month >= 6 && month <= 8) return "2nd"; // Apr-Jun
+      if (month >= 9 && month <= 11) return "3rd"; // Jul-Sep
       return "4th"; // Oct-Dec
     };
 
+    // Zoom functionality
+    const zoomIn = () => {
+      if (zoomLevel.value < 2) {
+        zoomLevel.value = Math.min(2, zoomLevel.value + 0.1);
+      }
+    };
+
+    const zoomOut = () => {
+      if (zoomLevel.value > 0.5) {
+        zoomLevel.value = Math.max(0.5, zoomLevel.value - 0.1);
+      }
+    };
+
+    const resetZoom = () => {
+      zoomLevel.value = 1;
+    };
+
     const handlePrint = () => {
+      // Apply zoom level to print
+      document.documentElement.style.setProperty('--print-zoom-factor', zoomLevel.value);
+      
       // First check if answers are being shown
       if (showAnswers.value) {
         // Ask if they want to print with answers
@@ -300,6 +340,10 @@ export default {
         }).then((result) => {
           if (result.isConfirmed) {
             window.print();
+            // Reset zoom level after printing
+            setTimeout(() => {
+              document.documentElement.style.removeProperty('--print-zoom-factor');
+            }, 1000);
           } else {
             // If they chose to hide answers, temporarily hide them
             showAnswers.value = false;
@@ -307,16 +351,27 @@ export default {
               window.print();
               // And restore their preference afterward
               showAnswers.value = true;
+              // Reset zoom level after printing
+              setTimeout(() => {
+                document.documentElement.style.removeProperty('--print-zoom-factor');
+              }, 1000);
             }, 100);
           }
         });
       } else {
         window.print();
+        // Reset zoom level after printing
+        setTimeout(() => {
+          document.documentElement.style.removeProperty('--print-zoom-factor');
+        }, 1000);
       }
     };
 
     const downloadPDF = async () => {
       const element = printArea.value;
+      
+      // Apply zoom level for PDF generation
+      document.documentElement.style.setProperty('--print-zoom-factor', zoomLevel.value);
       
       // Show confirmation if answers are being shown
       let includeAnswers = showAnswers.value;
@@ -348,7 +403,7 @@ export default {
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
-          scale: 2,
+          scale: 2 * zoomLevel.value, // Scale based on current zoom level
           useCORS: true,
           letterRendering: true,
           scrollY: 0,
@@ -391,6 +446,8 @@ export default {
         if (originalAnswersState !== showAnswers.value) {
           showAnswers.value = originalAnswersState;
         }
+        // Reset zoom level for PDF generation
+        document.documentElement.style.removeProperty('--print-zoom-factor');
       }
     };
 
@@ -413,6 +470,7 @@ export default {
       error,
       printArea,
       showAnswers,
+      zoomLevel,
       formatQuestionType,
       parseOptions,
       formatAnswer,
@@ -422,7 +480,10 @@ export default {
       getOptionLetter,
       getTotalQuestions,
       calculateExamTime,
-      getCurrentQuarter
+      getCurrentQuarter,
+      zoomIn,
+      zoomOut,
+      resetZoom
     };
   }
 };
@@ -441,14 +502,148 @@ export default {
   padding: 30px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+/* Dynamic text scaling based on zoom level - QUESTIONS ONLY */
+.printable-area .question-text {
+  font-size: calc(12px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .question-number {
+  font-size: calc(12px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .question-type {
+  font-size: calc(10px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .option-text {
+  font-size: calc(11px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .circle {
+  width: calc(18px * var(--zoom-factor, 1)) !important;
+  height: calc(18px * var(--zoom-factor, 1)) !important;
+  font-size: calc(10px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .answer-lines .line {
+  height: calc(1px * var(--zoom-factor, 1)) !important;
+  margin-bottom: calc(12px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .option-item {
+  margin-bottom: calc(6px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .question-item {
+  margin-bottom: calc(10px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .question-header {
+  margin-bottom: calc(8px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .options-list {
+  margin-top: calc(6px * var(--zoom-factor, 1)) !important;
+  padding-left: calc(25px * var(--zoom-factor, 1)) !important;
+}
+
+.printable-area .text-answer {
+  padding-left: calc(25px * var(--zoom-factor, 1)) !important;
+  margin-top: calc(6px * var(--zoom-factor, 1)) !important;
+}
+
+/* Question image scaling - maintain aspect ratio */
+.printable-area .question-image {
+  max-width: calc(80% * var(--zoom-factor, 1)) !important;
+  max-height: calc(200px * var(--zoom-factor, 1)) !important;
+  width: auto !important;
+  height: auto !important;
 }
 
 /* Print Controls */
 .print-controls {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   align-items: center;
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.zoom-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.zoom-label {
+  font-size: 14px;
+}
+
+.zoom-percentage {
+  font-size: 14px;
+  font-weight: bold;
+  color: #007bff;
+  min-width: 40px;
+  text-align: center;
+}
+
+.zoom-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.zoom-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: white;
+  color: #495057;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 18px;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.zoom-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-btn.reset {
+  background: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+
+.zoom-btn.reset:hover:not(:disabled) {
+  background: #5a6268;
+  border-color: #545b62;
 }
 
 .export-controls {
@@ -884,6 +1079,11 @@ input:checked + .slider:before {
     display: none !important;
   }
 
+  /* Apply zoom level to print */
+  .printable-area {
+    --zoom-factor: var(--print-zoom-factor, 1) !important;
+  }
+
   .exam-paper-preview {
     padding: 0;
     margin: 0;
@@ -1035,6 +1235,26 @@ input:checked + .slider:before {
     width: 100%;
     display: flex;
     gap: 8px;
+  }
+
+  .zoom-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 8px;
+  }
+
+  .zoom-info {
+    font-size: 12px;
+  }
+
+  .zoom-buttons {
+    gap: 0.25rem;
+  }
+
+  .zoom-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
 
   .export-controls {

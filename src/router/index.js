@@ -31,6 +31,7 @@ import StudentSubjects from '@/components/student/StudentSubjects.vue'
 import CreateTask from '@/components/teacher/CreateTask.vue'
 import SubjectTasks from '@/components/teacher/SubjectTasks.vue'
 import TaskSubmission from "@/components/teacher/TaskSubmission.vue";
+import TaskSubmissionDetails from "@/components/teacher/TaskSubmissionDetails.vue";
 import GameCanvas from '@/components/game/GameCanvas.vue';
 import StudentTasks from '@/components/student/StudentTasks.vue';
 import TaskDetails from '@/components/student/TaskDetails.vue';
@@ -42,6 +43,7 @@ import TeacherClassList from "@/components/teacher/TeacherClassList.vue";
 import AttendanceScanner from "@/components/teacher/AttendanceScanner.vue";
 import AttendanceRecords from "@/components/teacher/AttendanceRecords.vue";
 import StudentRegistrationPage from "@/components/public/StudentRegistrationPage.vue";
+import GradeSectionStudentList from "@/components/admin/Grade&SectionStudentList.vue";
 
 const routes = [
   { 
@@ -112,6 +114,12 @@ const routes = [
   {
     path: '/manage-users', 
     component: ManageUsers,
+    meta: { requiresAuth: true, roles: ['admin'] }
+  },
+  {
+    path: '/grade-section-students/:grade/:section',
+    name: 'GradeSectionStudentList',
+    component: GradeSectionStudentList,
     meta: { requiresAuth: true, roles: ['admin'] }
   },
   { 
@@ -248,6 +256,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ['teacher'] }
   },
   {
+    path: '/subject/:subjectId/task/:taskId/submission-details',
+    name: 'TaskSubmissionDetails',
+    component: TaskSubmissionDetails,
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
     path: '/game',
     name: 'Game',
     component: GameCanvas,
@@ -338,6 +352,12 @@ const routes = [
     component: () => import('@/components/teacher/archivedExamResults.vue'),
     meta: { requiresAuth: true, roles: ['teacher'] }
   },
+  {
+    path:'/student-dashboard',
+    name: 'StudentDashboard',
+    component: () => import('@/components/student/Dashboard.vue'),
+    meta: { requiresAuth: true, roles: ['student'] }
+  }
   
  
 

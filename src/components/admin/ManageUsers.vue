@@ -411,6 +411,12 @@
       </div>
       
       <div class="export-controls">
+        <!-- Tab Count Display -->
+        <div class="tab-count-display">
+          <span class="count-label">{{ activeTab.charAt(0).toUpperCase() + activeTab.slice(1) }}:</span>
+          <span class="count-number">{{ tabCounts[activeTab] || 0 }}</span>
+        </div>
+        
         <!-- Quick Add Button -->
         <button @click="quickAddUser" class="quick-add-btn" :title="`Quick Add ${activeTab === 'students' ? 'Student' : activeTab === 'teachers' ? 'Teacher' : activeTab === 'admins' ? 'Admin' : activeTab === 'sections' ? 'Grade Section' : 'User'}`">
           <span class="material-icons">add</span>
@@ -529,12 +535,20 @@
         <div v-for="gs in gradeSections" :key="gs.id" class="grade-section-card">
           <div class="grade-section-header">
             <h3>Grade {{ gs.grade }} - Section {{ gs.section }}</h3>
+            <div class="student-count">
+              <span class="material-icons">people</span>
+              <span class="count-number">{{ gradeSectionStudentCounts[`${gs.grade}-${gs.section}`] || 0 }}</span>
+              <span class="count-label">student{{ (gradeSectionStudentCounts[`${gs.grade}-${gs.section}`] || 0) !== 1 ? 's' : '' }}</span>
+            </div>
           </div>
           <div class="grade-section-actions">
-            <button @click="openGradeSectionModal(gs)" class="action-btn edit">
+            <button @click="viewGradeSectionStudents(gs)" class="action-btn view" title="View Students">
+              <span class="material-icons">visibility</span>
+            </button>
+            <button @click="openGradeSectionModal(gs)" class="action-btn edit" title="Edit Section">
               <span class="material-icons">edit</span>
             </button>
-            <button @click="deleteGrade(gs.id)" class="action-btn archive">
+            <button @click="deleteGrade(gs.id)" class="action-btn archive" title="Archive Section">
               <span class="material-icons">archive</span>
             </button>
           </div>
@@ -1727,6 +1741,7 @@
 
 <script setup>
 import { ref, onMounted, computed, watch, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import { 
   registerStudent, 
   registerTeacher, 
@@ -1751,6 +1766,9 @@ import {
   deleteUserProfilePicture
 } from '@/services/authService';
 import aiService from '@/services/aiService';
+
+// Router
+const router = useRouter();
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx';
 // Import jsPDF and its autotable plugin properly
@@ -1861,6 +1879,38 @@ const availableSectionsForGrade = computed(() => {
     .filter(gs => gs.grade === editFormData.value.gradeLevel)
     .map(gs => gs.section);
 });
+
+// Computed property to calculate student count per grade and section
+const gradeSectionStudentCounts = computed(() => {
+  const counts = {};
+  
+  // Initialize counts for all grade sections
+  gradeSections.value.forEach(gs => {
+    const key = `${gs.grade}-${gs.section}`;
+    counts[key] = 0;
+  });
+  
+  // Count students in each grade section
+  students.value.forEach(student => {
+    if (student.gradeLevel && student.section) {
+      const key = `${student.gradeLevel}-${student.section}`;
+      if (Object.prototype.hasOwnProperty.call(counts, key)) {
+        counts[key]++;
+      }
+    }
+  });
+  
+  return counts;
+});
+
+// Computed properties for tab counts
+const tabCounts = computed(() => ({
+  students: students.value.length,
+  teachers: teachers.value.length,
+  admins: admins.value.length,
+  sections: gradeSections.value.length,
+  archived: archivedUsers.value.length
+}));
 
 // Function to open full screen image modal
 const openFullScreenImage = (imageSrc) => {
@@ -2366,6 +2416,11 @@ const openGradeSectionModal = (gradeSection = null) => {
     section: ''
   };
   showGradeSectionModal.value = true;
+};
+
+// View grade section students
+const viewGradeSectionStudents = (gradeSection) => {
+  router.push(`/grade-section-students/${gradeSection.grade}/${gradeSection.section}`);
 };
 
 // Save grade section
@@ -3845,14 +3900,74 @@ const parseSelectedFile = (file) => {
         const wb = XLSX.read(data, { type: 'array' });
         const sheetName = wb.SheetNames[0];
         const ws = wb.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
-        if (!rows || rows.length === 0) {
+        // Parse the worksheet to find the actual data table
+        const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+        const allRows = [];
+        
+        // Convert worksheet to array of arrays
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+          const row = [];
+          for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+            const cellAddress = XLSX.utils.encode_cell({ r: rowNum, c: colNum });
+            const cell = ws[cellAddress];
+            row.push(cell ? cell.v : '');
+          }
+          allRows.push(row);
+        }
+        
+        if (!allRows || allRows.length === 0) {
           bulkParseError.value = 'No rows detected in the file.';
           return;
         }
-        const headers = Object.keys(rows[0]);
+        
+        // Find the data table by looking for the header row with "First Name"
+        let dataStartRow = -1;
+        let headers = [];
+        
+        for (let i = 0; i < allRows.length; i++) {
+          const row = allRows[i];
+          if (row.includes('First Name') && row.includes('Last Name')) {
+            dataStartRow = i;
+            headers = row.filter(cell => cell && cell.toString().trim() !== '');
+            break;
+          }
+        }
+        
+        if (dataStartRow === -1) {
+          bulkParseError.value = 'Could not find the data table. Please ensure the file has "First Name" and "Last Name" headers.';
+          return;
+        }
+        
+        // Extract data rows starting from the row after headers
+        const dataRows = allRows.slice(dataStartRow + 1);
+        
+        // Convert to objects with proper headers
+        const processedRows = dataRows
+          .filter(row => {
+            // Skip completely empty rows
+            return row.some(cell => cell && cell.toString().trim() !== '');
+          })
+          .map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+              obj[header] = row[index] || '';
+            });
+            return obj;
+          })
+          .filter(row => {
+            // Only include rows that have at least firstName and lastName
+            return row['First Name'] && row['Last Name'] && 
+                   row['First Name'].toString().trim() !== '' && 
+                   row['Last Name'].toString().trim() !== '';
+          });
+        
+        if (processedRows.length === 0) {
+          bulkParseError.value = 'No valid student data found. Please ensure the file contains student records with First Name and Last Name.';
+          return;
+        }
+        
         bulkPreviewHeaders.value = headers;
-        bulkPreviewRows.value = rows;
+        bulkPreviewRows.value = processedRows;
         bulkPreviewPage.value = 1; // Reset to first page when new data is loaded
       } catch (err) {
         console.error(err);
@@ -3917,7 +4032,235 @@ const confirmBulkUpload = async () => {
   }
 };
 
-const downloadBulkTemplate = () => {
+const downloadBulkTemplate = async () => {
+  try {
+    // Import the ExcelJS library
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    
+    // Add a worksheet
+    const worksheet = workbook.addWorksheet('Student Template');
+    
+    // Add official DepEd header section
+    const republicRow = worksheet.getRow(1);
+    republicRow.height = 15;
+    const republicCell = republicRow.getCell(1);
+    republicCell.value = 'Republic of the Philippines';
+    republicCell.font = { size: 10, bold: true, name: 'Arial' };
+    republicCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A1:G1');
+    
+    const deptRow = worksheet.getRow(2);
+    deptRow.height = 15;
+    const deptCell = deptRow.getCell(1);
+    deptCell.value = 'Department of Education';
+    deptCell.font = { size: 10, bold: true, name: 'Arial' };
+    deptCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A2:G2');
+    
+    const regionRow = worksheet.getRow(3);
+    regionRow.height = 15;
+    const regionCell = regionRow.getCell(1);
+    regionCell.value = 'Region III - Central Luzon';
+    regionCell.font = { size: 10, bold: true, name: 'Arial' };
+    regionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A3:G3');
+    
+    const divisionRow = worksheet.getRow(4);
+    divisionRow.height = 15;
+    const divisionCell = divisionRow.getCell(1);
+    divisionCell.value = 'Schools Division of Olongapo City';
+    divisionCell.font = { size: 10, bold: true, name: 'Arial' };
+    divisionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A4:G4');
+    
+    const schoolRow = worksheet.getRow(5);
+    schoolRow.height = 20;
+    const schoolCell = schoolRow.getCell(1);
+    schoolCell.value = 'NEW CABALAN NATIONAL HIGH SCHOOL';
+    schoolCell.font = { size: 14, bold: true, name: 'Arial' };
+    schoolCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A5:G5');
+    
+    const addressRow = worksheet.getRow(6);
+    addressRow.height = 15;
+    const addressCell = addressRow.getCell(1);
+    addressCell.value = 'New Cabalan, Olongapo City';
+    addressCell.font = { size: 10, italic: true, name: 'Arial' };
+    addressCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A6:G6');
+    
+    // Add line break
+    const lineRow = worksheet.getRow(7);
+    lineRow.height = 5;
+    const lineCell = lineRow.getCell(1);
+    lineCell.value = '_________________________________________________';
+    lineCell.font = { size: 8, name: 'Arial' };
+    lineCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A7:G7');
+    
+    // Add template title
+    const titleRow = worksheet.getRow(8);
+    titleRow.height = 25;
+    const titleCell = titleRow.getCell(1);
+    titleCell.value = 'STUDENT BULK REGISTRATION TEMPLATE';
+    titleCell.font = { size: 16, bold: true, name: 'Arial' };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A8:G8');
+    
+    // Add instructions section
+    const instructionRow = worksheet.getRow(9);
+    instructionRow.height = 30;
+    const instructionCell = instructionRow.getCell(1);
+    instructionCell.value = 'Instructions:\n• Fill in the student information below\n• Email and LRN are optional\n• Use UPPERCASE for names\n• Grade Level should be 7-12\n• Section should match existing sections';
+    instructionCell.font = { 
+      size: 10, 
+      color: { argb: '2E7D32' },
+      name: 'Arial'
+    };
+    instructionCell.alignment = { horizontal: 'left', vertical: 'top' };
+    instructionCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'E8F5E8' }
+    };
+    worksheet.mergeCells('A9:G9');
+    
+    // Add empty row for spacing
+    const spacingRow = worksheet.getRow(10);
+    spacingRow.height = 10;
+    
+    // Set column headers and widths
+    worksheet.columns = [
+      { header: 'First Name', key: 'firstName', width: 20 },
+      { header: 'Last Name', key: 'lastName', width: 20 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'LRN', key: 'lrn', width: 15 },
+      { header: 'Grade Level', key: 'gradeLevel', width: 12 },
+      { header: 'Section', key: 'section', width: 15 },
+      { header: 'Address', key: 'address', width: 40 }
+    ];
+    
+    // Add header row with styling
+    const headerRow = worksheet.getRow(11);
+    headerRow.height = 25;
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // Add column headers with individual cell styling
+    const headerCells = [
+      { col: 1, value: 'First Name' },
+      { col: 2, value: 'Last Name' },
+      { col: 3, value: 'Email' },
+      { col: 4, value: 'LRN' },
+      { col: 5, value: 'Grade Level' },
+      { col: 6, value: 'Section' },
+      { col: 7, value: 'Address' }
+    ];
+    
+    headerCells.forEach(({ col, value }) => {
+      const cell = headerRow.getCell(col);
+      cell.value = value;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4CAF50' }
+      };
+    });
+    
+    // Add sample data row
+    const sampleRow = worksheet.getRow(12);
+    sampleRow.height = 20;
+    sampleRow.font = { italic: true, color: { argb: '666666' }, size: 10 };
+    sampleRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'F5F5F5' }
+    };
+    sampleRow.getCell(1).value = 'JUAN';
+    sampleRow.getCell(2).value = 'DELA CRUZ';
+    sampleRow.getCell(3).value = 'juan.delacruz@ncnhs.edu.ph';
+    sampleRow.getCell(4).value = '123456789012';
+    sampleRow.getCell(5).value = '7';
+    sampleRow.getCell(6).value = 'A';
+    sampleRow.getCell(7).value = '123 Main Street, City';
+    
+    // Add empty rows for data entry
+    for (let i = 13; i <= 42; i++) {
+      const row = worksheet.getRow(i);
+      row.height = 20;
+      row.alignment = { vertical: 'middle' };
+    }
+    
+    // Set worksheet properties to limit used range
+    worksheet.properties.defaultColWidth = 15;
+    worksheet.properties.defaultRowHeight = 20;
+    
+    // Add borders to data cells only (limit to actual data columns A-G)
+    for (let rowNum = 11; rowNum <= 42; rowNum++) {
+      const row = worksheet.getRow(rowNum);
+      for (let colNum = 1; colNum <= 7; colNum++) {
+        const cell = row.getCell(colNum);
+        cell.border = {
+          top: { style: 'thin', color: { argb: '4CAF50' } },
+          left: { style: 'thin', color: { argb: '4CAF50' } },
+          bottom: { style: 'thin', color: { argb: '4CAF50' } },
+          right: { style: 'thin', color: { argb: '4CAF50' } }
+        };
+      }
+    }
+    
+    // Clear borders and background from unused columns (H onwards)
+    for (let rowNum = 11; rowNum <= 42; rowNum++) {
+      const row = worksheet.getRow(rowNum);
+      for (let colNum = 8; colNum <= 50; colNum++) {
+        const cell = row.getCell(colNum);
+        cell.border = {
+          top: { style: 'none' },
+          left: { style: 'none' },
+          bottom: { style: 'none' },
+          right: { style: 'none' }
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFF' }
+        };
+      }
+    }
+    
+    // Add footer with generation info
+    const footerRow = worksheet.getRow(43);
+    footerRow.height = 20;
+    const footerCell = footerRow.getCell(1);
+    footerCell.value = `Generated on: ${new Date().toLocaleDateString()} | NCNHS Exam System`;
+    footerCell.font = { 
+      size: 9, 
+      color: { argb: '999999' },
+      italic: true
+    };
+    footerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells('A43:G43');
+    
+    // Generate the Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `NCNHS_Student_Template_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Professional Template Downloaded',
+      text: 'Excel template with NCNHS branding has been downloaded successfully!',
+      timer: 3000
+    });
+  } catch (error) {
+    console.error('Error generating template:', error);
+    // Fallback to CSV if Excel generation fails
   const headers = ['firstName','lastName','email','lrn','gradeLevel','section','address'];
   const csv = headers.join(',') + '\n';
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -3927,6 +4270,7 @@ const downloadBulkTemplate = () => {
   a.download = `bulk_students_template.csv`;
   a.click();
   URL.revokeObjectURL(url);
+  }
 };
 
 // Template generator state
@@ -3957,8 +4301,337 @@ const sampleLastNames = ['DELA CRUZ','SANTOS','REYES','GARCIA','MENDOZA','RAMOS'
 
 const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-const generateAndDownloadTemplate = () => {
+const generateAndDownloadTemplate = async () => {
   try {
+    // Import the ExcelJS library
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    
+    // Add a worksheet
+    const worksheet = workbook.addWorksheet('Student Template');
+    
+    // Define headers based on selected options
+    const headers = ['firstName','lastName'];
+    const headerLabels = ['First Name', 'Last Name'];
+    if (templateIncludeEmail.value) {
+      headers.push('email');
+      headerLabels.push('Email');
+    }
+    if (templateIncludeLRN.value) {
+      headers.push('lrn');
+      headerLabels.push('LRN');
+    }
+    headers.push('gradeLevel','section');
+    headerLabels.push('Grade Level', 'Section');
+    if (templateIncludeAddress.value) {
+      headers.push('address');
+      headerLabels.push('Address');
+    }
+
+    // Add official DepEd header section
+    const republicRow = worksheet.getRow(1);
+    republicRow.height = 15;
+    const republicCell = republicRow.getCell(1);
+    republicCell.value = 'Republic of the Philippines';
+    republicCell.font = { size: 10, bold: true, name: 'Arial' };
+    republicCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const republicMergeRange = `A1:${String.fromCharCode(65 + headers.length - 1)}1`;
+    worksheet.mergeCells(republicMergeRange);
+    
+    const deptRow = worksheet.getRow(2);
+    deptRow.height = 15;
+    const deptCell = deptRow.getCell(1);
+    deptCell.value = 'Department of Education';
+    deptCell.font = { size: 10, bold: true, name: 'Arial' };
+    deptCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const deptMergeRange = `A2:${String.fromCharCode(65 + headers.length - 1)}2`;
+    worksheet.mergeCells(deptMergeRange);
+    
+    const regionRow = worksheet.getRow(3);
+    regionRow.height = 15;
+    const regionCell = regionRow.getCell(1);
+    regionCell.value = 'Region III - Central Luzon';
+    regionCell.font = { size: 10, bold: true, name: 'Arial' };
+    regionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const regionMergeRange = `A3:${String.fromCharCode(65 + headers.length - 1)}3`;
+    worksheet.mergeCells(regionMergeRange);
+    
+    const divisionRow = worksheet.getRow(4);
+    divisionRow.height = 15;
+    const divisionCell = divisionRow.getCell(1);
+    divisionCell.value = 'Schools Division of Olongapo City';
+    divisionCell.font = { size: 10, bold: true, name: 'Arial' };
+    divisionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const divisionMergeRange = `A4:${String.fromCharCode(65 + headers.length - 1)}4`;
+    worksheet.mergeCells(divisionMergeRange);
+    
+    const schoolRow = worksheet.getRow(5);
+    schoolRow.height = 20;
+    const schoolCell = schoolRow.getCell(1);
+    schoolCell.value = 'NEW CABALAN NATIONAL HIGH SCHOOL';
+    schoolCell.font = { size: 14, bold: true, name: 'Arial' };
+    schoolCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const schoolMergeRange = `A5:${String.fromCharCode(65 + headers.length - 1)}5`;
+    worksheet.mergeCells(schoolMergeRange);
+    
+    const addressRow = worksheet.getRow(6);
+    addressRow.height = 15;
+    const addressCell = addressRow.getCell(1);
+    addressCell.value = 'New Cabalan, Olongapo City';
+    addressCell.font = { size: 10, italic: true, name: 'Arial' };
+    addressCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const addressMergeRange = `A6:${String.fromCharCode(65 + headers.length - 1)}6`;
+    worksheet.mergeCells(addressMergeRange);
+    
+    // Add line break
+    const lineRow = worksheet.getRow(7);
+    lineRow.height = 5;
+    const lineCell = lineRow.getCell(1);
+    lineCell.value = '_________________________________________________';
+    lineCell.font = { size: 8, name: 'Arial' };
+    lineCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const lineMergeRange = `A7:${String.fromCharCode(65 + headers.length - 1)}7`;
+    worksheet.mergeCells(lineMergeRange);
+    
+    // Add template title
+    const titleRow = worksheet.getRow(8);
+    titleRow.height = 25;
+    const titleCell = titleRow.getCell(1);
+    titleCell.value = 'STUDENT BULK REGISTRATION TEMPLATE';
+    titleCell.font = { size: 16, bold: true, name: 'Arial' };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const titleMergeRange = `A8:${String.fromCharCode(65 + headers.length - 1)}8`;
+    worksheet.mergeCells(titleMergeRange);
+    
+    // Add instructions section
+    const instructionRow = worksheet.getRow(9);
+    instructionRow.height = 30;
+    const instructionCell = instructionRow.getCell(1);
+    instructionCell.value = 'Instructions:\n• Fill in the student information below\n• Email and LRN are optional\n• Use UPPERCASE for names\n• Grade Level should be 7-12\n• Section should match existing sections';
+    instructionCell.font = { 
+      size: 10, 
+      color: { argb: '2E7D32' },
+      name: 'Arial'
+    };
+    instructionCell.alignment = { horizontal: 'left', vertical: 'top' };
+    instructionCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'E8F5E8' }
+    };
+    const instructionMergeRange = `A9:${String.fromCharCode(65 + headers.length - 1)}9`;
+    worksheet.mergeCells(instructionMergeRange);
+    
+    // Add empty row for spacing
+    const spacingRow = worksheet.getRow(10);
+    spacingRow.height = 10;
+
+    // Set column widths for better formatting
+    const columnWidths = [20, 20]; // firstName, lastName
+    if (templateIncludeEmail.value) columnWidths.push(30);
+    if (templateIncludeLRN.value) columnWidths.push(15);
+    columnWidths.push(12, 15); // gradeLevel, section
+    if (templateIncludeAddress.value) columnWidths.push(40);
+    
+    worksheet.columns = headers.map((header, index) => ({
+      header: headerLabels[index],
+      key: header,
+      width: columnWidths[index]
+    }));
+    
+    // Add header row with styling
+    const headerRow = worksheet.getRow(11);
+    headerRow.height = 25;
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    // Add column headers based on selected options with individual cell styling
+    let colIndex = 1;
+    const headerCells = [
+      { col: colIndex++, value: 'First Name' },
+      { col: colIndex++, value: 'Last Name' }
+    ];
+    
+    if (templateIncludeEmail.value) headerCells.push({ col: colIndex++, value: 'Email' });
+    if (templateIncludeLRN.value) headerCells.push({ col: colIndex++, value: 'LRN' });
+    headerCells.push({ col: colIndex++, value: 'Grade Level' });
+    headerCells.push({ col: colIndex++, value: 'Section' });
+    if (templateIncludeAddress.value) headerCells.push({ col: colIndex++, value: 'Address' });
+    
+    headerCells.forEach(({ col, value }) => {
+      const cell = headerRow.getCell(col);
+      cell.value = value;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4CAF50' }
+      };
+    });
+
+    let rows = [];
+    if (templateExampleType.value === 'headers') {
+      rows = [];
+    } else {
+      const count = Math.max(1, Math.min(5000, Number(templateCount.value) || 1));
+      for (let i = 0; i < count; i++) {
+        let firstName = '';
+        let lastName = '';
+        if (templateExampleType.value === 'sample') {
+          firstName = pickRandom(sampleFirstNames);
+          lastName = pickRandom(sampleLastNames);
+        }
+        const gradeLevel = templateGrade.value ? Number(templateGrade.value) : '';
+        const section = templateSection.value || '';
+        const row = { firstName, lastName };
+        if (templateIncludeEmail.value) {
+          if (firstName && lastName) {
+            const local = `${firstName}.${lastName}`.toLowerCase().replace(/\s+/g, '').replace(/\.+/g, '.');
+            row.email = `${local}@ncnhs.edu.ph`;
+          } else {
+            row.email = '';
+          }
+        }
+        if (templateIncludeLRN.value) {
+          row.lrn = '';
+        }
+        row.gradeLevel = gradeLevel;
+        row.section = section;
+        if (templateIncludeAddress.value) row.address = '';
+        rows.push(row);
+      }
+    }
+
+    // Add data rows
+    const startRow = 12; // Always start at row 12 after headers
+    if (templateExampleType.value === 'headers') {
+      // Headers only - no data rows
+    } else if (templateExampleType.value === 'sample' && rows.length > 0) {
+      // Add sample data row with special styling
+      const sampleRow = worksheet.getRow(startRow);
+      sampleRow.height = 20;
+      sampleRow.font = { italic: true, color: { argb: '666666' }, size: 10 };
+      sampleRow.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'F5F5F5' }
+      };
+      
+      headers.forEach((header, index) => {
+        const sampleValue = rows[0][header] || '';
+        sampleRow.getCell(index + 1).value = sampleValue;
+      });
+      
+      // Add remaining data rows starting from row 13
+      rows.slice(1).forEach((row, index) => {
+        const excelRow = worksheet.getRow(startRow + 1 + index);
+        excelRow.height = 20;
+        excelRow.alignment = { vertical: 'middle' };
+        
+        headers.forEach((header, colIndex) => {
+          const value = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+          excelRow.getCell(colIndex + 1).value = value;
+        });
+      });
+    } else {
+      // Add all data rows normally
+      rows.forEach((row, index) => {
+        const excelRow = worksheet.getRow(startRow + index);
+        excelRow.height = 20;
+        excelRow.alignment = { vertical: 'middle' };
+        
+        headers.forEach((header, colIndex) => {
+          const value = row[header] !== undefined && row[header] !== null ? String(row[header]) : '';
+          excelRow.getCell(colIndex + 1).value = value;
+        });
+      });
+    }
+    
+    // Add empty rows for data entry if needed
+    let totalRows = startRow;
+    if (templateExampleType.value === 'sample' && rows.length > 0) {
+      totalRows = startRow + rows.length; // Sample row + remaining rows
+    } else if (templateExampleType.value !== 'headers') {
+      totalRows = startRow + rows.length; // All data rows
+    }
+    const emptyRowsNeeded = Math.max(0, 42 - totalRows);
+    for (let i = 0; i < emptyRowsNeeded; i++) {
+      const row = worksheet.getRow(totalRows + i);
+      row.height = 20;
+      row.alignment = { vertical: 'middle' };
+    }
+    
+    // Set worksheet properties to limit used range
+    worksheet.properties.defaultColWidth = 15;
+    worksheet.properties.defaultRowHeight = 20;
+    
+    // Add borders to data cells only (limit to actual data columns)
+    for (let rowNum = 11; rowNum <= 42; rowNum++) {
+      const row = worksheet.getRow(rowNum);
+      for (let colNum = 1; colNum <= headers.length; colNum++) {
+        const cell = row.getCell(colNum);
+        cell.border = {
+          top: { style: 'thin', color: { argb: '4CAF50' } },
+          left: { style: 'thin', color: { argb: '4CAF50' } },
+          bottom: { style: 'thin', color: { argb: '4CAF50' } },
+          right: { style: 'thin', color: { argb: '4CAF50' } }
+        };
+      }
+    }
+    
+    // Clear borders and background from unused columns
+    for (let rowNum = 11; rowNum <= 42; rowNum++) {
+      const row = worksheet.getRow(rowNum);
+      for (let colNum = headers.length + 1; colNum <= 50; colNum++) {
+        const cell = row.getCell(colNum);
+        cell.border = {
+          top: { style: 'none' },
+          left: { style: 'none' },
+          bottom: { style: 'none' },
+          right: { style: 'none' }
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFFFFF' }
+        };
+      }
+    }
+    
+    // Add footer with generation info
+    const footerRow = worksheet.getRow(43);
+    footerRow.height = 20;
+    const footerCell = footerRow.getCell(1);
+    footerCell.value = `Generated on: ${new Date().toLocaleDateString()} | NCNHS Exam System`;
+    footerCell.font = { 
+      size: 9, 
+      color: { argb: '999999' },
+      italic: true
+    };
+    footerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    const footerMergeRange = `A43:${String.fromCharCode(65 + headers.length - 1)}43`;
+    worksheet.mergeCells(footerMergeRange);
+    
+    // Generate the Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const gradePart = templateGrade.value ? `G${templateGrade.value}_` : '';
+    const sectionPart = templateSection.value ? `${templateSection.value}_` : '';
+    a.download = `NCNHS_Students_${gradePart}${sectionPart}${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Professional Template Generated',
+      text: 'Excel template with NCNHS branding has been generated successfully!',
+      timer: 3000
+    });
+  } catch (error) {
+    console.error('Template generation error:', error);
+    // Fallback to CSV if Excel generation fails
     const headers = ['firstName','lastName'];
     if (templateIncludeEmail.value) headers.push('email');
     if (templateIncludeLRN.value) headers.push('lrn');
@@ -3966,9 +4639,7 @@ const generateAndDownloadTemplate = () => {
     if (templateIncludeAddress.value) headers.push('address');
 
     let rows = [];
-    if (templateExampleType.value === 'headers') {
-      rows = [];
-    } else {
+    if (templateExampleType.value !== 'headers') {
       const count = Math.max(1, Math.min(5000, Number(templateCount.value) || 1));
       for (let i = 0; i < count; i++) {
         let firstName = '';
@@ -4017,9 +4688,8 @@ const generateAndDownloadTemplate = () => {
     a.download = `bulk_students_${gradePart}${sectionPart}${new Date().toISOString().slice(0,10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('Template generation error:', err);
-    Swal.fire({ icon: 'error', title: 'Template Generation Failed', text: 'Could not generate CSV template.' });
+    
+    Swal.fire({ icon: 'error', title: 'Excel Generation Failed', text: 'Generated CSV template instead.' });
   }
 };
 </script>
@@ -4951,17 +5621,23 @@ const generateAndDownloadTemplate = () => {
 /* Grade Section Management Styles */
 .grade-sections-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
   margin-top: 1rem;
+  padding: 0.5rem;
 }
 
 .grade-section-card {
   background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  border: 1px solid #f0f0f0;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .grade-section-card:hover {
@@ -4969,18 +5645,103 @@ const generateAndDownloadTemplate = () => {
 }
 
 .grade-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 1rem;
+  gap: 1rem;
 }
 
 .grade-section-header h3 {
   font-size: 1.1rem;
   color: #333;
+  margin: 0;
+  flex: 1;
+  min-width: 0; /* Allow text to wrap if needed */
+  word-wrap: break-word;
+}
+
+.student-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid #e9ecef;
+  font-size: 0.9rem;
+  color: #495057;
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent count from shrinking */
+  margin-left: auto; /* Push to the right */
+}
+
+.student-count .material-icons {
+  font-size: 18px;
+  color: #6c757d;
+}
+
+.count-number {
+  font-weight: 600;
+  color: #495057;
+  font-size: 1rem;
+}
+
+.count-label {
+  color: #6c757d;
+  font-size: 0.85rem;
 }
 
 .grade-section-actions {
   display: flex;
   gap: 0.5rem;
   justify-content: flex-end;
+  margin-top: auto; /* Push actions to bottom */
+}
+
+/* Responsive styles for grade sections */
+@media (max-width: 768px) {
+  .grade-sections-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 0.25rem;
+  }
+  
+  .grade-section-card {
+    padding: 1rem;
+    min-height: 100px;
+  }
+  
+  .grade-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .student-count {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .grade-sections-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .grade-section-card {
+    padding: 0.875rem;
+  }
+  
+  .grade-section-header h3 {
+    font-size: 1rem;
+  }
+  
+  .student-count {
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
 }
 
 /* Removed old add-btn styles */
@@ -5070,6 +5831,37 @@ const generateAndDownloadTemplate = () => {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+}
+
+/* Tab Count Display */
+.tab-count-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8f9fa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+  font-size: 0.9rem;
+  color: #495057;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.count-label {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.count-number {
+  font-weight: 600;
+  color: #2196F3;
+  font-size: 1rem;
+  background: rgba(33, 150, 243, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  min-width: 24px;
+  text-align: center;
 }
 
 /* Quick Add Button */
@@ -5885,6 +6677,30 @@ const generateAndDownloadTemplate = () => {
   .grade-section-form .cancel-btn {
     width: 100%;
     justify-content: center;
+  }
+  
+  .grade-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .student-count {
+    align-self: flex-end;
+    font-size: 0.85rem;
+    padding: 6px 10px;
+  }
+  
+  .student-count .material-icons {
+    font-size: 16px;
+  }
+  
+  .count-number {
+    font-size: 0.9rem;
+  }
+  
+  .count-label {
+    font-size: 0.8rem;
   }
 }
 
@@ -6879,6 +7695,19 @@ input:checked + .toggle-slider:before {
     flex-direction: column;
     gap: 0.75rem;
   }
+  
+  /* Tab count display responsive styles for tablets */
+  .tab-count-display {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    min-width: 100px;
+  }
+  
+  .count-number {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.4rem;
+    min-width: 20px;
+  }
 }
 
 /* Add more specific media queries for slim devices */
@@ -7002,6 +7831,19 @@ input:checked + .toggle-slider:before {
   /* Fix header actions for very slim devices */
   .header-actions {
     gap: 0.35rem;
+  }
+  
+  /* Tab count display responsive styles for mobile */
+  .tab-count-display {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+    min-width: 80px;
+  }
+  
+  .count-number {
+    font-size: 0.8rem;
+    padding: 0.15rem 0.35rem;
+    min-width: 18px;
   }
   
   /* Removed old add-btn styles */

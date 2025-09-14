@@ -129,20 +129,28 @@
     </div>
 
     <div v-else class="results-content">
-      <div class="filters">
-        <div class="filter-group">
-          <label for="gradeLevel">Grade Level:</label>
-          <select v-model="filters.gradeLevel" id="gradeLevel">
+      <!-- Search and Filter -->
+      <div class="table-controls">
+        <div class="search-container">
+          <span class="material-icons search-icon">search</span>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search students by name, LRN, or section..." 
+            class="search-input"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="filter-container">
+          <select v-model="filters.gradeLevel" @change="applyFilter" class="grade-filter">
             <option value="">All Grades</option>
             <option v-for="grade in uniqueGrades" :key="grade" :value="grade">
               Grade {{ grade }}
             </option>
           </select>
-        </div>
-        
-        <div class="filter-group">
-          <label for="section">Section:</label>
-          <select v-model="filters.section" id="section">
+          <select v-model="filters.section" @change="applyFilter" class="section-filter">
             <option value="">All Sections</option>
             <option v-for="section in uniqueSections" :key="section" :value="section">
               {{ section }}
@@ -151,38 +159,69 @@
         </div>
       </div>
 
-      <div class="search-container">
-        <div class="search-box">
-          <span class="material-icons search-icon">search</span>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search by student name, LRN, or section..."
-            class="search-input"
-          />
+      <!-- Summary Cards -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons">assessment</span>
+        </div>
+          <div class="summary-info">
+            <h3>{{ getAverageScore(filteredResults) }}</h3>
+            <p>Average Score</p>
+      </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons">people</span>
+      </div>
+          <div class="summary-info">
+            <h3>{{ filteredResults.length }}</h3>
+            <p>Total Students</p>
+        </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons">trending_up</span>
+          </div>
+          <div class="summary-info">
+            <h3>{{ getHighestScore(filteredResults) }}</h3>
+            <p>Highest Score</p>
+          </div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-icon">
+            <span class="material-icons">trending_down</span>
+          </div>
+          <div class="summary-info">
+            <h3>{{ getLowestScore(filteredResults) }}</h3>
+            <p>Lowest Score</p>
+          </div>
         </div>
       </div>
 
-      <div class="stats-cards">
-        <div class="stat-card">
-          <h3>Average Score</h3>
-          <p class="stat-value">{{ getAverageScore(filteredResults) }}</p>
-        </div>
-              <div class="stat-card">
-        <h3>Total Students</h3>
-        <p class="stat-value">{{ filteredResults.length }}</p>
-      </div>
-        <div class="stat-card">
-          <h3>Highest Score</h3>
-          <p class="stat-value">{{ getHighestScore(filteredResults) }}</p>
-        </div>
-        <div class="stat-card">
-          <h3>Lowest Score</h3>
-          <p class="stat-value">{{ getLowestScore(filteredResults) }}</p>
-        </div>
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'scores' }"
+          @click="activeTab = 'scores'"
+        >
+          <span class="material-icons">assessment</span>
+          Student Scores
+        </button>
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'analysis' }"
+          @click="activeTab = 'analysis'"
+        >
+          <span class="material-icons">analytics</span>
+          Item Analysis
+        </button>
       </div>
 
-      <!-- Add view toggle buttons -->
+      <!-- Scores Tab Content -->
+      <div v-if="activeTab === 'scores'" class="tab-content">
+        <!-- Add view toggle buttons for scores -->
       <div class="view-controls">
         <button 
           class="view-toggle-btn" 
@@ -280,25 +319,32 @@
       </div>
 
       <!-- Table View -->
-      <div v-else class="table-wrapper" ref="resultsTableWrapper">
-        <table>
+      <div v-else class="table-container">
+        <table class="results-table">
           <thead>
             <tr>
-              <th class="mobile-hide">Grade & Section</th>
-              <th>Student</th>
-              <th>Score</th>
-              <th class="mobile-hide">Percentage</th>
-              <th>History</th>
-              <th class="mobile-hide">Submitted At</th>
-              <th>Actions</th>
+              <th class="col-number">#</th>
+              <th class="col-name">Student</th>
+              <th class="col-grade">Grade & Section</th>
+              <th class="col-score">Score</th>
+              <th class="col-percentage">Percentage</th>
+              <th class="col-history">History</th>
+              <th class="col-submitted">Submitted At</th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="result in paginatedResults" :key="result.id">
-              <td class="mobile-hide">Grade {{ result.user.gradeLevel }}-{{ result.user.section }}</td>
-              <td>{{ result.user.firstName }} {{ result.user.lastName }}</td>
-              <td>{{ result.score }}/{{ result.total }}</td>
-              <td class="mobile-hide">
+            <tr v-for="(result, index) in paginatedResults" :key="result.id" class="result-row">
+              <td class="col-number">{{ index + 1 }}</td>
+              <td class="col-name">
+                <div class="student-name">
+                  <span class="name">{{ result.user.firstName }} {{ result.user.lastName }}</span>
+                  <span class="email">{{ result.user.email || 'N/A' }}</span>
+                </div>
+              </td>
+              <td class="col-grade">Grade {{ result.user.gradeLevel }}-{{ result.user.section }}</td>
+              <td class="col-score">{{ result.score }}/{{ result.total }}</td>
+              <td class="col-percentage">
                 <span 
                   class="percentage-badge"
                   :class="{
@@ -311,10 +357,8 @@
                   {{ result.percentage }}%
                 </span>
               </td>
-              <td>
-                <!-- Improved attempt dropdown for table view -->
+              <td class="col-history">
                 <div class="attempt-controls-table">
-                  <!-- Only keep the restore history button -->
                   <button 
                     v-if="result.exam && result.exam.attempts && result.exam.attempts.some(a => a.records && a.records.length)"
                     @click.stop="showAttemptRecordsModal(result.userId)"
@@ -324,14 +368,14 @@
                     <span class="material-icons">history</span>
                     <span class="restore-text">History</span>
                   </button>
-                  <span v-else>-</span>
+                  <span v-else class="no-history">-</span>
                 </div>
                 <div class="attempt-date" v-if="result.submittedAt">
                   {{ formatShortDate(result.submittedAt) }}
                 </div>
                               </td>
-                <td class="mobile-hide">{{ formatDate(result.submittedAt) }}</td>
-                <td>
+              <td class="col-submitted">{{ formatDate(result.submittedAt) }}</td>
+              <td class="col-actions">
                   <div class="action-buttons">
                     <button 
                       class="view-answers-btn"
@@ -455,42 +499,80 @@
           </div>
         </template>
       </div>
+      </div>
 
-      <div v-if="!loading && !error" class="item-analysis">
+      <!-- Analysis Tab Content -->
+      <div v-if="activeTab === 'analysis'" class="tab-content">
+        <div v-if="!loading && !error" class="item-analysis">
         <h2>Item Analysis</h2>
-        <div class="analysis-filters">
-          <div class="filter-group">
-            <label for="difficultyLevel">Difficulty Level:</label>
-            <select v-model="analysisFilters.difficulty" id="difficultyLevel">
-              <option value="">All Levels</option>
+        
+        <!-- Summary Cards for Analysis -->
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="summary-icon">
+              <span class="material-icons">quiz</span>
+            </div>
+            <div class="summary-info">
+              <h3>{{ itemAnalysis.length }}</h3>
+              <p>Total Questions</p>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">
+              <span class="material-icons">trending_up</span>
+            </div>
+            <div class="summary-info">
+              <h3>{{ getAverageDifficulty() }}%</h3>
+              <p>Average Success Rate</p>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">
+              <span class="material-icons">check_circle</span>
+            </div>
+            <div class="summary-info">
+              <h3>{{ getEasyQuestionsCount() }}</h3>
+              <p>Easy Questions</p>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon">
+              <span class="material-icons">warning</span>
+            </div>
+            <div class="summary-info">
+              <h3>{{ getHardQuestionsCount() }}</h3>
+              <p>Hard Questions</p>
+            </div>
+          </div>
+          </div>
+
+        <!-- Search and Filter -->
+        <div class="table-controls">
+          <div class="search-container">
+              <span class="material-icons search-icon">search</span>
+              <input 
+                v-model="analysisSearchQuery" 
+              type="text" 
+              placeholder="Search by question #, text, answer, or difficulty..." 
+                class="search-input"
+              />
+            <button v-if="analysisSearchQuery" @click="clearAnalysisSearch" class="clear-search-btn">
+              <i class="fas fa-times"></i>
+            </button>
+            </div>
+          <div class="filter-container">
+            <select v-model="analysisFilters.difficulty" @change="applyAnalysisFilter" class="difficulty-filter">
+              <option value="">All Difficulty Levels</option>
               <option value="easy">Easy (70% or higher)</option>
               <option value="medium">Medium (40-69%)</option>
               <option value="hard">Hard (below 40%)</option>
             </select>
-          </div>
-          
-          <div class="filter-group">
-            <label for="successRate">Success Rate:</label>
-            <select v-model="analysisFilters.successRate" id="successRate">
-              <option value="">All</option>
+            <select v-model="analysisFilters.successRate" @change="applyAnalysisFilter" class="success-rate-filter">
+              <option value="">All Success Rates</option>
               <option value="high">High (80% or higher)</option>
               <option value="moderate">Moderate (50-79%)</option>
               <option value="low">Low (below 50%)</option>
             </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="analysisSearch">Search:</label>
-            <div class="search-box">
-              <span class="material-icons search-icon">search</span>
-              <input 
-                type="text" 
-                v-model="analysisSearchQuery" 
-                placeholder="Search by question #, text, answer, scores, or difficulty..."
-                class="search-input"
-                id="analysisSearch"
-              />
-            </div>
           </div>
         </div>
 
@@ -570,27 +652,29 @@
         </div>
 
         <!-- Table View for Analysis -->
-        <div v-else class="table-wrapper" ref="analysisTableWrapper">
-          <table>
+        <div v-else class="table-container">
+          <table class="analysis-table">
             <thead>
               <tr>
-                <th>#</th>
-                <th>Question</th>
-                <th>Correct Answer</th>
-                <th>Correct Responses</th>
-                <th>Incorrect Responses</th>
-                <th>Difficulty</th>
-                <th>Success Rate</th>
+                <th class="col-number">#</th>
+                <th class="col-question">Question</th>
+                <th class="col-answer">Correct Answer</th>
+                <th class="col-correct">Correct</th>
+                <th class="col-incorrect">Incorrect</th>
+                <th class="col-difficulty">Difficulty</th>
+                <th class="col-success">Success Rate</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in paginatedAnalysis" :key="item.questionId">
-                <td>{{ item.questionNumber }}</td>
-                <td>{{ item.questionText }}</td>
-                <td>{{ item.correctAnswer }}</td>
-                <td>{{ item.correctCount }}/{{ item.totalStudents }}</td>
-                <td>{{ item.incorrectCount }}/{{ item.totalStudents }}</td>
-                <td>
+              <tr v-for="item in paginatedAnalysis" :key="item.questionId" class="analysis-row">
+                <td class="col-number">{{ item.questionNumber }}</td>
+                <td class="col-question">
+                  <div class="question-text">{{ item.questionText }}</div>
+                </td>
+                <td class="col-answer">{{ item.correctAnswer }}</td>
+                <td class="col-correct">{{ item.correctCount }}/{{ item.totalStudents }}</td>
+                <td class="col-incorrect">{{ item.incorrectCount }}/{{ item.totalStudents }}</td>
+                <td class="col-difficulty">
                   <span 
                     class="difficulty-badge"
                     :class="getDifficultyClass(item.percentageCorrect)"
@@ -598,7 +682,7 @@
                     {{ getDifficultyLabel(item.percentageCorrect) }}
                   </span>
                 </td>
-                <td>
+                <td class="col-success">
                   <div class="progress-bar">
                     <div 
                       class="progress" 
@@ -889,6 +973,7 @@
               {{ isBulkArchiving ? 'Archiving...' : 'Archive All Results' }}
             </button>
           </div>
+          </div>
         </div>
       </div>
     </div>
@@ -903,42 +988,45 @@ import {
   fetchExamAnalysis, 
   restoreAttemptScore,
   archiveExamResult,
-  archiveAllExamResults
+  archiveAllExamResults,
+  getUserDetails
 } from '../../services/authService';
 /* eslint-disable no-unused-vars */
 // Import libraries for export functionality
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+// Import logo
+import logoImage from '@/assets/logo.png';
 
 export default {
   name: 'ExamResults',
   
   setup() {
-    const route = useRoute();
-    const router = useRouter();
-    const results = ref([]);
-    const loading = ref(true);
-    const error = ref(null);
-    const filters = ref({
-      gradeLevel: '',
-      section: ''
-    });
+const route = useRoute();
+const router = useRouter();
+const results = ref([]);
+const loading = ref(true);
+const error = ref(null);
+const filters = ref({
+  gradeLevel: '',
+  section: ''
+});
     const itemAnalysis = ref([]);
     const analysisFilters = ref({
       difficulty: '',
       successRate: ''
     });
 
-    // Add export-related states
-    const showExportOptions = ref(false);
-    const exportOptions = ref({
+// Add export-related states
+const showExportOptions = ref(false);
+const exportOptions = ref({
       section: 'results', // 'results' or 'analysis'
-      fields: {
-        studentName: true,
-        gradeSection: false,
-        score: true,
-        percentage: true,
+  fields: {
+    studentName: true,
+    gradeSection: false,
+    score: true,
+    percentage: true,
         submittedAt: false,
         // Analysis fields
         questionNumber: true,
@@ -948,32 +1036,34 @@ export default {
         incorrectCount: false,
         difficulty: true,
         successRate: true
-      }
-    });
+  }
+});
 
-    const resultsTableWrapper = ref(null);
+const resultsTableWrapper = ref(null);
     const analysisTableWrapper = ref(null);
 
-    const searchQuery = ref('');
+const searchQuery = ref('');
     const analysisSearchQuery = ref('');
 
-    const viewMode = ref('table');
-    const analysisViewMode = ref('table');
+    const activeTab = ref('scores');
+    
+    // Set default view mode based on screen size
+    const isMobile = ref(window.innerWidth <= 768);
+    const viewMode = ref(isMobile.value ? 'grid' : 'table');
+    const analysisViewMode = ref(isMobile.value ? 'grid' : 'table');
 
-    const resultsPage = ref(1);
-    const resultsPageSize = ref(10);
+const resultsPage = ref(1);
+const resultsPageSize = ref(10);
 
     const analysisPage = ref(1);
     const analysisPageSize = ref(10);
 
-    const showPagination = ref(true);
+const showPagination = ref(true);
     const showAnalysisPagination = ref(true);
 
-    const isMobile = ref(false);
-
-    // Add state for tracking attempts
-    const processedResults = ref([]);
-    const allAttempts = ref({}); // userId -> array of attempts
+// Add state for tracking attempts
+const processedResults = ref([]);
+const allAttempts = ref({}); // userId -> array of attempts
 
     // Add attempt records modal state
     const showAttemptModal = ref(false);
@@ -1400,6 +1490,36 @@ export default {
       return new Date(date).toLocaleString();
     };
 
+    const clearSearch = () => {
+      searchQuery.value = '';
+    };
+
+    const applyFilter = () => {
+      // Filter is applied automatically through computed property
+    };
+
+    const clearAnalysisSearch = () => {
+      analysisSearchQuery.value = '';
+    };
+
+    const applyAnalysisFilter = () => {
+      // Filter is applied automatically through computed property
+    };
+
+    const getAverageDifficulty = () => {
+      if (!itemAnalysis.value.length) return 0;
+      const total = itemAnalysis.value.reduce((sum, item) => sum + item.percentageCorrect, 0);
+      return Math.round(total / itemAnalysis.value.length);
+    };
+
+    const getEasyQuestionsCount = () => {
+      return itemAnalysis.value.filter(item => item.percentageCorrect >= 70).length;
+    };
+
+    const getHardQuestionsCount = () => {
+      return itemAnalysis.value.filter(item => item.percentageCorrect < 40).length;
+    };
+
     const formatTimeSpent = (timeInSeconds) => {
       if (!timeInSeconds) return '--';
       
@@ -1565,6 +1685,20 @@ export default {
       });
     });
 
+    // Add window resize listener to update view mode based on screen size
+    const handleResize = () => {
+      isMobile.value = window.innerWidth <= 768;
+      if (isMobile.value) {
+        viewMode.value = 'grid';
+        analysisViewMode.value = 'grid';
+      } else {
+        viewMode.value = 'table';
+        analysisViewMode.value = 'table';
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+
     const viewStudentAnswers = (result) => {
       router.push({
         name: 'StudentAnswerDetails',
@@ -1695,8 +1829,131 @@ export default {
       }
     };
 
+    // Convert logo to base64
+    const getLogoBase64 = async () => {
+      try {
+        // Convert the imported logo to base64
+        const response = await fetch(logoImage);
+        if (response.ok) {
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (error) {
+        console.log('Could not load logo, using fallback');
+      }
+      // Fallback to placeholder
+      return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+    };
+
+    // Get current teacher's name
+    const getCurrentTeacherName = async () => {
+      try {
+        const userId = localStorage.getItem('userId');
+        if (!userId) return 'Subject Teacher';
+        
+        const userDetails = await getUserDetails(userId);
+        if (userDetails && userDetails.firstName && userDetails.lastName) {
+          return `${userDetails.firstName} ${userDetails.lastName}`;
+        }
+        return 'Subject Teacher';
+      } catch (error) {
+        console.error('Failed to get teacher name:', error);
+        return 'Subject Teacher';
+      }
+    };
+
+    // Add school header with logo
+    const addSchoolHeader = async (doc, yPosition = 10) => {
+      // Get page width for centering
+      const pageWidth = doc.internal.pageSize.getWidth();
+      
+      // School logo - positioned on the left
+      try {
+        const logoData = await getLogoBase64();
+        doc.addImage(logoData, 'PNG', 14, yPosition, 30, 30);
+      } catch (e) {
+        // Fallback if logo fails to load
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text('NCNHS', 14, yPosition + 15);
+      }
+      
+      // School information - positioned to the right of logo
+      const textStartX = 50; // Start text after logo
+      
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('Republic of the Philippines', textStartX, yPosition + 4);
+      doc.text('Department of Education', textStartX, yPosition + 8);
+      doc.text('Region III - Central Luzon', textStartX, yPosition + 12);
+      doc.text('Schools Division of Olongapo City', textStartX, yPosition + 16);
+      
+      // School name
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('NEW CABALAN NATIONAL HIGH SCHOOL', textStartX, yPosition + 22);
+      
+      // Address
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('New Cabalan, Olongapo City', textStartX, yPosition + 28);
+      
+      // Line separator - full width
+      doc.setLineWidth(0.5);
+      doc.line(14, yPosition + 35, pageWidth - 14, yPosition + 35);
+      
+      return yPosition + 45;
+    };
+
+    // Add exam title section
+    const addExamTitle = async (doc, yPosition) => {
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const title = exportOptions.value.section === 'results' ? 'EXAMINATION RESULTS' : 'ITEM ANALYSIS';
+      const examTitle = route.query.title || 'EXAMINATION';
+      
+      // Exam title - centered
+      doc.setFontSize(16);
+      doc.setFont(undefined, 'bold');
+      doc.text(examTitle, pageWidth/2, yPosition, { align: 'center' });
+      
+      // Report type - centered
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'normal');
+      doc.text(title, pageWidth/2, yPosition + 8, { align: 'center' });
+      
+      // Add exam details in a table format
+      const testCode = route.query.testCode || 'N/A';
+      const currentDate = new Date().toLocaleDateString();
+      const currentTime = new Date().toLocaleTimeString();
+      const teacherName = await getCurrentTeacherName();
+      
+      // Create a simple table for metadata
+      const metadata = [
+        ['Test Code:', testCode],
+        ['Generated:', `${currentDate} at ${currentTime}`],
+        ['Prepared by:', teacherName]
+      ];
+      
+      // Draw metadata table
+      let currentY = yPosition + 15;
+      metadata.forEach(([label, value]) => {
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text(label, 14, currentY);
+        doc.setFont(undefined, 'normal');
+        doc.text(value, 14 + 30, currentY);
+        currentY += 6;
+      });
+      
+      return currentY + 10;
+    };
+
     // Export to PDF
-    const exportToPDF = () => {
+    const exportToPDF = async () => {
       try {
         const { headers, data } = getExportData();
         
@@ -1708,20 +1965,11 @@ export default {
         // Create PDF document
         const doc = new jsPDF();
         
-        // Add title
-        const title = exportOptions.value.section === 'results' ? 'Exam Results' : 'Item Analysis';
-        const examTitle = route.query.title || 'Exam';
+        // Add school header
+        let currentY = await addSchoolHeader(doc);
         
-        doc.setFontSize(16);
-        doc.text(examTitle, 14, 15);
-        
-        doc.setFontSize(12);
-        doc.text(title, 14, 25);
-        
-        // Add date
-        const currentDate = new Date().toLocaleDateString();
-        doc.setFontSize(10);
-        doc.text(`Generated: ${currentDate}`, 14, 35);
+        // Add exam title
+        currentY = await addExamTitle(doc, currentY);
         
         // Extract values for autoTable
         const tableData = data.map(item => Object.values(item));
@@ -1730,7 +1978,7 @@ export default {
         autoTable(doc, {
           head: [headers],
           body: tableData,
-          startY: 40,
+          startY: currentY,
           theme: 'grid',
           styles: {
             fontSize: 8,
@@ -1738,7 +1986,7 @@ export default {
             lineColor: [200, 200, 200]
           },
           headStyles: {
-            fillColor: [41, 128, 185],
+            fillColor: [21, 156, 80], // Green color to match school theme
             textColor: 255,
             fontStyle: 'bold'
           },
@@ -1746,6 +1994,51 @@ export default {
             fillColor: [240, 240, 240]
           }
         });
+        
+        // Add teacher signature section
+        const addTeacherSignature = async (doc, finalY) => {
+          const signatureY = finalY + 20;
+          const teacherName = await getCurrentTeacherName();
+          
+          // Teacher signature section
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('Prepared by:', 14, signatureY);
+          
+          // Signature line
+          doc.setLineWidth(0.5);
+          doc.line(14, signatureY + 15, 80, signatureY + 15);
+          
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'normal');
+          doc.text(teacherName, 14, signatureY + 20);
+          doc.text('Subject Teacher', 14, signatureY + 25);
+          
+          // Approved by section
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('Approved by:', 120, signatureY);
+          
+          // Signature line
+          doc.line(120, signatureY + 15, 186, signatureY + 15);
+          
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'normal');
+          doc.text('Principal\'s Name', 120, signatureY + 20);
+          doc.text('School Principal', 120, signatureY + 25);
+          
+          // Watermark
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'italic');
+          doc.setTextColor(100, 100, 100);
+          doc.text('*** END OF REPORT ***', 14, signatureY + 40);
+          
+          return signatureY + 50;
+        };
+        
+        // Get the final Y position after table
+        const finalY = doc.lastAutoTable.finalY || currentY + 100;
+        await addTeacherSignature(doc, finalY);
         
         // Generate PDF filename
         const fileName = `Exam_${exportOptions.value.section === 'results' ? 'Results' : 'Analysis'}_${new Date().toISOString().slice(0, 10)}.pdf`;
@@ -1762,7 +2055,7 @@ export default {
     };
 
     // Print data
-    const printData = () => {
+    const printData = async () => {
       try {
         const { headers, data } = getExportData();
         
@@ -1770,6 +2063,9 @@ export default {
           alert('No data to print');
           return;
         }
+        
+        // Get teacher name
+        const teacherName = await getCurrentTeacherName();
         
         // Create a separate print-only div
         const printFrame = document.createElement('iframe');
@@ -1791,19 +2087,61 @@ export default {
               <title>${examTitle} - ${title}</title>
               <style>
                 body { font-family: Arial, sans-serif; margin: 20px; }
-                h1 { color: #2980b9; font-size: 20px; margin-bottom: 5px; }
-                h2 { color: #333; font-size: 16px; margin-top: 0; }
+                .school-header { margin-bottom: 20px; border-bottom: 2px solid #159750; padding-bottom: 15px; }
+                .logo-container { margin-right: 20px; flex-shrink: 0; }
+                .school-logo { width: 50px; height: 50px; object-fit: contain; }
+                .school-info { text-align: left; }
+                .republic, .department, .region, .division { font-size: 10px; margin: 0; line-height: 1.2; }
+                .school-name { font-size: 16px; font-weight: bold; margin: 5px 0; color: #159750; }
+                .address { font-size: 10px; margin: 0; }
+                .exam-title { font-size: 18px; font-weight: bold; margin: 15px 0 5px 0; color: #159750; text-align: center; }
+                .exam-subtitle { font-size: 14px; margin: 0 0 15px 0; text-align: center; }
+                .exam-details { margin-bottom: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; }
+                .detail-item { margin: 5px 0; font-size: 12px; flex: 1; min-width: 200px; }
+                .detail-label { font-weight: bold; }
                 .print-date { color: #555; font-size: 12px; margin-bottom: 20px; }
                 table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                th { background-color: #2980b9; color: white; font-weight: bold; }
+                th { background-color: #159750; color: white; font-weight: bold; }
                 th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
                 tr:nth-child(even) { background-color: #f2f2f2; }
+                .signature-section { margin-top: 30px; display: flex; justify-content: space-between; }
+                .signature-box { width: 45%; }
+                .signature-line { border-bottom: 1px solid #000; margin: 10px 0 5px 0; }
+                .watermark { text-align: center; margin-top: 30px; font-style: italic; color: #999; }
               </style>
             </head>
             <body>
-              <h1>${examTitle}</h1>
-              <h2>${title}</h2>
-              <div class="print-date">Generated: ${new Date().toLocaleDateString()}</div>
+              <div class="school-header">
+                <div style="display: flex; align-items: flex-start; justify-content: flex-start;">
+                  <div class="logo-container" style="margin-right: 20px; flex-shrink: 0;">
+                    <img src="${logoImage}" alt="School Logo" class="school-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div style="display: none; width: 50px; height: 50px; background: #159750; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;">NCNHS</div>
+                  </div>
+                  <div class="school-info" style="text-align: left;">
+                    <div class="republic">Republic of the Philippines</div>
+                    <div class="department">Department of Education</div>
+                    <div class="region">Region III - Central Luzon</div>
+                    <div class="division">Schools Division of Olongapo City</div>
+                    <div class="school-name">NEW CABALAN NATIONAL HIGH SCHOOL</div>
+                    <div class="address">New Cabalan, Olongapo City</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="exam-title">${examTitle}</div>
+              <div class="exam-subtitle">${title}</div>
+              
+              <div class="exam-details">
+                <div class="detail-item">
+                  <span class="detail-label">Test Code:</span> ${route.query.testCode || 'N/A'}
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Generated:</span> ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">Prepared by:</span> ${teacherName}
+                </div>
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -1818,6 +2156,23 @@ export default {
                   `).join('')}
                 </tbody>
               </table>
+              
+              <div class="signature-section">
+                <div class="signature-box">
+                  <div><strong>Prepared by:</strong></div>
+                  <div class="signature-line"></div>
+                  <div>${teacherName}</div>
+                  <div>Subject Teacher</div>
+                </div>
+                <div class="signature-box">
+                  <div><strong>Approved by:</strong></div>
+                  <div class="signature-line"></div>
+                  <div>Principal's Name</div>
+                  <div>School Principal</div>
+                </div>
+              </div>
+              
+              <div class="watermark">*** END OF REPORT ***</div>
             </body>
           </html>
         `);
@@ -1851,6 +2206,7 @@ export default {
 
     onUnmounted(() => {
       window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', handleResize);
       document.removeEventListener('click', closeExportOptionsOnClickOutside);
     });
 
@@ -2175,6 +2531,7 @@ export default {
       getHighestScore,
       getLowestScore,
       getTotalItems,
+      activeTab,
       viewMode,
       analysisViewMode,
       resultsPage,
@@ -2229,7 +2586,15 @@ export default {
       isBulkArchiving,
       // Add archive toggle functionality
       archiveEnabled,
-      toggleArchiveMode
+      toggleArchiveMode,
+      // Add new analysis summary methods
+      clearSearch,
+      applyFilter,
+      clearAnalysisSearch,
+      applyAnalysisFilter,
+      getAverageDifficulty,
+      getEasyQuestionsCount,
+      getHardQuestionsCount
     };
   }
 };
@@ -2594,14 +2959,701 @@ export default {
   margin-bottom: 30px;
 }
 
-.stat-card {
+/* Tab Navigation Styles */
+.tab-navigation {
+  display: flex;
   background: white;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  text-align: center;
-  position: relative;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
   overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 20px;
+  background: white;
+  border: none;
+  color: #666;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.tab-btn:hover {
+  background: #f8f9fa;
+  color: #333;
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  font-weight: 600;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tab-btn .material-icons {
+  font-size: 20px;
+}
+
+.tab-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Mobile responsive styles for tabs */
+@media (max-width: 768px) {
+  .tab-navigation {
+    margin: 0 -10px 20px -10px;
+    border-radius: 0;
+  }
+  
+  .tab-btn {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+  }
+  
+  .tab-btn .material-icons {
+    font-size: 18px;
+  }
+  
+  /* Force card view on mobile for scores tab */
+  .tab-content .view-controls {
+    display: none !important;
+  }
+  
+  .tab-content .results-grid {
+    display: grid !important;
+  }
+  
+  .tab-content .table-wrapper {
+    display: none !important;
+  }
+}
+
+/* Desktop styles - force table view */
+@media (min-width: 769px) {
+  .tab-content .results-grid {
+    display: none !important;
+  }
+  
+  .tab-content .table-wrapper {
+    display: block !important;
+  }
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.summary-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-2px);
+}
+
+.summary-icon {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.summary-icon .material-icons {
+  font-size: 1.5rem;
+}
+
+.summary-info h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+}
+
+.summary-info p {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Table Controls */
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  font-size: 1.2rem;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 45px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grade-filter,
+.section-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  cursor: pointer;
+}
+
+.grade-filter:focus,
+.section-filter:focus,
+.difficulty-filter:focus,
+.success-rate-filter:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.difficulty-filter,
+.success-rate-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 140px;
+  cursor: pointer;
+}
+
+/* Analysis Table Styles */
+.analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.analysis-table th {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analysis-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.analysis-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.analysis-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.analysis-row:hover {
+  background: #f8f9fa;
+}
+
+/* Analysis Column Styles */
+.col-question {
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.question-text {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #333;
+  word-wrap: break-word;
+}
+
+.col-answer,
+.col-correct,
+.col-incorrect,
+.col-difficulty,
+.col-success {
+  text-align: center;
+  font-weight: 500;
+}
+
+.col-number {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+}
+
+/* Difficulty Badge Styles */
+.difficulty-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.difficulty-badge.easy {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.difficulty-badge.medium {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.difficulty-badge.hard {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .summary-cards {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .summary-card {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .summary-icon {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .summary-icon .material-icons {
+    font-size: 1.3rem;
+  }
+  
+  .summary-info h3 {
+    font-size: 1.6rem;
+  }
+  
+  .summary-info p {
+    font-size: 0.85rem;
+  }
+  
+  .table-controls {
+    margin-bottom: 16px;
+    gap: 16px;
+  }
+  
+  .search-input {
+    padding: 10px 14px 10px 40px;
+    font-size: 0.9rem;
+  }
+  
+  .grade-filter,
+  .section-filter,
+  .difficulty-filter,
+  .success-rate-filter {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    min-width: 100px;
+  }
+  
+  .results-table th,
+  .analysis-table th {
+    padding: 14px 10px;
+    font-size: 0.85rem;
+  }
+  
+  .results-table td,
+  .analysis-table td {
+    padding: 14px 10px;
+  }
+  
+  .student-name .name {
+    font-size: 0.95rem;
+  }
+  
+  .student-name .email {
+    font-size: 0.8rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .summary-cards {
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  
+  .summary-card {
+    padding: 14px;
+    gap: 10px;
+  }
+  
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .summary-icon .material-icons {
+    font-size: 1.2rem;
+  }
+  
+  .summary-info h3 {
+    font-size: 1.4rem;
+  }
+  
+  .summary-info p {
+    font-size: 0.8rem;
+  }
+  
+  .table-controls {
+    margin-bottom: 14px;
+    gap: 14px;
+  }
+  
+  .search-input {
+    padding: 9px 12px 9px 38px;
+    font-size: 0.85rem;
+  }
+  
+  .grade-filter,
+  .section-filter,
+  .difficulty-filter,
+  .success-rate-filter {
+    padding: 9px 12px;
+    font-size: 0.85rem;
+    min-width: 90px;
+  }
+  
+  .results-table th,
+  .analysis-table th {
+    padding: 12px 8px;
+    font-size: 0.8rem;
+  }
+  
+  .results-table td,
+  .analysis-table td {
+    padding: 12px 8px;
+  }
+  
+  .student-name .name {
+    font-size: 0.9rem;
+  }
+  
+  .student-name .email {
+    font-size: 0.75rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .summary-cards {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  
+  .summary-card {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .summary-icon {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .summary-icon .material-icons {
+    font-size: 1.1rem;
+  }
+  
+  .summary-info h3 {
+    font-size: 1.2rem;
+  }
+  
+  .summary-info p {
+    font-size: 0.75rem;
+  }
+  
+  .table-controls {
+    margin-bottom: 12px;
+    gap: 12px;
+  }
+  
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.8rem;
+  }
+  
+  .grade-filter,
+  .section-filter,
+  .difficulty-filter,
+  .success-rate-filter {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    min-width: 80px;
+  }
+  
+  .results-table th,
+  .analysis-table th {
+    padding: 10px 6px;
+    font-size: 0.75rem;
+  }
+  
+  .results-table td,
+  .analysis-table td {
+    padding: 10px 6px;
+  }
+  
+  .student-name .name {
+    font-size: 0.85rem;
+  }
+  
+  .student-name .email {
+    font-size: 0.7rem;
+  }
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .summary-card {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .summary-icon .material-icons {
+    font-size: 1.2rem;
+  }
+
+  .summary-info h3 {
+    font-size: 1.4rem;
+  }
+
+  .summary-info p {
+    font-size: 0.8rem;
+  }
+
+  .table-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .search-container {
+    max-width: none;
+  }
+
+  .search-input {
+    padding: 10px 12px 10px 40px;
+    font-size: 0.9rem;
+  }
+
+  .grade-filter,
+  .section-filter,
+  .difficulty-filter,
+  .success-rate-filter {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    min-width: 120px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+
+  .results-table,
+  .analysis-table {
+    min-width: 600px;
+  }
+
+  .results-table th,
+  .results-table td,
+  .analysis-table th,
+  .analysis-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+
+  .col-name {
+    min-width: 150px;
+  }
+
+  .student-name .name {
+    font-size: 0.9rem;
+  }
+
+  .student-name .email {
+    font-size: 0.75rem;
+  }
+}
+
+/* Very small screens */
+@media (max-width: 480px) {
+  .summary-cards {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .summary-icon {
+    width: 35px;
+    height: 35px;
+  }
+
+  .summary-icon .material-icons {
+    font-size: 1.1rem;
+  }
+
+  .summary-info h3 {
+    font-size: 1.2rem;
+  }
+
+  .summary-info p {
+    font-size: 0.75rem;
+  }
+
+  .search-input {
+    padding: 8px 10px 8px 35px;
+    font-size: 0.85rem;
+  }
+
+  .grade-filter,
+  .section-filter,
+  .difficulty-filter,
+  .success-rate-filter {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    min-width: 100px;
+  }
+
+  .results-table,
+  .analysis-table {
+    min-width: 500px;
+  }
+
+  .results-table th,
+  .results-table td,
+  .analysis-table th,
+  .analysis-table td {
+    padding: 10px 6px;
+    font-size: 0.8rem;
+  }
+
+  .student-name .name {
+    font-size: 0.85rem;
+  }
+
+  .student-name .email {
+    font-size: 0.7rem;
+  }
 }
 
 .stat-card:nth-child(1)::before {
@@ -2626,31 +3678,112 @@ export default {
   margin: 10px 0 0;
 }
 
-.results-table {
+/* Table Container */
+.table-container {
   background: white;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  border-radius: 12px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
-table {
+.results-table {
   width: 100%;
-  min-width: 800px;
   border-collapse: collapse;
 }
 
-th, td {
-  padding: 15px;
+.results-table th {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 16px 12px;
   text-align: left;
-  border-bottom: 1px solid #eee;
-  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.results-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.results-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.results-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.result-row:hover {
+  background: #f8f9fa;
+}
+
+/* Column Styles */
+.col-number {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+}
+
+.col-name {
+  min-width: 200px;
+}
+
+.student-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-name .name {
+  font-weight: 600;
+  color: #333;
+}
+
+.student-name .email {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.col-grade,
+.col-score,
+.col-percentage,
+.col-history,
+.col-submitted,
+.col-actions {
+  text-align: center;
+  font-weight: 500;
+}
+
+.no-history {
+  color: #999;
+  font-style: italic;
 }
 
 th {
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: 10;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+th:hover {
+  background: linear-gradient(135deg, #0aa844 0%, #138a42 100%);
+}
+
+tr:hover {
+  background: #f8fffe;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(11, 204, 78, 0.1);
 }
 
 th:nth-child(1), td:nth-child(1) { width: 5%; }

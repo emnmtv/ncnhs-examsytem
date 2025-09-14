@@ -22,9 +22,29 @@
           class="uppercase-input"
         />
       </div>
+      <div class="view-controls">
+        <div class="view-toggle">
+          <button 
+            @click="viewMode = 'table'" 
+            :class="{ active: viewMode === 'table' }"
+            class="view-btn"
+            title="Table View"
+          >
+            <span class="material-icons">table_view</span>
+          </button>
+          <button 
+            @click="viewMode = 'cards'" 
+            :class="{ active: viewMode === 'cards' }"
+            class="view-btn"
+            title="Card View"
+          >
+            <span class="material-icons">grid_view</span>
+          </button>
+        </div>
       <button @click="openSubjectModal()" class="add-btn">
         <span class="material-icons">add</span> Add Subject
       </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -33,8 +53,81 @@
       <p>Loading subjects...</p>
     </div>
 
-    <!-- Subjects List -->
-    <div class="subjects-grid" v-if="!loading">
+    <!-- Subjects Table View -->
+    <div v-if="!loading && viewMode === 'table'" class="table-container">
+      <table class="subjects-table">
+        <thead>
+          <tr>
+            <th class="col-name">Subject Name</th>
+            <th class="col-code">Code</th>
+            <th class="col-description">Description</th>
+            <th class="col-teachers">Teachers</th>
+            <th class="col-sections">Sections</th>
+            <th class="col-students">Students</th>
+            <th class="col-schedule">Schedule</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="subject in filteredSubjects" :key="subject.id" class="subject-row">
+            <td class="col-name">
+              <div class="subject-name">
+                <span class="name">{{ subject.name }}</span>
+              </div>
+            </td>
+            <td class="col-code">{{ subject.code }}</td>
+            <td class="col-description">
+              <span class="description-text" :title="subject.description">
+                {{ subject.description || 'No description' }}
+              </span>
+            </td>
+            <td class="col-teachers">
+              <div class="count-badge">
+                <span class="material-icons">person</span>
+                {{ subject.teachers?.length || 0 }}
+              </div>
+            </td>
+            <td class="col-sections">
+              <div class="count-badge">
+                <span class="material-icons">class</span>
+                {{ subject.sections?.length || 0 }}
+              </div>
+            </td>
+            <td class="col-students">
+              <div class="count-badge">
+                <span class="material-icons">people</span>
+                {{ getTotalStudentCount(subject) }}
+              </div>
+            </td>
+            <td class="col-schedule">
+              <div v-if="subject.scheduleType" class="schedule-info">
+                <span class="schedule-type-badge" :class="subject.scheduleType.toLowerCase()">
+                  {{ formatScheduleType(subject.scheduleType) }}
+                </span>
+                <div class="schedule-time">{{ subject.startTime }} - {{ subject.endTime }}</div>
+              </div>
+              <span v-else class="no-schedule">No schedule</span>
+            </td>
+            <td class="col-actions">
+              <div class="action-buttons">
+                <button @click="openMetadataModal(subject)" class="action-btn info-btn" title="View Details">
+                  <span class="material-icons">info</span>
+                </button>
+                <button @click="openEditModal(subject)" class="action-btn edit-btn" title="Edit">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button @click="deleteSubject(subject.id)" class="action-btn delete-btn" title="Delete">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Subjects Cards View -->
+    <div class="subjects-grid" v-if="!loading && viewMode === 'cards'">
       <div v-for="subject in filteredSubjects" :key="subject.id" class="subject-card">
         <div class="subject-header">
           <div class="texture-layer"></div>
@@ -590,6 +683,149 @@
         </form>
       </div>
     </div>
+
+    <!-- Subject Metadata Modal -->
+    <div v-if="showMetadataModal" class="modal-overlay" @click="showMetadataModal = false">
+      <div class="modal-content landscape-modal" @click.stop>
+        <div class="modal-header">
+          <h2>{{ selectedSubject?.name }} - Details</h2>
+          <button class="close-btn" @click="showMetadataModal = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        
+        <div class="metadata-content landscape-content">
+          <div class="metadata-grid-layout">
+            <!-- Left Column -->
+            <div class="metadata-column">
+              <!-- Basic Information -->
+              <div class="metadata-section">
+                <h3>Basic Information</h3>
+                <div class="metadata-grid">
+                  <div class="metadata-item">
+                    <label>Subject Name</label>
+                    <span>{{ selectedSubject?.name }}</span>
+                  </div>
+                  <div class="metadata-item">
+                    <label>Subject Code</label>
+                    <span>{{ selectedSubject?.code }}</span>
+                  </div>
+                  <div class="metadata-item full-width">
+                    <label>Description</label>
+                    <span>{{ selectedSubject?.description || 'No description provided' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Teachers Section -->
+              <div class="metadata-section">
+                <h3>Assigned Teachers</h3>
+                <div v-if="selectedSubject?.teachers?.length > 0" class="teachers-list">
+                  <div v-for="teacher in selectedSubject.teachers" :key="teacher.teacherId" class="teacher-item">
+                    <div class="teacher-info">
+                      <span class="teacher-name">{{ teacher.user.firstName }} {{ teacher.user.lastName }}</span>
+                      <span class="teacher-email">{{ teacher.user.email }}</span>
+                    </div>
+                    <button 
+                      @click="removeTeacher(selectedSubject.id, teacher.teacherId)" 
+                      class="remove-btn"
+                      title="Remove Teacher"
+                    >
+                      <span class="material-icons">close</span>
+                    </button>
+                  </div>
+                </div>
+                <div v-else class="empty-list">No teachers assigned</div>
+                <button @click="openAssignTeacherModal(selectedSubject)" class="assign-btn">
+                  <span class="material-icons">add</span>
+                  Assign Teacher
+                </button>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="metadata-column">
+              <!-- Sections Section -->
+              <div class="metadata-section">
+                <h3>Assigned Sections</h3>
+                <div v-if="selectedSubject?.sections?.length > 0" class="sections-list">
+                  <div v-for="section in selectedSubject.sections" :key="section.id" class="section-item">
+                    <span>Grade {{ section.grade }} - {{ section.section }}</span>
+                    <button 
+                      @click="removeSection(selectedSubject.id, section.grade, section.section)" 
+                      class="remove-btn"
+                      title="Remove Section"
+                    >
+                      <span class="material-icons">close</span>
+                    </button>
+                  </div>
+                </div>
+                <div v-else class="empty-list">No sections assigned</div>
+                <button @click="openAssignSectionModal(selectedSubject)" class="assign-btn">
+                  <span class="material-icons">add</span>
+                  Assign Section
+                </button>
+              </div>
+
+              <!-- Students Section -->
+              <div class="metadata-section">
+                <h3>Students</h3>
+                <div class="students-summary">
+                  <div class="student-count">
+                    Total: {{ getTotalStudentCount(selectedSubject) }} student(s)
+                    <div class="student-breakdown">
+                      <span class="breakdown-item">Direct: {{ selectedSubject?.directStudents?.length || 0 }}</span>
+                      <span class="breakdown-item">Section: {{ getSectionStudentCount(selectedSubject) }}</span>
+                    </div>
+                  </div>
+                  <button @click="openViewStudentsModal(selectedSubject)" class="view-all-btn">
+                    <span class="material-icons">visibility</span>
+                    View All Students
+                  </button>
+                </div>
+                <button @click="openAssignStudentModal(selectedSubject)" class="assign-btn">
+                  <span class="material-icons">add</span>
+                  Assign Students
+                </button>
+              </div>
+
+              <!-- Schedule Section -->
+              <div class="metadata-section">
+                <h3>Schedule Information</h3>
+                <div v-if="selectedSubject?.scheduleType" class="schedule-details">
+                  <div class="schedule-type-badge" :class="selectedSubject.scheduleType.toLowerCase()">
+                    {{ formatScheduleType(selectedSubject.scheduleType) }}
+                  </div>
+                  <div class="schedule-info">
+                    <div class="schedule-days">
+                      <span v-if="selectedSubject.scheduleType === 'SINGLE'">
+                        {{ formatDays(selectedSubject.daysOfWeek) }}
+                      </span>
+                      <span v-else-if="selectedSubject.scheduleType === 'RANGE'">
+                        {{ formatDayRange(selectedSubject.daysOfWeek) }}
+                      </span>
+                      <span v-else>
+                        {{ formatMultipleDays(selectedSubject.daysOfWeek) }}
+                      </span>
+                    </div>
+                    <div class="schedule-time">{{ selectedSubject.startTime }} - {{ selectedSubject.endTime }}</div>
+                  </div>
+                </div>
+                <div v-else class="empty-list">No schedule set</div>
+                <button @click="openScheduleModal(selectedSubject)" class="schedule-btn">
+                  <span class="material-icons">{{ selectedSubject?.scheduleType ? 'edit' : 'add' }}</span>
+                  {{ selectedSubject?.scheduleType ? 'Edit' : 'Add' }} Schedule
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button class="cancel-btn" @click="showMetadataModal = false">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -618,12 +854,14 @@ import Swal from 'sweetalert2';
 const subjects = ref([]);
 const loading = ref(true);
 const searchQuery = ref('');
+const viewMode = ref('table'); // Default to table view
 const showSubjectModal = ref(false);
 const showAssignTeacherModal = ref(false);
 const showAssignSectionModal = ref(false);
 const showScheduleModal = ref(false);
 const showAssignStudentModal = ref(false);
 const showViewStudentsModal = ref(false);
+const showMetadataModal = ref(false);
 const currentSubject = ref({ name: '', code: '', description: '' });
 const selectedSubject = ref(null);
 const selectedTeacherId = ref('');
@@ -850,6 +1088,7 @@ const openEditModal = (subject) => {
 const openAssignTeacherModal = (subject) => {
   selectedSubject.value = subject;
   selectedTeacherId.value = '';
+  showMetadataModal.value = false; // Close metadata modal
   showAssignTeacherModal.value = true;
 };
 
@@ -857,6 +1096,7 @@ const openAssignSectionModal = (subject) => {
   selectedSubject.value = subject;
   selectedGrade.value = '';
   selectedSection.value = '';
+  showMetadataModal.value = false; // Close metadata modal
   showAssignSectionModal.value = true;
 };
 
@@ -871,6 +1111,7 @@ const openScheduleModal = (subject) => {
     startTime: '',
     endTime: ''
   };
+  showMetadataModal.value = false; // Close metadata modal
   showScheduleModal.value = true;
 };
 
@@ -880,13 +1121,52 @@ const openAssignStudentModal = (subject) => {
   studentSearchQuery.value = '';
   gradeFilter.value = '';
   sectionFilter.value = '';
+  showMetadataModal.value = false; // Close metadata modal
   showAssignStudentModal.value = true;
 };
 
 const openViewStudentsModal = (subject) => {
   selectedSubject.value = subject;
   assignedStudentSearchQuery.value = '';
+  showMetadataModal.value = false; // Close metadata modal
   showViewStudentsModal.value = true;
+};
+
+const openMetadataModal = (subject) => {
+  selectedSubject.value = subject;
+  showMetadataModal.value = true;
+};
+
+const getTotalStudentCount = (subject) => {
+  // Get direct students count
+  const directCount = subject.directStudents?.length || 0;
+  
+  // Get section-based students count
+  let sectionCount = 0;
+  if (subject.sections && subject.sections.length > 0) {
+    // For each section assigned to this subject, count students in that section
+    subject.sections.forEach(section => {
+      const studentsInSection = students.value.filter(student => 
+        student.gradeLevel === section.grade && student.section === section.section
+      );
+      sectionCount += studentsInSection.length;
+    });
+  }
+  
+  return directCount + sectionCount;
+};
+
+const getSectionStudentCount = (subject) => {
+  let sectionCount = 0;
+  if (subject?.sections && subject.sections.length > 0) {
+    subject.sections.forEach(section => {
+      const studentsInSection = students.value.filter(student => 
+        student.gradeLevel === section.grade && student.section === section.section
+      );
+      sectionCount += studentsInSection.length;
+    });
+  }
+  return sectionCount;
 };
 
 const toggleStudentSelection = (studentId) => {
@@ -1248,6 +1528,21 @@ const formatScheduleType = (type) => {
 
 // Lifecycle hooks
 onMounted(async () => {
+  // Set view mode based on screen size
+  const checkScreenSize = () => {
+    if (window.innerWidth <= 768) {
+      viewMode.value = 'cards';
+    } else {
+      viewMode.value = 'table';
+    }
+  };
+  
+  // Check on mount
+  checkScreenSize();
+  
+  // Listen for resize events
+  window.addEventListener('resize', checkScreenSize);
+  
   await Promise.all([
     loadSubjects(),
     loadTeachers(),
@@ -1329,6 +1624,49 @@ onMounted(async () => {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.08);
   margin-bottom: 2rem;
+}
+
+.view-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.view-toggle {
+  display: flex;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.view-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666;
+}
+
+.view-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.view-btn.active {
+  background: #159750;
+  color: white;
+  box-shadow: 0 2px 4px rgba(21, 151, 80, 0.3);
+}
+
+.view-btn .material-icons {
+  font-size: 1.2rem;
 }
 
 .search-box {
@@ -2109,6 +2447,79 @@ onMounted(async () => {
   .empty-list {
     font-size: 0.6rem;
   }
+
+  /* Compact metadata modal for 150% scale */
+  .metadata-content {
+    padding: 8px;
+    max-height: 85vh;
+  }
+  
+  .metadata-section {
+    padding: 8px;
+  }
+  
+  .metadata-section h3 {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .metadata-item label {
+    font-size: 0.65rem;
+  }
+  
+  .metadata-item span {
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+  
+  .metadata-section .teacher-item,
+  .metadata-section .section-item {
+    padding: 4px 6px;
+  }
+  
+  .teacher-name {
+    font-size: 0.7rem;
+  }
+  
+  .teacher-email {
+    font-size: 0.6rem;
+  }
+  
+  .students-summary {
+    padding: 6px 8px;
+  }
+  
+  .student-count {
+    font-size: 0.7rem;
+  }
+  
+  .breakdown-item {
+    font-size: 0.55rem;
+  }
+  
+  .schedule-details {
+    padding: 4px 6px;
+  }
+  
+  .schedule-days {
+    font-size: 0.65rem;
+  }
+  
+  .metadata-section .assign-btn,
+  .metadata-section .schedule-btn {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+  
+  .metadata-section .view-all-btn {
+    padding: 3px 6px;
+    font-size: 0.6rem;
+  }
+  
+  .metadata-section .empty-list {
+    padding: 6px;
+    font-size: 0.65rem;
+  }
 }
 
 /* Mobile Responsiveness */
@@ -2135,9 +2546,75 @@ onMounted(async () => {
     width: 100%;
   }
 
+  .view-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .view-toggle {
+    align-self: center;
+  }
+
   .add-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  /* Table responsive on mobile */
+  .table-container {
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+
+  .subjects-table {
+    min-width: 800px;
+  }
+
+  .subjects-table th,
+  .subjects-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+
+  .col-name {
+    min-width: 150px;
+  }
+
+  .col-description {
+    max-width: 150px;
+  }
+
+  .subject-name .name {
+    font-size: 0.9rem;
+  }
+
+
+  .count-badge {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+  }
+
+  .count-badge .material-icons {
+    font-size: 14px;
+  }
+
+  .schedule-type-badge {
+    padding: 1px 6px;
+    font-size: 0.7rem;
+  }
+
+  .schedule-time {
+    font-size: 0.8rem;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .action-btn .material-icons {
+    font-size: 16px;
   }
 }
 
@@ -2182,6 +2659,192 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 20px;
+}
+
+/* Table Styles */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.subjects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.subjects-table th {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 16px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subjects-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.subjects-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.subjects-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+}
+
+.subject-row:hover {
+  background: #f8f9fa;
+}
+
+.col-name {
+  min-width: 200px;
+}
+
+.subject-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.subject-name .name {
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+
+.col-code {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  color: #159750;
+}
+
+.col-description {
+  max-width: 200px;
+}
+
+.description-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #666;
+}
+
+.count-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.count-badge .material-icons {
+  font-size: 16px;
+  color: #159750;
+}
+
+.schedule-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-type-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.schedule-type-badge.single {
+  background: #e8f5e9;
+  color: #159750;
+}
+
+.schedule-type-badge.range {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.schedule-type-badge.multiple {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.schedule-time {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'Courier New', monospace;
+}
+
+.no-schedule {
+  color: #999;
+  font-style: italic;
+  font-size: 0.85rem;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+.action-btn .material-icons {
+  font-size: 18px;
+}
+
+.info-btn {
+  background: #2196f3;
+}
+
+.info-btn:hover {
+  background: #1976d2;
+  transform: scale(1.1);
+}
+
+.edit-btn {
+  background: #159750;
+}
+
+.edit-btn:hover {
+  background: #107040;
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  background: #f44336;
+}
+
+.delete-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
 }
 
 @media (max-width: 768px) {
@@ -2657,11 +3320,64 @@ onMounted(async () => {
   width: 700px;
 }
 
+.landscape-modal {
+  width: 85vw;
+  max-width: 1000px;
+  height: 75vh;
+  max-height: 500px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000; /* Same as other modals but positioned differently */
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .landscape-modal {
+    width: 80vw;
+    max-width: 900px;
+    height: 70vh;
+    max-height: 450px;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .landscape-modal {
+    width: 75vw;
+    max-width: 800px;
+    height: 65vh;
+    max-height: 400px;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .landscape-modal {
+    width: 70vw;
+    max-width: 700px;
+    height: 60vh;
+    max-height: 350px;
+  }
+}
+
 @media (max-width: 768px) {
   .modal-content, .wider-modal {
     width: 100%;
     max-width: 100%;
     border-radius: 8px;
+  }
+  
+  .landscape-modal {
+    width: 95vw;
+    height: 90vh;
+    max-height: none;
+    top: 5vh;
+    left: 2.5vw;
+    transform: none;
   }
   
   .modal-overlay {
@@ -3421,5 +4137,702 @@ onMounted(async () => {
 .info-item .material-icons-round {
   color: #19a463;
   font-size: 1.2rem;
+}
+
+/* Metadata Modal Styles */
+.metadata-content {
+  padding: 10px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.landscape-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.metadata-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  height: 100%;
+  padding: 0;
+}
+
+.metadata-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  background: white;
+  border-radius: 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.metadata-column:first-child {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border-right: 1px solid #e9ecef;
+}
+
+.metadata-column:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.metadata-section {
+  margin: 0;
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+  background: white;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.metadata-section:hover {
+  background: #fafbfc;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.metadata-section:last-child {
+  border-bottom: none;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.metadata-column:first-child .metadata-section:first-child {
+  border-top-left-radius: 12px;
+}
+
+.metadata-column:last-child .metadata-section:first-child {
+  border-top-right-radius: 12px;
+}
+
+.landscape-content .metadata-section {
+  margin: 0;
+  padding: 12px;
+}
+
+.metadata-section h3 {
+  color: #159750;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  position: relative;
+  padding-bottom: 4px;
+}
+
+.metadata-section h3::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 25px;
+  height: 2px;
+  background: linear-gradient(90deg, #159750, #0bcc4e);
+  border-radius: 1px;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.metadata-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.metadata-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.metadata-item label {
+  font-weight: 600;
+  color: #666;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.metadata-item span {
+  color: #333;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 4px;
+  border: 1px solid #e9ecef;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.metadata-item span:hover {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: #159750;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(21, 151, 80, 0.1);
+}
+
+/* Large screens - make modal bigger and more readable */
+@media screen and (min-width: 1920px) {
+  .landscape-modal {
+    width: 90vw;
+    max-width: 1400px;
+    height: 85vh;
+    max-height: 800px;
+  }
+  
+  .metadata-content {
+    padding: 30px;
+    max-height: 85vh;
+  }
+  
+  .metadata-section {
+    padding: 25px;
+  }
+  
+  .metadata-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: 15px;
+    gap: 10px;
+    padding-bottom: 8px;
+  }
+  
+  .metadata-section h3::after {
+    width: 50px;
+    height: 3px;
+  }
+  
+  .metadata-grid {
+    gap: 20px;
+  }
+  
+  .metadata-item label {
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+  
+  .metadata-item span {
+    font-size: 1rem;
+    padding: 12px 16px;
+    border-radius: 8px;
+  }
+  
+  .metadata-section .teacher-item,
+  .metadata-section .section-item {
+    padding: 15px 20px;
+    border-radius: 10px;
+  }
+  
+  .teacher-name {
+    font-size: 1rem;
+  }
+  
+  .teacher-email {
+    font-size: 0.9rem;
+  }
+  
+  .students-summary {
+    padding: 20px 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+  
+  .student-count {
+    font-size: 1.1rem;
+  }
+  
+  .breakdown-item {
+    font-size: 0.9rem;
+    padding: 4px 12px;
+  }
+  
+  .schedule-details {
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .schedule-days {
+    font-size: 1rem;
+  }
+  
+  .metadata-section .assign-btn,
+  .metadata-section .schedule-btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+  }
+  
+  .metadata-section .assign-btn .material-icons,
+  .metadata-section .schedule-btn .material-icons {
+    font-size: 20px;
+  }
+  
+  .metadata-section .view-all-btn {
+    padding: 10px 16px;
+    font-size: 0.85rem;
+    border-radius: 8px;
+  }
+  
+  .metadata-section .view-all-btn .material-icons {
+    font-size: 18px;
+  }
+  
+  .metadata-section .empty-list {
+    padding: 20px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+  
+  .metadata-section .empty-list::before {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+  }
+}
+
+/* Extra large screens - even bigger modal */
+@media screen and (min-width: 2560px) {
+  .landscape-modal {
+    width: 85vw;
+    max-width: 1800px;
+    height: 90vh;
+    max-height: 1000px;
+  }
+  
+  .metadata-content {
+    padding: 40px;
+  }
+  
+  .metadata-section {
+    padding: 35px;
+  }
+  
+  .metadata-section h3 {
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+  
+  .metadata-section h3::after {
+    width: 60px;
+    height: 4px;
+  }
+  
+  .metadata-grid {
+    gap: 25px;
+  }
+  
+  .metadata-item label {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+  }
+  
+  .metadata-item span {
+    font-size: 1.2rem;
+    padding: 16px 20px;
+    border-radius: 10px;
+  }
+  
+  .metadata-section .teacher-item,
+  .metadata-section .section-item {
+    padding: 20px 25px;
+    border-radius: 12px;
+  }
+  
+  .teacher-name {
+    font-size: 1.2rem;
+  }
+  
+  .teacher-email {
+    font-size: 1rem;
+  }
+  
+  .students-summary {
+    padding: 25px 30px;
+    border-radius: 15px;
+    margin-bottom: 25px;
+  }
+  
+  .student-count {
+    font-size: 1.3rem;
+  }
+  
+  .breakdown-item {
+    font-size: 1rem;
+    padding: 6px 15px;
+  }
+  
+  .schedule-details {
+    padding: 20px 25px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+  }
+  
+  .schedule-days {
+    font-size: 1.2rem;
+  }
+  
+  .metadata-section .assign-btn,
+  .metadata-section .schedule-btn {
+    padding: 15px 25px;
+    font-size: 1rem;
+    border-radius: 10px;
+  }
+  
+  .metadata-section .assign-btn .material-icons,
+  .metadata-section .schedule-btn .material-icons {
+    font-size: 22px;
+  }
+  
+  .metadata-section .view-all-btn {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+  }
+  
+  .metadata-section .view-all-btn .material-icons {
+    font-size: 20px;
+  }
+  
+  .metadata-section .empty-list {
+    padding: 25px;
+    font-size: 1.1rem;
+    border-radius: 12px;
+  }
+  
+  .metadata-section .empty-list::before {
+    font-size: 3rem;
+    margin-bottom: 20px;
+  }
+}
+
+.metadata-section .teachers-list,
+.metadata-section .sections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.metadata-section .teacher-item,
+.metadata-section .section-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metadata-section .teacher-item::before,
+.metadata-section .section-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(180deg, #159750 0%, #0bcc4e 100%);
+}
+
+.metadata-section .teacher-item:hover,
+.metadata-section .section-item:hover {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(21, 151, 80, 0.15);
+  border-color: #159750;
+}
+
+.teacher-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.teacher-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.75rem;
+}
+
+.teacher-email {
+  font-size: 0.65rem;
+  color: #666;
+}
+
+.students-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-radius: 8px;
+  border: 1px solid #159750;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 6px rgba(21, 151, 80, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.students-summary::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.student-count {
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.75rem;
+}
+
+.student-breakdown {
+  display: flex;
+  gap: 6px;
+  font-size: 0.65rem;
+  font-weight: 400;
+  color: #666;
+}
+
+.breakdown-item {
+  padding: 1px 4px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  font-size: 0.6rem;
+}
+
+.schedule-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 2px solid #159750;
+  margin-bottom: 8px;
+}
+
+.schedule-days {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.7rem;
+}
+
+.metadata-section .assign-btn,
+.metadata-section .schedule-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: linear-gradient(135deg, #159750 0%, #0bcc4e 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(21, 151, 80, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.metadata-section .assign-btn::before,
+.metadata-section .schedule-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.metadata-section .assign-btn:hover::before,
+.metadata-section .schedule-btn:hover::before {
+  left: 100%;
+}
+
+.metadata-section .assign-btn:hover,
+.metadata-section .schedule-btn:hover {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(21, 151, 80, 0.4);
+}
+
+.metadata-section .assign-btn .material-icons,
+.metadata-section .schedule-btn .material-icons {
+  font-size: 14px;
+}
+
+.metadata-section .view-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 8px;
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.metadata-section .view-all-btn:hover {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(33, 150, 243, 0.4);
+}
+
+.metadata-section .view-all-btn .material-icons {
+  font-size: 12px;
+}
+
+.metadata-section .empty-list {
+  color: #6c757d;
+  font-style: italic;
+  padding: 8px;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 6px;
+  border: 1px dashed #dee2e6;
+  font-size: 0.7rem;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.metadata-section .empty-list::before {
+  content: '📝';
+  display: block;
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+  opacity: 0.5;
+}
+
+/* Mobile responsive for metadata modal */
+@media (max-width: 768px) {
+  .metadata-content {
+    padding: 8px;
+  }
+  
+  .landscape-content {
+    padding: 0;
+  }
+  
+  .metadata-grid-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0;
+  }
+  
+  .metadata-column {
+    gap: 0;
+  }
+  
+  .metadata-column:first-child {
+    border-radius: 8px 8px 0 0;
+    border-right: none;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .metadata-column:last-child {
+    border-radius: 0 0 8px 8px;
+  }
+  
+  .metadata-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  
+  .metadata-section {
+    margin-bottom: 0;
+    padding: 8px;
+  }
+  
+  .landscape-content .metadata-section {
+    margin-bottom: 0;
+    padding: 8px;
+  }
+  
+  .metadata-section h3 {
+    font-size: 0.75rem;
+    margin-bottom: 6px;
+  }
+  
+  .metadata-item span {
+    font-size: 0.7rem;
+    padding: 4px 6px;
+  }
+  
+  .metadata-section .teacher-item,
+  .metadata-section .section-item,
+  .students-summary {
+    padding: 4px 6px;
+  }
+  
+  .teacher-name {
+    font-size: 0.7rem;
+  }
+  
+  .teacher-email {
+    font-size: 0.6rem;
+  }
+  
+  .schedule-details {
+    padding: 4px 6px;
+  }
+  
+  .metadata-section .assign-btn,
+  .metadata-section .schedule-btn {
+    padding: 4px 8px;
+    font-size: 0.65rem;
+  }
+  
+  .metadata-section .view-all-btn {
+    padding: 3px 6px;
+    font-size: 0.6rem;
+  }
 }
 </style>

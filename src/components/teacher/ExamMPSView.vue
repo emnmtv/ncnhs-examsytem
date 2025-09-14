@@ -160,6 +160,73 @@
               <h3><span class="material-icons">update</span> Future Suggestions</h3>
               <p>{{ aiResults.full.futureSuggestions }}</p>
             </div>
+
+            <!-- Top & Low Performers in Full Analysis -->
+            <div class="ai-performers" v-if="mpsData && (mpsData.topPerformers || mpsData.lowPerformers)">
+              <h3><span class="material-icons">emoji_events</span> Student Performance Highlights</h3>
+              
+              <!-- Top Performers -->
+              <div class="performers-section top-performers" v-if="mpsData.topPerformers && mpsData.topPerformers.length > 0">
+                <h4><span class="material-icons">trending_up</span> Top Performers</h4>
+                <div class="performers-list">
+                  <div v-for="(student, idx) in mpsData.topPerformers" :key="'top-'+idx" class="performer-item top">
+                    <div class="performer-rank">{{ idx + 1 }}</div>
+                    <div class="performer-info">
+                      <div class="performer-name">{{ student.name }}</div>
+                      <div class="performer-details">
+                        <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                        <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                      </div>
+                    </div>
+                    <div class="performer-badge excellent">
+                      <span class="material-icons">star</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Low Performers -->
+              <div class="performers-section low-performers" v-if="mpsData.lowPerformers && mpsData.lowPerformers.length > 0">
+                <h4><span class="material-icons">trending_down</span> Students Needing Support</h4>
+                <div class="performers-list">
+                  <div v-for="(student, idx) in mpsData.lowPerformers" :key="'low-'+idx" class="performer-item low">
+                    <div class="performer-rank">{{ mpsData.topPerformers.length + idx + 1 }}</div>
+                    <div class="performer-info">
+                      <div class="performer-name">{{ student.name }}</div>
+                      <div class="performer-details">
+                        <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                        <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                      </div>
+                    </div>
+                    <div class="performer-badge needs-improvement">
+                      <span class="material-icons">support</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Performance Insights -->
+              <div class="performance-insights" v-if="mpsData.topPerformers && mpsData.lowPerformers">
+                <h4><span class="material-icons">analytics</span> Performance Insights</h4>
+                <div class="insights-grid">
+                  <div class="insight-card">
+                    <div class="insight-value">{{ mpsData.topPerformers.length }}</div>
+                    <div class="insight-label">Top Performers</div>
+                    <div class="insight-desc">Students scoring in the top tier</div>
+                  </div>
+                  <div class="insight-card">
+                    <div class="insight-value">{{ mpsData.lowPerformers.length }}</div>
+                    <div class="insight-label">Need Support</div>
+                    <div class="insight-desc">Students requiring additional help</div>
+                  </div>
+                  <div class="insight-card">
+                    <div class="insight-value">{{ ((mpsData.topPerformers[0]?.percentage || 0) - (mpsData.lowPerformers[0]?.percentage || 0)).toFixed(1) }}%</div>
+                    <div class="insight-label">Score Gap</div>
+                    <div class="insight-desc">Difference between highest and lowest</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- AI Analysis Result: Insights Only -->
@@ -230,6 +297,75 @@
             </div>
           </div>
 
+          <!-- AI Analysis Result: Top & Low Performers -->
+          <div v-else-if="currentAITab === 'performers' && mpsData" class="ai-result">
+            <div class="performers-analysis">
+              <h3><span class="material-icons">emoji_events</span> Student Performance Analysis</h3>
+              
+              <!-- Top Performers -->
+              <div class="performers-section top-performers" v-if="mpsData.topPerformers && mpsData.topPerformers.length > 0">
+                <h4><span class="material-icons">trending_up</span> Top Performers</h4>
+                <div class="performers-list">
+                  <div v-for="(student, idx) in mpsData.topPerformers" :key="'top-'+idx" class="performer-item top">
+                    <div class="performer-rank">{{ idx + 1 }}</div>
+                    <div class="performer-info">
+                      <div class="performer-name">{{ student.name }}</div>
+                      <div class="performer-details">
+                        <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                        <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                      </div>
+                    </div>
+                    <div class="performer-badge excellent">
+                      <span class="material-icons">star</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Low Performers -->
+              <div class="performers-section low-performers" v-if="mpsData.lowPerformers && mpsData.lowPerformers.length > 0">
+                <h4><span class="material-icons">trending_down</span> Students Needing Support</h4>
+                <div class="performers-list">
+                  <div v-for="(student, idx) in mpsData.lowPerformers" :key="'low-'+idx" class="performer-item low">
+                    <div class="performer-rank">{{ mpsData.topPerformers.length + idx + 1 }}</div>
+                    <div class="performer-info">
+                      <div class="performer-name">{{ student.name }}</div>
+                      <div class="performer-details">
+                        <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                        <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                      </div>
+                    </div>
+                    <div class="performer-badge needs-improvement">
+                      <span class="material-icons">support</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Performance Insights -->
+              <div class="performance-insights" v-if="mpsData.topPerformers && mpsData.lowPerformers">
+                <h4><span class="material-icons">analytics</span> Performance Insights</h4>
+                <div class="insights-grid">
+                  <div class="insight-card">
+                    <div class="insight-value">{{ mpsData.topPerformers.length }}</div>
+                    <div class="insight-label">Top Performers</div>
+                    <div class="insight-desc">Students scoring in the top tier</div>
+                  </div>
+                  <div class="insight-card">
+                    <div class="insight-value">{{ mpsData.lowPerformers.length }}</div>
+                    <div class="insight-label">Need Support</div>
+                    <div class="insight-desc">Students requiring additional help</div>
+                  </div>
+                  <div class="insight-card">
+                    <div class="insight-value">{{ ((mpsData.topPerformers[0]?.percentage || 0) - (mpsData.lowPerformers[0]?.percentage || 0)).toFixed(1) }}%</div>
+                    <div class="insight-label">Score Gap</div>
+                    <div class="insight-desc">Difference between highest and lowest</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- No AI data yet state -->
           <div v-else class="ai-empty">
             <span class="material-icons">psychology</span>
@@ -248,6 +384,10 @@
       <div class="exam-info-card">
         <div class="exam-title">{{ mpsData.exam.title }}</div>
         <div class="exam-code">Test Code: {{ mpsData.exam.testCode }}</div>
+        <div class="exam-teacher" v-if="mpsData.exam.teacher">
+          <span class="material-icons">person</span>
+          Teacher: {{ mpsData.exam.teacher.name }}
+        </div>
         <div class="exam-stats">
           <div class="stat-item">
             <div class="stat-label">Overall MPS</div>
@@ -542,6 +682,7 @@
           <div class="print-exam-info">
             <p><strong>Exam:</strong> {{ mpsData.exam.title }}</p>
             <p><strong>Test Code:</strong> {{ mpsData.exam.testCode }}</p>
+            <p><strong>Teacher:</strong> {{ mpsData.exam.teacher ? mpsData.exam.teacher.name : 'N/A' }}</p>
             <p><strong>Date Generated:</strong> {{ new Date().toLocaleDateString() }}</p>
           </div>
         </div>
@@ -670,7 +811,8 @@ const aiResults = ref({
   insights: null,
   recommendations: null,
   improvements: null,
-  nextSteps: null
+  nextSteps: null,
+  performers: null
 });
 const currentAITab = ref('full');
 
@@ -680,7 +822,8 @@ const aiTabs = [
   { id: 'insights', label: 'Key Insights', icon: 'lightbulb' },
   { id: 'recommendations', label: 'Recommendations', icon: 'psychology_alt' },
   { id: 'improvements', label: 'Improvement Strategies', icon: 'trending_up' },
-  { id: 'nextSteps', label: 'Next Steps', icon: 'checklist' }
+  { id: 'nextSteps', label: 'Next Steps', icon: 'checklist' },
+  { id: 'performers', label: 'Top & Low Performers', icon: 'emoji_events' }
 ];
 
 // Get exam ID from route params
@@ -1211,6 +1354,7 @@ const exportData = () => {
             <div class="info">
               <p><strong>Exam:</strong> ${mpsData.value.exam.title}</p>
               <p><strong>Test Code:</strong> ${mpsData.value.exam.testCode}</p>
+              <p><strong>Teacher:</strong> ${mpsData.value.exam.teacher ? mpsData.value.exam.teacher.name : 'N/A'}</p>
               <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
             </div>
           </div>
@@ -1634,6 +1778,14 @@ const generateAnalysis = async (type) => {
         }
         break;
         
+      case 'performers':
+        // For performers, we don't need AI analysis - just use the data directly
+        aiResults.value.performers = {
+          topPerformers: mpsData.value.topPerformers || [],
+          lowPerformers: mpsData.value.lowPerformers || []
+        };
+        break;
+        
       case 'full':
       default:
         result = await aiAnalysisService.generateAIAnalysis(mpsData.value, 'full');
@@ -1898,7 +2050,25 @@ const useUniqueColors = ref(true); // Enabled by default
   font-size: 0.9rem;
   font-weight: 500;
   border-radius: 20px;
+  margin-bottom: 12px;
+}
+
+.exam-teacher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 0.95rem;
   margin-bottom: 20px;
+  padding: 8px 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border-left: 3px solid #159750;
+}
+
+.exam-teacher .material-icons {
+  font-size: 18px;
+  color: #159750;
 }
 
 .exam-stats {
@@ -2592,7 +2762,17 @@ th {
   .exam-code {
     font-size: 0.8rem;
     padding: 4px 8px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .exam-teacher {
+    font-size: 0.9rem;
+    padding: 6px 10px;
+    margin-bottom: 16px;
+  }
+  
+  .exam-teacher .material-icons {
+    font-size: 16px;
   }
   
   .exam-stats {
@@ -2779,7 +2959,17 @@ th {
   .exam-code {
     font-size: 0.75rem;
     padding: 3px 6px;
+    margin-bottom: 8px;
+  }
+  
+  .exam-teacher {
+    font-size: 0.85rem;
+    padding: 5px 8px;
     margin-bottom: 12px;
+  }
+  
+  .exam-teacher .material-icons {
+    font-size: 14px;
   }
   
   .exam-stats {
@@ -3794,6 +3984,255 @@ th {
   }
 }
 
+/* Performers Analysis Styles */
+.performers-analysis, .ai-performers {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ai-performers {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.performers-section {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.performers-section h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.performers-section h4 .material-icons {
+  font-size: 1.2rem;
+}
+
+.top-performers h4 {
+  color: #2E7D32;
+}
+
+.top-performers h4 .material-icons {
+  color: #2E7D32;
+}
+
+.low-performers h4 {
+  color: #C62828;
+}
+
+.low-performers h4 .material-icons {
+  color: #C62828;
+}
+
+.performers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.performer-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s;
+}
+
+.performer-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.performer-item.top {
+  border-left: 4px solid #4CAF50;
+}
+
+.performer-item.low {
+  border-left: 4px solid #F44336;
+}
+
+.performer-rank {
+  width: 32px;
+  height: 32px;
+  background-color: #e0e0e0;
+  color: #666;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.performer-item.top .performer-rank {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.performer-item.low .performer-rank {
+  background-color: #F44336;
+  color: white;
+}
+
+.performer-info {
+  flex: 1;
+}
+
+.performer-name {
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.performer-details {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.performer-section {
+  background-color: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.performer-score {
+  font-weight: 500;
+}
+
+.performer-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.performer-badge.excellent {
+  background-color: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.performer-badge.needs-improvement {
+  background-color: rgba(244, 67, 54, 0.1);
+  color: #F44336;
+}
+
+.performer-badge .material-icons {
+  font-size: 20px;
+}
+
+.performance-insights {
+  background-color: #f0f7ff;
+  border-radius: 12px;
+  padding: 20px;
+  border-left: 4px solid #1a73e8;
+}
+
+.performance-insights h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  color: #1a73e8;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.insight-card {
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.insight-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #1a73e8;
+  margin-bottom: 4px;
+}
+
+.insight-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.insight-desc {
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.3;
+}
+
+/* Responsive styles for performers */
+@media (max-width: 768px) {
+  .performer-item {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .performer-rank {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+  
+  .performer-name {
+    font-size: 1rem;
+  }
+  
+  .performer-details {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .performer-badge {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .performer-badge .material-icons {
+    font-size: 16px;
+  }
+  
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .ai-performers {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+}
+
 /* Print styles for AI analysis */
 @media print {
   .ai-analysis-panel {
@@ -3817,6 +4256,12 @@ th {
   
   .insight-item, .rec-item, .improvement-item, .next-step-item {
     break-inside: avoid;
+  }
+  
+  .performer-item {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ddd;
   }
 }
 </style> 

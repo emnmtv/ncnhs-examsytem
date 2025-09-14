@@ -33,6 +33,12 @@
     <div v-else class="content-container">
       <div class="task-info-card">
         <div class="task-header">
+          <div class="back-button-container">
+            <button @click="$router.go(-1)" class="back-button">
+              <span class="material-icons">arrow_back</span>
+              Back
+            </button>
+          </div>
           <div class="task-title-section">
             <h2>{{ task?.title }}</h2>
             <div class="task-meta-badges">
@@ -81,14 +87,14 @@
             <div class="view-toggle">
               <button 
                 @click="viewMode = 'cards'" 
-                :class="['toggle-btn', { active: viewMode === 'cards' }]"
+                :class="['toggle-btn', { active: currentViewMode === 'cards' }]"
               >
                 <span class="material-icons">grid_view</span>
                 Cards
               </button>
               <button 
                 @click="viewMode = 'table'" 
-                :class="['toggle-btn', { active: viewMode === 'table' }]"
+                :class="['toggle-btn', { active: currentViewMode === 'table' }]"
               >
                 <span class="material-icons">table_view</span>
                 Table
@@ -141,54 +147,69 @@
         </div>
 
         <!-- Table View -->
-        <div v-if="viewMode === 'table'" class="students-table">
-          <table>
+        <div :class="['table-container', { hidden: currentViewMode !== 'table' }]">
+          <table class="students-table">
             <thead>
               <tr>
-                <th>
+                <th class="col-checkbox">
                   <input 
                     type="checkbox" 
                     :checked="selectedStudents.length === filteredStudents.length"
                     @change="selectedStudents = $event.target.checked ? filteredStudents.map(s => s.lrn) : []"
                   >
                 </th>
-                <th>Name</th>
-                <th>LRN</th>
-                <th>Section</th>
-                <th>Status</th>
-                <th>Submission</th>
-                <th>Score</th>
-                <th>Actions</th>
+                <th class="col-number">#</th>
+                <th class="col-name">Name</th>
+                <th class="col-lrn">LRN</th>
+                <th class="col-section">Section</th>
+                <th class="col-status">Status</th>
+                <th class="col-submission">Submission</th>
+                <th class="col-score">Score</th>
+                <th class="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="student in filteredStudents" :key="student.id">
-                <td>
+              <tr v-for="(student, index) in filteredStudents" :key="student.id" class="student-row">
+                <td class="col-checkbox">
                   <input 
                     type="checkbox" 
                     :value="student.lrn" 
                     v-model="selectedStudents"
                   >
                 </td>
-                <td>{{ student.lastName }}, {{ student.firstName }}</td>
-                <td>{{ student.lrn }}</td>
-                <td>Grade {{ student.gradeLevel }}-{{ student.section }}</td>
-                <td>
+                <td class="col-number">{{ index + 1 }}</td>
+                <td class="col-name">
+                  <div class="student-name">
+                    <span class="name">{{ student.lastName }}, {{ student.firstName }}</span>
+                    <span class="email">{{ student.email || 'No email' }}</span>
+                  </div>
+                </td>
+                <td class="col-lrn">{{ student.lrn || 'N/A' }}</td>
+                <td class="col-section">Grade {{ student.gradeLevel }}-{{ student.section }}</td>
+                <td class="col-status">
                   <span :class="['status-badge', getSubmissionStatus(student).class]">
                     {{ getSubmissionStatus(student).text }}
                   </span>
                 </td>
-                <td>
+                <td class="col-submission">
                   <div class="submission-files">
                     <div v-if="student.submission">
-                      <button v-if="student.submission.files.length > 1" 
-                              @click="openFilesModal(student.submission)"
-                              class="view-files-btn">
-                        <span class="material-icons">folder_open</span>
-                        View {{ student.submission.files.length }} Files
-                      </button>
+                      <div class="submission-actions">
+                        <button v-if="student.submission.files.length > 1" 
+                                @click="openFilesModal(student.submission)"
+                                class="view-files-btn">
+                          <span class="material-icons">folder_open</span>
+                          View {{ student.submission.files.length }} Files
+                        </button>
+                        
+                        <button @click="openSubmissionDetails(student.submission)"
+                                class="action-btn score-btn">
+                          <span class="material-icons">edit</span>
+                          Score
+                        </button>
+                      </div>
                       
-                      <div v-else-if="student.submission.files.length === 1" class="file-item">
+                      <div v-if="student.submission.files.length === 1" class="file-item">
                         <img :src="getFileIcon(student.submission.files[0].fileName)" 
                              :alt="getFileType(student.submission.files[0].fileName)" 
                              class="file-icon">
@@ -215,7 +236,7 @@
                     </div>
                   </div>
                 </td>
-                <td>
+                <td class="col-score">
                   <div v-if="hasSubmission(student)" class="table-score-input">
                     <input 
                       type="number" 
@@ -228,7 +249,7 @@
                   </div>
                   <span v-else>-</span>
                 </td>
-                <td>
+                <td class="col-actions">
                   <div v-if="hasSubmission(student)" class="table-actions">
                     <textarea 
                       v-model="submissionComments[student.id]" 
@@ -250,7 +271,7 @@
         </div>
 
         <!-- Cards View -->
-        <div v-else class="cards-view">
+        <div :class="['cards-view', { active: currentViewMode === 'cards' }]">
           <div v-if="showBySection" class="sections-container">
             <div v-for="(students, section) in groupedStudents" :key="section" class="section-group">
               <div class="section-header">
@@ -286,14 +307,22 @@
                       </p>
                       <div class="submission-files">
                         <div v-if="student.submission">
-                          <button v-if="student.submission.files.length > 1" 
-                                  @click="openFilesModal(student.submission)"
-                                  class="view-files-btn">
-                            <span class="material-icons">folder_open</span>
-                            View {{ student.submission.files.length }} Files
-                          </button>
+                          <div class="submission-actions">
+                            <button v-if="student.submission.files.length > 1" 
+                                    @click="openFilesModal(student.submission)"
+                                    class="view-files-btn">
+                              <span class="material-icons">folder_open</span>
+                              View {{ student.submission.files.length }} Files
+                            </button>
+                            
+                            <button @click="openSubmissionDetails(student.submission)"
+                                    class="action-btn score-btn">
+                              <span class="material-icons">edit</span>
+                              Score
+                            </button>
+                          </div>
                           
-                          <div v-else-if="student.submission.files.length === 1" class="file-item">
+                          <div v-if="student.submission.files.length === 1" class="file-item">
                             <img :src="getFileIcon(student.submission.files[0].fileName)" 
                                  :alt="getFileType(student.submission.files[0].fileName)" 
                                  class="file-icon">
@@ -394,14 +423,22 @@
                   </p>
                   <div class="submission-files">
                     <div v-if="student.submission">
-                      <button v-if="student.submission.files.length > 1" 
-                              @click="openFilesModal(student.submission)"
-                              class="view-files-btn">
-                        <span class="material-icons">folder_open</span>
-                        View {{ student.submission.files.length }} Files
-                      </button>
+                      <div class="submission-actions">
+                        <button v-if="student.submission.files.length > 1" 
+                                @click="openFilesModal(student.submission)"
+                                class="view-files-btn">
+                          <span class="material-icons">folder_open</span>
+                          View {{ student.submission.files.length }} Files
+                        </button>
+                        
+                        <button @click="openSubmissionDetails(student.submission)"
+                                class="action-btn score-btn">
+                          <span class="material-icons">edit</span>
+                          Score
+                        </button>
+                      </div>
                       
-                      <div v-else-if="student.submission.files.length === 1" class="file-item">
+                      <div v-if="student.submission.files.length === 1" class="file-item">
                         <img :src="getFileIcon(student.submission.files[0].fileName)" 
                              :alt="getFileType(student.submission.files[0].fileName)" 
                              class="file-icon">
@@ -515,7 +552,7 @@
                 <label class="checkbox-label">
                   <input 
                     type="checkbox" 
-                    :value="student.lrn" 
+                    :value="student.id" 
                     v-model="selectedAvailableStudents"
                   >
                   {{ student.firstName }} {{ student.lastName }}
@@ -774,8 +811,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { 
   getTaskVisibility, 
   getSubjectTasks, 
@@ -806,6 +843,7 @@ import defaultIcon from '@/assets/FileIcons/doc.png';
 import powerpointIcon from '@/assets/FileIcons/pptx.png';
 
 const route = useRoute();
+const router = useRouter();
 
 const subjectId = parseInt(route.params.subjectId);
 const taskId = parseInt(route.params.taskId);
@@ -825,7 +863,22 @@ const selectedAvailableStudents = ref([]);
 const modalSearchQuery = ref('');
 const isSubmitting = ref(false);
 
-const viewMode = ref('cards');
+const viewMode = ref('table');
+
+// Reactive window width for responsive design
+const windowWidth = ref(window.innerWidth);
+
+// Computed property to handle responsive view mode
+const currentViewMode = computed(() => {
+  // On mobile (768px and below), force cards view
+  if (windowWidth.value <= 768) {
+    console.log('Mobile view: forcing cards mode');
+    return 'cards';
+  }
+  // On desktop, use the selected view mode
+  console.log('Desktop view: using', viewMode.value);
+  return viewMode.value;
+});
 const statusFilter = ref('all');
 const submissionScores = ref({});
 const submissionComments = ref({});
@@ -859,7 +912,7 @@ const filteredStudents = computed(() => {
     students = students.filter(student => 
       student.firstName.toLowerCase().includes(search) || 
       student.lastName.toLowerCase().includes(search) || 
-      student.lrn.toString().includes(search)
+      (student.lrn && student.lrn.toString().includes(search))
     );
   }
   
@@ -912,7 +965,7 @@ const filteredAvailableStudents = computed(() => {
   return availableStudents.value.filter(student => 
     student.firstName.toLowerCase().includes(search) || 
     student.lastName.toLowerCase().includes(search) || 
-    student.lrn.toString().includes(search)
+    (student.lrn && student.lrn.toString().includes(search))
   );
 });
 
@@ -937,7 +990,7 @@ const formatExactDate = (date) => {
 // Toggle select all available students
 const toggleSelectAllAvailable = (event) => {
   if (event.target.checked) {
-    selectedAvailableStudents.value = availableStudents.value.map(s => s.lrn);
+    selectedAvailableStudents.value = availableStudents.value.map(s => s.id);
   } else {
     selectedAvailableStudents.value = [];
   }
@@ -1004,13 +1057,14 @@ const loadAvailableStudents = async () => {
         // Extract student data from response
         const directStudents = directStudentsResponse.data.map(item => item.student);
         console.log(`Found ${directStudents.length} directly assigned students`);
+        console.log('Direct students data:', directStudents);
         
-        // Add direct students to all students array (avoiding duplicates by LRN)
-        const existingLRNs = new Set(allStudents.map(s => s.lrn));
+        // Add direct students to all students array (avoiding duplicates by ID)
+        const existingIds = new Set(allStudents.map(s => s.id));
         for (const student of directStudents) {
-          if (!existingLRNs.has(student.lrn)) {
+          if (!existingIds.has(student.id)) {
             allStudents.push(student);
-            existingLRNs.add(student.lrn);
+            existingIds.add(student.id);
           }
         }
       }
@@ -1019,12 +1073,15 @@ const loadAvailableStudents = async () => {
     }
     
     console.log('Total students (sections + direct):', allStudents.length);
+    console.log('Visible students:', visibleStudents.value.length);
+    console.log('Visible student IDs:', visibleStudents.value.map(s => s.id));
     
-    // Filter out students who already have visibility
-    const visibleLRNs = visibleStudents.value.map(s => s.lrn);
-    availableStudents.value = allStudents.filter(s => !visibleLRNs.includes(s.lrn));
+    // Filter out students who already have visibility (using IDs instead of LRNs)
+    const visibleIds = visibleStudents.value.map(s => s.id);
+    availableStudents.value = allStudents.filter(s => !visibleIds.includes(s.id));
     
     console.log('Available students after filtering:', availableStudents.value.length);
+    console.log('Available student names:', availableStudents.value.map(s => `${s.firstName} ${s.lastName}`));
     
   } catch (err) {
     console.error('Error loading available students:', err);
@@ -1312,6 +1369,24 @@ const openFilesModal = (submission) => {
   showFilesModal.value = true;
 };
 
+const openSubmissionDetails = (submission) => {
+  // Find the student associated with this submission
+  const student = visibleStudents.value.find(s => s.submission && s.submission.id === submission.id);
+  const studentIndex = visibleStudents.value.findIndex(s => s.id === student.id);
+  
+  // Navigate to the submission details page
+  router.push({
+    name: 'TaskSubmissionDetails',
+    params: {
+      taskId: taskId,
+      subjectId: subjectId
+    },
+    query: {
+      studentIndex: studentIndex
+    }
+  });
+};
+
 const closeFilesModal = () => {
   showFilesModal.value = false;
   // Reset selectedSubmission to default state instead of null
@@ -1437,6 +1512,18 @@ const getVideoType = (fileName) => {
 
 onMounted(() => {
   loadTaskData();
+  
+  // Add window resize listener for responsive view
+  const handleResize = () => {
+    windowWidth.value = window.innerWidth;
+  };
+  
+  window.addEventListener('resize', handleResize);
+  
+  // Cleanup on unmount
+  onUnmounted(() => {
+    window.removeEventListener('resize', handleResize);
+  });
 });
 
 // Add this new function
@@ -1563,6 +1650,36 @@ const downloadStudentSubmission = async () => {
   padding: 25px;
   position: relative;
   overflow: hidden;
+}
+
+.back-button-container {
+  margin-bottom: 15px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+.back-button .material-icons {
+  font-size: 18px;
 }
 
 /* Main paint swipe */
@@ -1796,72 +1913,107 @@ const downloadStudentSubmission = async () => {
   box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
-/* Updated students table */
+/* Table Container */
+.table-container {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
 .students-table {
-  margin-top: 1.5rem;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-}
-
-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: white;
+  border-collapse: collapse;
 }
 
-thead {
-  background: linear-gradient(135deg, #1aac5a 0%, #159750 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-thead::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: -10%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(45deg, 
-    transparent 0%,
-    rgba(255, 255, 255, 0.05) 30%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0.05) 70%,
-    transparent 100%
-  );
-  transform: skewX(-20deg);
-  pointer-events: none;
-}
-
-th {
+.students-table th {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   color: white;
-  font-weight: 500;
+  padding: 16px 12px;
   text-align: left;
-  padding: 1rem;
-  position: relative;
-  z-index: 1;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-td {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
+.students-table th:first-child {
+  border-top-left-radius: 12px;
 }
 
-tr:last-child td {
-  border-bottom: none;
+.students-table th:last-child {
+  border-top-right-radius: 12px;
 }
 
-tbody tr {
-  transition: all 0.3s;
+.students-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
 }
 
-tbody tr:hover {
+.student-row:hover {
   background: #f8f9fa;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Column Styles */
+.col-checkbox {
+  width: 50px;
+  text-align: center;
+}
+
+.col-number {
+  width: 60px;
+  text-align: center;
+  font-weight: 600;
+  color: #666;
+}
+
+.col-name {
+  min-width: 200px;
+}
+
+.student-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-name .name {
+  font-weight: 600;
+  color: #333;
+}
+
+.student-name .email {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.col-lrn {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.col-section {
+  text-align: center;
+  font-weight: 500;
+}
+
+.col-status {
+  text-align: center;
+}
+
+.col-submission {
+  min-width: 200px;
+}
+
+.col-score {
+  text-align: center;
+  min-width: 120px;
+}
+
+.col-actions {
+  min-width: 200px;
 }
 
 /* Style the table checkboxes */
@@ -2607,6 +2759,44 @@ td input[type="checkbox"] {
   .file-card .file-btn .material-icons {
     font-size: 14px;
   }
+  
+  /* Force cards view on mobile */
+  .table-container {
+    display: none;
+  }
+  
+  .cards-view {
+    display: block;
+  }
+  
+  .view-toggle {
+    display: none; /* Hide toggle on mobile since we force cards */
+  }
+}
+
+/* Desktop - Show view toggle */
+@media (min-width: 769px) {
+  .view-toggle {
+    display: flex;
+  }
+}
+
+/* View mode visibility - controlled by JavaScript */
+.table-container {
+  display: block;
+}
+
+.cards-view {
+  display: none;
+}
+
+/* When cards mode is active */
+.cards-view.active {
+  display: block;
+}
+
+.table-container.hidden {
+  display: none;
 }
 
 /* Extra small devices */
@@ -3973,6 +4163,42 @@ td input[type="checkbox"] {
 .view-files-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Score button styles */
+.score-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.score-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.score-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Submission actions container */
+.submission-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .file-item {

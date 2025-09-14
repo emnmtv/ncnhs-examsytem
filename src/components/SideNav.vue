@@ -124,6 +124,7 @@ const navigationItems = {
   
   ],
   teacher: [
+    {name:'Dashboard', path:'/teacher-dashboard', icon:'dashboard'},
   { name: 'Classes', path: '/teacher-subjects', icon: 'subject' },
     { name: 'Create Exam', path: '/create-exam', icon: 'note_add' },
     { name: 'Monitor Exam', path: '/manage-exam', icon: 'assignment' },
@@ -137,6 +138,7 @@ const navigationItems = {
     { name: 'Settings', path: '/settings', icon: 'settings' },
   ],
   student: [
+    {name:'Dashboard', path:'/student-dashboard', icon:'dashboard'},
     { name: 'Classes', path: '/student-subjects', icon: 'subject' },
     {name:'My Task', path:'/student/tasks', icon:'task'},
     { name: 'Take Exam', path: '/take-exam', icon: 'edit' },

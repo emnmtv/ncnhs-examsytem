@@ -219,7 +219,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="score in sortedScores" :key="`${score.userId}-${score.examId}`">
+          <tr v-for="score in paginatedScores" :key="`${score.userId}-${score.examId}`">
             <td>
               <div class="student-info">
                 <span class="student-name">{{ score.user.firstName }} {{ score.user.lastName }}</span>
@@ -257,6 +257,67 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Pagination Controls -->
+    <div v-if="filteredScores.length > 0" class="pagination-container">
+      <div class="pagination-info">
+        <span class="pagination-text">
+          Showing {{ paginationInfo.start }}-{{ paginationInfo.end }} of {{ paginationInfo.total }} results
+        </span>
+        <div class="pagination-controls">
+          <label class="pagination-label">
+            <input 
+              type="checkbox" 
+              v-model="paginationEnabled"
+              @change="togglePagination"
+            />
+            Enable Pagination
+          </label>
+          <select 
+            v-if="paginationEnabled" 
+            v-model="itemsPerPage" 
+            @change="changeItemsPerPage(itemsPerPage)"
+            class="items-per-page"
+          >
+            <option value="10">10 per page</option>
+            <option value="20">20 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+          </select>
+        </div>
+      </div>
+      
+      <div v-if="paginationEnabled && totalPages > 1" class="pagination-nav">
+        <button 
+          @click="prevPage" 
+          :disabled="currentPage === 1"
+          class="pagination-btn prev"
+        >
+          <i class="fas fa-chevron-left"></i>
+          Previous
+        </button>
+        
+        <div class="pagination-pages">
+          <button 
+            v-for="page in getVisiblePages()" 
+            :key="page"
+            @click="goToPage(page)"
+            :class="['pagination-page', { active: page === currentPage }]"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button 
+          @click="nextPage" 
+          :disabled="currentPage === totalPages"
+          class="pagination-btn next"
+        >
+          Next
+          <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -288,6 +349,11 @@ export default {
     // Sorting
     const sortField = ref('submittedAt');
     const sortDirection = ref('desc');
+    
+    // Pagination
+    const currentPage = ref(1);
+    const itemsPerPage = ref(20);
+    const paginationEnabled = ref(true);
 
     // Extract unique exams from scores
     const uniqueExams = computed(() => {
@@ -427,6 +493,40 @@ export default {
       });
     });
 
+    // Pagination computed properties
+    const totalPages = computed(() => {
+      if (!paginationEnabled.value) return 1;
+      return Math.ceil(filteredScores.value.length / itemsPerPage.value);
+    });
+
+    const paginatedScores = computed(() => {
+      if (!paginationEnabled.value) {
+        return sortedScores.value;
+      }
+      
+      const start = (currentPage.value - 1) * itemsPerPage.value;
+      const end = start + itemsPerPage.value;
+      return sortedScores.value.slice(start, end);
+    });
+
+    const paginationInfo = computed(() => {
+      if (!paginationEnabled.value) {
+        return {
+          start: 1,
+          end: filteredScores.value.length,
+          total: filteredScores.value.length
+        };
+      }
+      
+      const start = (currentPage.value - 1) * itemsPerPage.value + 1;
+      const end = Math.min(currentPage.value * itemsPerPage.value, filteredScores.value.length);
+      return {
+        start,
+        end,
+        total: filteredScores.value.length
+      };
+    });
+
     // Load scores from the API
     const loadScores = async () => {
       loading.value = true;
@@ -531,7 +631,79 @@ export default {
       searchQuery.value = '';
       minScore.value = 0;
       dateRange.value = 'all';
+      currentPage.value = 1; // Reset to first page
       applyFilters();
+    };
+
+    // Pagination methods
+    const goToPage = (page) => {
+      if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page;
+      }
+    };
+
+    const nextPage = () => {
+      if (currentPage.value < totalPages.value) {
+        currentPage.value++;
+      }
+    };
+
+    const prevPage = () => {
+      if (currentPage.value > 1) {
+        currentPage.value--;
+      }
+    };
+
+    const togglePagination = () => {
+      paginationEnabled.value = !paginationEnabled.value;
+      currentPage.value = 1; // Reset to first page when toggling
+    };
+
+    const changeItemsPerPage = (newItemsPerPage) => {
+      itemsPerPage.value = newItemsPerPage;
+      currentPage.value = 1; // Reset to first page when changing items per page
+    };
+
+    // Get visible page numbers for pagination
+    const getVisiblePages = () => {
+      const pages = [];
+      const total = totalPages.value;
+      const current = currentPage.value;
+      
+      if (total <= 7) {
+        // Show all pages if total is 7 or less
+        for (let i = 1; i <= total; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Show first page
+        pages.push(1);
+        
+        if (current > 4) {
+          pages.push('...');
+        }
+        
+        // Show pages around current page
+        const start = Math.max(2, current - 1);
+        const end = Math.min(total - 1, current + 1);
+        
+        for (let i = start; i <= end; i++) {
+          if (!pages.includes(i)) {
+            pages.push(i);
+          }
+        }
+        
+        if (current < total - 3) {
+          pages.push('...');
+        }
+        
+        // Show last page
+        if (total > 1) {
+          pages.push(total);
+        }
+      }
+      
+      return pages;
     };
     
     // Sort by field
@@ -638,9 +810,16 @@ export default {
       testCodeOptions,
       filteredScores,
       sortedScores,
+      paginatedScores,
       hasActiveFilters,
       averageScore,
       passingRate,
+      // Pagination
+      currentPage,
+      itemsPerPage,
+      paginationEnabled,
+      totalPages,
+      paginationInfo,
       loadScores,
       applyFilters,
       resetFilters,
@@ -652,7 +831,14 @@ export default {
       getExamTitle,
       getDateRangeLabel,
       viewScoreDetails,
-      exportScoreReport
+      exportScoreReport,
+      // Pagination methods
+      goToPage,
+      nextPage,
+      prevPage,
+      togglePagination,
+      changeItemsPerPage,
+      getVisiblePages
     };
   }
 };
@@ -887,6 +1073,10 @@ export default {
 /* Table styles */
 .scores-table-container {
   overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .scores-table {
@@ -895,21 +1085,35 @@ export default {
 }
 
 .scores-table th {
-  background-color: #f5f5f5;
-  color: #333;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
   font-weight: 600;
   text-align: left;
-  padding: 12px 15px;
-  border-bottom: 2px solid #ddd;
+  padding: 16px 12px;
+  border-bottom: none;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.scores-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.scores-table th:last-child {
+  border-top-right-radius: 12px;
 }
 
 .scores-table th.sortable {
   cursor: pointer;
   user-select: none;
+  transition: all 0.2s ease;
 }
 
 .scores-table th.sortable:hover {
-  background-color: #eeeeee;
+  background: linear-gradient(135deg, #159750 0%, #0bcc4e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .scores-table th i {
@@ -918,13 +1122,20 @@ export default {
 }
 
 .scores-table td {
-  padding: 12px 15px;
-  border-bottom: 1px solid #eee;
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
   color: #444;
+  vertical-align: middle;
+}
+
+.scores-table tbody tr {
+  transition: all 0.2s ease;
 }
 
 .scores-table tbody tr:hover {
-  background-color: #f9f9f9;
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .student-info,
@@ -932,81 +1143,110 @@ export default {
 .grade-info {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .student-name,
 .exam-title {
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
+  font-size: 0.95rem;
 }
 
 .student-details,
 .exam-class,
 .exam-code {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #666;
-  margin-top: 3px;
+  font-weight: 400;
 }
 
 /* Score percentage badge */
 .percentage-badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-weight: 500;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
   text-align: center;
+  min-width: 50px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.percentage-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .excellent {
-  background-color: #e8f5e9;
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
   color: #2e7d32;
+  border: 1px solid #4caf50;
 }
 
 .good {
-  background-color: #f1f8e9;
+  background: linear-gradient(135deg, #f1f8e9 0%, #dcedc8 100%);
   color: #558b2f;
+  border: 1px solid #8bc34a;
 }
 
 .average {
-  background-color: #fff8e1;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
   color: #ff8f00;
+  border: 1px solid #ffc107;
 }
 
 .needs-improvement {
-  background-color: #ffebee;
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
   color: #c62828;
+  border: 1px solid #f44336;
 }
 
 /* Action buttons */
 .actions-cell {
   white-space: nowrap;
+  display: flex;
+  gap: 8px;
+  justify-content: center;
 }
 
 .action-btn {
-  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
-  padding: 5px 8px;
-  margin: 0 3px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  color: white;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .view-btn {
-  color: #2196F3;
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
 }
 
 .view-btn:hover {
-  background-color: rgba(33, 150, 243, 0.1);
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
 }
 
 .export-btn {
-  color: #4CAF50;
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
 }
 
 .export-btn:hover {
-  background-color: rgba(76, 175, 80, 0.1);
+  background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
 }
 
 /* Loading, Error, and Empty states */
@@ -1105,6 +1345,396 @@ export default {
   .scores-table td {
     padding: 10px 8px;
     font-size: 0.85rem;
+  }
+  
+  .scores-table th {
+    font-size: 0.8rem;
+    padding: 12px 8px;
+  }
+  
+  .student-name,
+  .exam-title {
+    font-size: 0.9rem;
+  }
+  
+  .student-details,
+  .exam-class,
+  .exam-code {
+    font-size: 0.75rem;
+  }
+  
+  .percentage-badge {
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    min-width: 45px;
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+}
+
+/* High DPI and Zoom levels (125%, 150%) for laptops */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .scores-table th,
+  .scores-table td {
+    padding: 14px 10px;
+    font-size: 0.9rem;
+  }
+  
+  .scores-table th {
+    font-size: 0.85rem;
+  }
+  
+  .student-name,
+  .exam-title {
+    font-size: 0.9rem;
+  }
+  
+  .student-details,
+  .exam-class,
+  .exam-code {
+    font-size: 0.8rem;
+  }
+  
+  .percentage-badge {
+    padding: 5px 10px;
+    font-size: 0.8rem;
+  }
+  
+  .action-btn {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Compact layout for 14-inch laptops and lower resolutions */
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .scores-table th,
+  .scores-table td {
+    padding: 12px 8px;
+    font-size: 0.85rem;
+  }
+  
+  .scores-table th {
+    font-size: 0.8rem;
+  }
+  
+  .student-name,
+  .exam-title {
+    font-size: 0.85rem;
+  }
+  
+  .student-details,
+  .exam-class,
+  .exam-code {
+    font-size: 0.75rem;
+  }
+  
+  .percentage-badge {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    min-width: 40px;
+  }
+  
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Very high zoom levels (150%+) or very compact displays */
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .scores-table th,
+  .scores-table td {
+    padding: 10px 6px;
+    font-size: 0.8rem;
+  }
+  
+  .scores-table th {
+    font-size: 0.75rem;
+  }
+  
+  .student-name,
+  .exam-title {
+    font-size: 0.8rem;
+  }
+  
+  .student-details,
+  .exam-class,
+  .exam-code {
+    font-size: 0.7rem;
+  }
+  
+  .percentage-badge {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+    min-width: 35px;
+  }
+  
+  .action-btn {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Pagination Styles */
+.pagination-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.pagination-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.pagination-text {
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.pagination-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pagination-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #0bcc4e;
+  cursor: pointer;
+}
+
+.items-per-page {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.items-per-page:focus {
+  border-color: #0bcc4e;
+}
+
+.pagination-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #0bcc4e;
+  color: #0bcc4e;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f5f5f5;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.pagination-page {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.pagination-page:hover {
+  background: #f8f9fa;
+  border-color: #0bcc4e;
+  color: #0bcc4e;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-page.active {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  border-color: #0bcc4e;
+  box-shadow: 0 2px 8px rgba(11, 204, 78, 0.3);
+}
+
+.pagination-page.active:hover {
+  background: linear-gradient(135deg, #159750 0%, #0bcc4e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(11, 204, 78, 0.4);
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+  .pagination-container {
+    padding: 15px;
+  }
+  
+  .pagination-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .pagination-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .pagination-nav {
+    gap: 5px;
+  }
+  
+  .pagination-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .pagination-page {
+    width: 35px;
+    height: 35px;
+    font-size: 0.8rem;
+  }
+  
+  .pagination-text {
+    font-size: 0.8rem;
+  }
+  
+  .pagination-label {
+    font-size: 0.8rem;
+  }
+  
+  .items-per-page {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* High DPI and Zoom levels */
+@media screen and (max-width: 1536px) and (min-width: 1025px) {
+  .pagination-container {
+    padding: 18px;
+  }
+  
+  .pagination-text {
+    font-size: 0.85rem;
+  }
+  
+  .pagination-btn {
+    padding: 7px 14px;
+    font-size: 0.85rem;
+  }
+  
+  .pagination-page {
+    width: 38px;
+    height: 38px;
+    font-size: 0.85rem;
+  }
+}
+
+@media screen and (max-width: 1366px) and (min-width: 1025px) {
+  .pagination-container {
+    padding: 16px;
+  }
+  
+  .pagination-text {
+    font-size: 0.8rem;
+  }
+  
+  .pagination-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .pagination-page {
+    width: 36px;
+    height: 36px;
+    font-size: 0.8rem;
+  }
+}
+
+@media screen and (max-width: 1280px) and (min-width: 1025px) {
+  .pagination-container {
+    padding: 14px;
+  }
+  
+  .pagination-text {
+    font-size: 0.75rem;
+  }
+  
+  .pagination-btn {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+  }
+  
+  .pagination-page {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
   }
 }
 </style> 

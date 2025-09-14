@@ -2195,7 +2195,7 @@ export const submitTask = async (taskId, formData) => {
 /**
  * Add students to task visibility
  */
-export const addTaskVisibility = async (taskId, studentLRNs) => {
+export const addTaskVisibility = async (taskId, studentIds) => {
   try {
     const token = localStorage.getItem("jwtToken");
     if (!token) throw new Error("No token found");
@@ -2206,7 +2206,7 @@ export const addTaskVisibility = async (taskId, studentLRNs) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`
       },
-      body: JSON.stringify({ studentLRNs })
+      body: JSON.stringify({ studentIds })
     });
 
     if (!response.ok) {
@@ -4996,6 +4996,78 @@ export const checkExamSubjectAccess = async (examId) => {
     return data.hasAccess;
   } catch (error) {
     console.error('Error checking subject-based exam access:', error);
+    throw error;
+  }
+};
+
+// Teacher Analytics
+export const getTeacherAnalytics = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+    if (filters.gradeLevel) queryParams.append('gradeLevel', filters.gradeLevel);
+    if (filters.section) queryParams.append('section', filters.section);
+
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/teacher/analytics${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch teacher analytics");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching teacher analytics:", error);
+    throw error;
+  }
+};
+
+// Student Analytics
+export const getStudentAnalytics = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+    if (filters.gradeLevel) queryParams.append('gradeLevel', filters.gradeLevel);
+    if (filters.section) queryParams.append('section', filters.section);
+
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/student/analytics${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch student analytics");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching student analytics:", error);
     throw error;
   }
 };

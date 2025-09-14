@@ -45,6 +45,66 @@
             >
           </div>
         </div>
+
+        <!-- Legend Toggle -->
+        <div class="legend-toggle-container">
+          <label class="legend-toggle">
+            <input type="checkbox" v-model="showLegend">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">
+              <span class="material-icons">info</span>
+              Show Analysis & Legend
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Scoring Legend -->
+      <div v-if="showLegend" class="legend-container">
+        <div class="legend-section">
+          <h3><span class="material-icons">palette</span> Score Legend</h3>
+          <div class="legend-items">
+            <div class="legend-item">
+              <span class="legend-color score-excellent"></span>
+              <span class="legend-label">Excellent (90-100%)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color score-good"></span>
+              <span class="legend-label">Good (80-89%)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color score-passing"></span>
+              <span class="legend-label">Passing (75-79%)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color score-failing"></span>
+              <span class="legend-label">Failing (Below 75%)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-color score-zero"></span>
+              <span class="legend-label">No Score (0)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Part Difficulty Analysis -->
+        <div class="legend-section" v-if="partDifficultyAnalysis.length > 0">
+          <h3><span class="material-icons">trending_up</span> Part Difficulty Analysis</h3>
+          <div class="difficulty-items">
+            <div v-for="part in partDifficultyAnalysis" :key="part.id" class="difficulty-item" :class="part.difficulty">
+              <div class="difficulty-indicator">
+                <span class="material-icons">{{ getDifficultyIcon(part.difficulty) }}</span>
+              </div>
+              <div class="difficulty-info">
+                <div class="part-name">{{ part.label }}</div>
+                <div class="difficulty-stats">
+                  <span class="avg-score">Avg: {{ part.averageScore.toFixed(1) }}/{{ part.totalPoints }} ({{ part.averagePercentage.toFixed(1) }}%)</span>
+                  <span class="difficulty-label">{{ part.difficultyText }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="table-wrapper" ref="resultsTableWrapper">
@@ -55,8 +115,14 @@
               <th>Student Name</th>
               <th>LRN</th>
               <th>Section</th>
-              <th v-for="part in examParts" :key="part.id">
-                {{ part.label }} ({{ part.totalPoints }})
+              <th v-for="part in examParts" :key="part.id" :class="getPartDifficultyClass(part.id)">
+                <div class="part-header">
+                  <div class="part-title">{{ part.label }} ({{ part.totalPoints }})</div>
+                  <div class="part-difficulty" v-if="getPartDifficulty(part.id)">
+                    <span class="material-icons">{{ getDifficultyIcon(getPartDifficulty(part.id).difficulty) }}</span>
+                    <span class="difficulty-text">{{ getPartDifficulty(part.id).difficultyText }}</span>
+                  </div>
+                </div>
               </th>
               <th>Total Score</th>
               <th>Percentage</th>
@@ -166,6 +232,7 @@ export default {
     const filters = ref({ section: '' });
     const searchQuery = ref('');
     const maxTotalScore = ref(0);
+    const showLegend = ref(false); // Toggle for legend display
     
     // Pagination
     const resultsPage = ref(1);
@@ -221,6 +288,55 @@ export default {
 
     const uniqueSections = computed(() => {
       return [...new Set(results.value.map(r => r.section))].sort();
+    });
+
+    // Part difficulty analysis
+    const partDifficultyAnalysis = computed(() => {
+      if (!results.value.length || !examParts.value.length) return [];
+      
+      return examParts.value.map(part => {
+        const partScores = results.value
+          .map(result => result.partScores[part.id])
+          .filter(score => score && score.score !== undefined)
+          .map(score => score.score);
+        
+        if (partScores.length === 0) {
+          return {
+            id: part.id,
+            label: part.label,
+            totalPoints: part.totalPoints,
+            averageScore: 0,
+            averagePercentage: 0,
+            difficulty: 'unknown',
+            difficultyText: 'No Data'
+          };
+        }
+        
+        const averageScore = partScores.reduce((sum, score) => sum + score, 0) / partScores.length;
+        const averagePercentage = (averageScore / part.totalPoints) * 100;
+        
+        let difficulty, difficultyText;
+        if (averagePercentage >= 80) {
+          difficulty = 'easy';
+          difficultyText = 'Easy';
+        } else if (averagePercentage >= 60) {
+          difficulty = 'medium';
+          difficultyText = 'Medium';
+        } else {
+          difficulty = 'hard';
+          difficultyText = 'Hard';
+        }
+        
+        return {
+          id: part.id,
+          label: part.label,
+          totalPoints: part.totalPoints,
+          averageScore,
+          averagePercentage,
+          difficulty,
+          difficultyText
+        };
+      }).sort((a, b) => a.averagePercentage - b.averagePercentage); // Sort by difficulty (hardest first)
     });
 
     const filteredResults = computed(() => {
@@ -290,6 +406,26 @@ export default {
       return 'score-failing';
     };
 
+    // Difficulty analysis helpers
+    const getPartDifficulty = (partId) => {
+      return partDifficultyAnalysis.value.find(part => part.id === partId);
+    };
+
+    const getPartDifficultyClass = (partId) => {
+      const difficulty = getPartDifficulty(partId);
+      if (!difficulty) return '';
+      return `part-${difficulty.difficulty}`;
+    };
+
+    const getDifficultyIcon = (difficulty) => {
+      switch (difficulty) {
+        case 'easy': return 'check_circle';
+        case 'medium': return 'warning';
+        case 'hard': return 'error';
+        default: return 'help';
+      }
+    };
+
     const goBack = () => {
       router.back();
     };
@@ -307,6 +443,7 @@ export default {
       results,
       filters,
       searchQuery,
+      showLegend,
       uniqueSections,
       filteredResults,
       paginatedResults,
@@ -315,11 +452,15 @@ export default {
       resultsPageSize,
       showPagination,
       maxTotalScore,
+      partDifficultyAnalysis,
       getTotalResultsPages,
       getResultsPageNumbers,
       getScoreClass,
       getTotalScoreClass,
       getPercentageClass,
+      getPartDifficulty,
+      getPartDifficultyClass,
+      getDifficultyIcon,
       goBack
     };
   }
@@ -559,6 +700,68 @@ th {
   flex-wrap: wrap;
 }
 
+/* Legend Toggle Styles */
+.legend-toggle-container {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.legend-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  background-color: #ccc;
+  border-radius: 12px;
+  transition: background-color 0.3s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.legend-toggle input[type="checkbox"]:checked + .toggle-slider {
+  background-color: #673ab7;
+}
+
+.legend-toggle input[type="checkbox"]:checked + .toggle-slider::before {
+  transform: translateX(26px);
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+}
+
+.toggle-label .material-icons {
+  font-size: 18px;
+  color: #673ab7;
+}
+
 .filter-group {
   display: flex;
   align-items: center;
@@ -621,6 +824,224 @@ th {
   margin: 20px 0;
 }
 
+/* Legend Container */
+.legend-container {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.legend-section {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  flex: 1;
+  min-width: 300px;
+}
+
+.legend-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 15px 0;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.legend-section .material-icons {
+  color: #673ab7;
+  font-size: 20px;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* Difficulty Analysis */
+.difficulty-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.difficulty-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.difficulty-item.easy {
+  background: #e8f5e9;
+  border-left: 4px solid #4caf50;
+}
+
+.difficulty-item.medium {
+  background: #fff3e0;
+  border-left: 4px solid #ff9800;
+}
+
+.difficulty-item.hard {
+  background: #ffebee;
+  border-left: 4px solid #f44336;
+}
+
+.difficulty-item.unknown {
+  background: #f5f5f5;
+  border-left: 4px solid #9e9e9e;
+}
+
+.difficulty-indicator {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.difficulty-item.easy .difficulty-indicator {
+  background: #4caf50;
+  color: white;
+}
+
+.difficulty-item.medium .difficulty-indicator {
+  background: #ff9800;
+  color: white;
+}
+
+.difficulty-item.hard .difficulty-indicator {
+  background: #f44336;
+  color: white;
+}
+
+.difficulty-item.unknown .difficulty-indicator {
+  background: #9e9e9e;
+  color: white;
+}
+
+.difficulty-indicator .material-icons {
+  font-size: 18px;
+}
+
+.difficulty-info {
+  flex: 1;
+}
+
+.part-name {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.difficulty-stats {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.avg-score {
+  font-weight: 500;
+}
+
+.difficulty-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Table Header Difficulty Styling */
+.part-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  text-align: center;
+}
+
+.part-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.part-difficulty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.part-difficulty .material-icons {
+  font-size: 14px;
+}
+
+.difficulty-text {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Part difficulty column styling */
+th.part-easy {
+  background: #e8f5e9 !important;
+  border-left: 3px solid #4caf50;
+}
+
+th.part-medium {
+  background: #fff3e0 !important;
+  border-left: 3px solid #ff9800;
+}
+
+th.part-hard {
+  background: #ffebee !important;
+  border-left: 3px solid #f44336;
+}
+
+th.part-unknown {
+  background: #f5f5f5 !important;
+  border-left: 3px solid #9e9e9e;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .part-results {
@@ -635,6 +1056,45 @@ th {
   .filters {
     flex-direction: column;
     gap: 15px;
+  }
+
+  .legend-toggle-container {
+    margin-left: 0;
+    margin-top: 10px;
+  }
+
+  .toggle-label {
+    font-size: 13px;
+  }
+
+  .toggle-label .material-icons {
+    font-size: 16px;
+  }
+
+  .legend-container {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .legend-section {
+    min-width: auto;
+  }
+
+  .difficulty-stats {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .part-header {
+    gap: 2px;
+  }
+
+  .part-title {
+    font-size: 12px;
+  }
+
+  .part-difficulty {
+    font-size: 10px;
   }
 
   .table-wrapper {

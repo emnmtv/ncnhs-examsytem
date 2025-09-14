@@ -145,7 +145,7 @@
                   <input 
                     type="checkbox" 
                     :checked="selectedStudents.length === allStudents.length" 
-                    @change="selectedStudents = $event.target.checked ? allStudents.map(s => s.lrn) : []"
+                    @change="selectedStudents = $event.target.checked ? allStudents.map(s => s.id) : []"
                   >
                   <strong>Select All Students</strong>
                 </label>
@@ -156,7 +156,7 @@
                 <label class="checkbox-label">
                   <input 
                     type="checkbox" 
-                    :value="student.lrn" 
+                    :value="student.id" 
                     v-model="selectedStudents"
                   >
                   {{ student.firstName }} {{ student.lastName }} 
@@ -239,9 +239,9 @@ const filteredStudents = computed(() => {
   
   const search = studentSearch.value.toLowerCase();
   return allStudents.value.filter(student => 
-    student.firstName.toLowerCase().includes(search) || 
-    student.lastName.toLowerCase().includes(search) || 
-    student.lrn.toString().includes(search)
+    (student.firstName && student.firstName.toLowerCase().includes(search)) || 
+    (student.lastName && student.lastName.toLowerCase().includes(search)) || 
+    (student.lrn && student.lrn.toString().includes(search))
   );
 });
 
@@ -317,8 +317,8 @@ const loadStudentsFromSections = async () => {
     
     console.log(`Total students found: ${allStudents.value.length}`);
     
-    // Automatically select all students' LRNs
-    selectedStudents.value = allStudents.value.map(student => student.lrn);
+    // Automatically select all students' IDs
+    selectedStudents.value = allStudents.value.map(student => student.id);
   } catch (error) {
     console.error('Failed to load students:', error);
   } finally {
@@ -459,7 +459,9 @@ const handleSubmit = async () => {
     formData.append('description', taskData.value.description || '');
     formData.append('dueDate', taskData.value.dueDate);
     formData.append('totalScore', taskData.value.totalScore);
-    formData.append('studentLRNs', JSON.stringify(selectedStudents.value.map(lrn => lrn.toString())));
+    // Use student IDs directly since selectedStudents now contains IDs
+    const studentIds = selectedStudents.value;
+    formData.append('studentIds', JSON.stringify(studentIds));
     
     // Append multiple files
     selectedFiles.value.forEach(file => {
@@ -470,7 +472,19 @@ const handleSubmit = async () => {
     router.push(`/subject/${selectedSubject.value.id}/tasks`);
   } catch (error) {
     console.error('Failed to create task:', error);
-    alert('Failed to create task. Please try again.');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      subjectId: selectedSubject.value?.id,
+      studentCount: selectedStudents.value.length,
+      taskData: taskData.value
+    });
+    
+    let errorMessage = 'Failed to create task. Please try again.';
+    if (error.message) {
+      errorMessage = `Failed to create task: ${error.message}`;
+    }
+    alert(errorMessage);
   } finally {
     isSubmitting.value = false;
   }

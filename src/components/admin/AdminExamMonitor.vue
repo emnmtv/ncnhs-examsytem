@@ -157,10 +157,6 @@
         </div>
         
         <div class="exam-footer">
-          <button class="card-btn view" @click="viewResults(exam)">
-            <span class="material-icons">assessment</span>
-            Results
-          </button>
           <button class="card-btn details" @click="viewDetails(exam)">
             <span class="material-icons">visibility</span>
             Details
@@ -175,7 +171,7 @@
           </button>
           <button class="card-btn mps" @click="viewMPS(exam)" v-if="exam.totalSubmissions > 0">
             <span class="material-icons">analytics</span>
-            MPS
+            Analytics
           </button>
         </div>
       </div>
@@ -186,50 +182,50 @@
       <table class="exams-table">
         <thead>
           <tr>
-            <th @click="sortBy('testCode')">
+            <th @click="sortBy('testCode')" class="sortable">
               Test Code
               <span v-if="sortKey === 'testCode'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('examTitle')">
+            <th @click="sortBy('examTitle')" class="sortable">
               Exam Title
               <span v-if="sortKey === 'examTitle'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('classCode')">
+            <th @click="sortBy('classCode')" class="sortable">
               Class Code
               <span v-if="sortKey === 'classCode'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('status')">
+            <th @click="sortBy('status')" class="sortable">
               Status
               <span v-if="sortKey === 'status'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
             <th>Teacher</th>
-            <th @click="sortBy('totalQuestions')">
+            <th @click="sortBy('totalQuestions')" class="sortable">
               Questions
               <span v-if="sortKey === 'totalQuestions'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('totalSubmissions')">
+            <th @click="sortBy('totalSubmissions')" class="sortable">
               Submissions
               <span v-if="sortKey === 'totalSubmissions'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('averageScore')">
+            <th @click="sortBy('averageScore')" class="sortable">
               Avg. Score
               <span v-if="sortKey === 'averageScore'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
               </span>
             </th>
-            <th @click="sortBy('createdAt')">
+            <th @click="sortBy('createdAt')" class="sortable">
               Created
               <span v-if="sortKey === 'createdAt'" class="sort-icon material-icons">
                 {{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}
@@ -241,26 +237,54 @@
         </thead>
         <tbody>
           <tr v-for="exam in filteredSortedExams" :key="exam.id">
-            <td>{{ exam.testCode }}</td>
-            <td>{{ exam.examTitle }}</td>
-            <td>{{ exam.classCode }}</td>
+            <td>
+              <div class="test-code-cell">
+                <span class="test-code-badge">{{ exam.testCode }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="exam-title-cell">
+                <span class="exam-title">{{ exam.examTitle }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="class-code-cell">
+                <span class="class-code">{{ exam.classCode }}</span>
+              </div>
+            </td>
             <td>
               <span class="status-badge" :class="exam.status">
                 {{ formatStatus(exam.status) }}
               </span>
             </td>
-            <td>{{ exam.teacher ? `${exam.teacher.firstName} ${exam.teacher.lastName}` : 'Unknown' }}</td>
-            <td>{{ exam.totalQuestions }}</td>
-            <td>{{ exam.totalSubmissions }}</td>
+            <td>
+              <div class="teacher-cell">
+                <span class="teacher-name">{{ exam.teacher ? `${exam.teacher.firstName} ${exam.teacher.lastName}` : 'Unknown' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="questions-cell">
+                <span class="questions-count">{{ exam.totalQuestions }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="submissions-cell">
+                <span class="submissions-count">{{ exam.totalSubmissions }}</span>
+              </div>
+            </td>
             <td>
               <span v-if="exam.averageScore !== null" 
                     class="score-badge"
                     :class="getScoreClass(exam.averageScore)">
                 {{ exam.averageScore.toFixed(1) }}%
               </span>
-              <span v-else>-</span>
+              <span v-else class="no-score">-</span>
             </td>
-            <td>{{ formatDate(exam.createdAt) }}</td>
+            <td>
+              <div class="date-cell">
+                <span class="created-date">{{ formatDate(exam.createdAt) }}</span>
+              </div>
+            </td>
             <td>
               <div class="access-chips">
                 <span v-for="(access, i) in exam.accessSettings.slice(0, 2)" :key="i" class="access-chip">
@@ -273,20 +297,18 @@
             </td>
             <td>
               <div class="action-buttons">
-                <button class="action-btn" @click="viewResults(exam)">
-                  <span class="material-icons">assessment</span>
-                </button>
-                <button class="action-btn" @click="viewDetails(exam)">
+                <button class="action-btn details" @click="viewDetails(exam)" title="View Details">
                   <span class="material-icons">visibility</span>
                 </button>
                 <button 
                   v-if="exam.status === 'active'" 
                   class="action-btn stop" 
                   @click="stopExam(exam)"
+                  title="Stop Exam"
                 >
                   <span class="material-icons">stop_circle</span>
                 </button>
-                <button class="action-btn" @click="viewMPS(exam)" v-if="exam.totalSubmissions > 0">
+                <button class="action-btn analytics" @click="viewMPS(exam)" v-if="exam.totalSubmissions > 0" title="View Analytics">
                   <span class="material-icons">analytics</span>
                 </button>
               </div>
@@ -381,10 +403,6 @@
         </div>
         
         <div class="modal-footer">
-          <button class="modal-btn view-results" @click="viewResults(selectedExam)">
-            <span class="material-icons">assessment</span>
-            View Results
-          </button>
           <button 
             v-if="selectedExam.status === 'active'" 
             class="modal-btn stop-exam" 
@@ -419,7 +437,7 @@ const statusFilter = ref('');
 const sortKey = ref('createdAt');
 const sortOrder = ref('desc');
 const selectedExam = ref(null);
-const currentView = ref('card'); // Default to card view
+const currentView = ref('table'); // Default to table view
 
 // Fetch all exams on component mount
 onMounted(async () => {
@@ -554,16 +572,6 @@ const closeModal = () => {
   selectedExam.value = null;
 };
 
-// View exam results
-const viewResults = (exam) => {
-  router.push({
-    path: `/exam-results/${exam.id}`,
-    query: {
-      testCode: exam.testCode,
-      title: exam.examTitle
-    }
-  });
-};
 
 // Stop an active exam
 const stopExam = async (exam) => {
@@ -1551,13 +1559,44 @@ const viewMPS = (exam) => {
     font-size: 0.9rem;
   }
 
+  .exams-table th {
+    font-size: 0.85rem;
+    padding: 12px 10px;
+  }
+
+  .test-code-badge {
+    font-size: 0.75rem;
+    padding: 3px 6px;
+  }
+
+  .exam-title {
+    font-size: 0.9rem;
+  }
+
+  .class-code {
+    font-size: 0.8rem;
+  }
+
+  .teacher-name {
+    font-size: 0.85rem;
+  }
+
+  .questions-count,
+  .submissions-count {
+    font-size: 0.85rem;
+  }
+
+  .created-date {
+    font-size: 0.8rem;
+  }
+
   .action-btn {
     width: 28px;
     height: 28px;
   }
 
   .action-btn .material-icons {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .modal-content {
@@ -1726,13 +1765,44 @@ const viewMPS = (exam) => {
     font-size: 0.85rem;
   }
 
+  .exams-table th {
+    font-size: 0.8rem;
+    padding: 10px 8px;
+  }
+
+  .test-code-badge {
+    font-size: 0.7rem;
+    padding: 2px 5px;
+  }
+
+  .exam-title {
+    font-size: 0.85rem;
+  }
+
+  .class-code {
+    font-size: 0.75rem;
+  }
+
+  .teacher-name {
+    font-size: 0.8rem;
+  }
+
+  .questions-count,
+  .submissions-count {
+    font-size: 0.8rem;
+  }
+
+  .created-date {
+    font-size: 0.75rem;
+  }
+
   .action-btn {
     width: 26px;
     height: 26px;
   }
 
   .action-btn .material-icons {
-    font-size: 16px;
+    font-size: 14px;
   }
 
   .modal-content {
@@ -1901,13 +1971,44 @@ const viewMPS = (exam) => {
     font-size: 0.8rem;
   }
 
+  .exams-table th {
+    font-size: 0.75rem;
+    padding: 8px 6px;
+  }
+
+  .test-code-badge {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+  }
+
+  .exam-title {
+    font-size: 0.8rem;
+  }
+
+  .class-code {
+    font-size: 0.7rem;
+  }
+
+  .teacher-name {
+    font-size: 0.75rem;
+  }
+
+  .questions-count,
+  .submissions-count {
+    font-size: 0.75rem;
+  }
+
+  .created-date {
+    font-size: 0.7rem;
+  }
+
   .action-btn {
     width: 24px;
     height: 24px;
   }
 
   .action-btn .material-icons {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .modal-content {
@@ -2004,7 +2105,13 @@ const viewMPS = (exam) => {
     padding: 0 1rem;
   }
 
+  /* Force card view on mobile */
+  .exams-table-container {
+    display: none !important;
+  }
+  
   .exams-card-grid {
+    display: grid !important;
     grid-template-columns: 1fr;
     gap: 0.8rem;
   }
@@ -2036,12 +2143,6 @@ const viewMPS = (exam) => {
   .card-btn {
     padding: 8px;
     font-size: 11px;
-  }
-
-  .exams-table th,
-  .exams-table td {
-    padding: 6px 8px;
-    font-size: 0.8rem;
   }
 
   .modal-content {
@@ -2077,6 +2178,17 @@ const viewMPS = (exam) => {
   }
 }
 
+/* Desktop: Force table view */
+@media (min-width: 769px) {
+  .exams-card-grid {
+    display: none !important;
+  }
+  
+  .exams-table-container {
+    display: block !important;
+  }
+}
+
 .status-badge.active {
   background: #F8D7DA;
   color: #721C24;
@@ -2091,9 +2203,8 @@ const viewMPS = (exam) => {
 .exams-table-container {
   overflow-x: auto;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.12),
-  0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
   animation: fadeIn 0.3s ease;
 }
@@ -2108,35 +2219,58 @@ const viewMPS = (exam) => {
   border-collapse: collapse;
 }
 
-.exams-table th,
-.exams-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #f0f0f0;
-}
-
 .exams-table th {
-  background: #f9f9f9;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
   font-weight: 600;
-  color: #333;
+  text-align: left;
+  padding: 16px 12px;
+  border-bottom: none;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   cursor: pointer;
   white-space: nowrap;
   position: relative;
   user-select: none;
+  transition: all 0.2s ease;
 }
 
-.exams-table th:hover {
-  background: #f5f5f5;
+.exams-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.exams-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.exams-table th.sortable:hover {
+  background: linear-gradient(135deg, #159750 0%, #0bcc4e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.exams-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #444;
+  vertical-align: middle;
+}
+
+.exams-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.exams-table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sort-icon {
   font-size: 16px;
   vertical-align: middle;
   margin-left: 5px;
-}
-
-.exams-table tbody tr:hover {
-  background: #f9f9f9;
 }
 
 /* Status badges in table */
@@ -2159,39 +2293,117 @@ const viewMPS = (exam) => {
   color: #856404;
 }
 
+/* Table cell styles */
+.test-code-cell,
+.exam-title-cell,
+.class-code-cell,
+.teacher-cell,
+.questions-cell,
+.submissions-cell,
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.test-code-badge {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.exam-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.class-code {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.teacher-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.questions-count,
+.submissions-count {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.created-date {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.no-score {
+  color: #999;
+  font-style: italic;
+}
+
 /* Action buttons in table */
 .action-buttons {
   display: flex;
-  gap: 5px;
+  gap: 8px;
   justify-content: center;
 }
 
 .action-btn {
-  background: none;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
-  color: #757575;
+  transition: all 0.2s ease;
+  color: white;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .action-btn:hover {
-  background: #f0f0f0;
-  color: #4CAF50;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn.details {
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+}
+
+.action-btn.details:hover {
+  background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+}
+
+.action-btn.stop {
+  background: linear-gradient(135deg, #4CAF50 0%, #388E3C 100%);
 }
 
 .action-btn.stop:hover {
-  background: #E8F5E9;
-  color: #4CAF50;
+  background: linear-gradient(135deg, #388E3C 0%, #2E7D32 100%);
+}
+
+.action-btn.analytics {
+  background: linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%);
+}
+
+.action-btn.analytics:hover {
+  background: linear-gradient(135deg, #7B1FA2 0%, #6A1B9A 100%);
 }
 
 .action-btn .material-icons {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 /* Score badges */

@@ -1,30 +1,40 @@
 <template>
   <div class="student-approval">
-    <div class="page-header">
-      <h1>Student Registration Management</h1>
-      <div class="header-actions">
-        <div class="stats-overview">
-          <div class="stat-item">
-            <span class="stat-number">{{ stats.pending }}</span>
-            <span class="stat-label">Pending</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-number">{{ stats.approved }}</span>
-            <span class="stat-label">Approved</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-number">{{ stats.rejected }}</span>
-            <span class="stat-label">Denied</span>
-          </div>
-          <div class="stat-item total">
-            <span class="stat-number">{{ stats.total }}</span>
-            <span class="stat-label">Total</span>
-          </div>
+    <div class="header-container">
+      <div class="header-content">
+        <h1>Student Registration Management<span class="material-icons">people</span></h1>
+        <div class="divider"></div>
+        <div class="header-text">
+          <p class="subtitle">Manage student registrations and approvals</p>
+        </div>
+      </div>
+      <div class="header-background">STUDENTS</div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-section">
+      <div class="stats-overview">
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.pending }}</span>
+          <span class="stat-label">Pending</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.approved }}</span>
+          <span class="stat-label">Approved</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ stats.rejected }}</span>
+          <span class="stat-label">Denied</span>
+        </div>
+        <div class="stat-item total">
+          <span class="stat-number">{{ stats.total }}</span>
+          <span class="stat-label">Total</span>
         </div>
       </div>
     </div>
 
-    <div class="filters-section">
+    <!-- Controls Section -->
+    <div class="controls-section">
       <div class="search-box">
         <span class="material-icons">search</span>
         <input 
@@ -37,8 +47,8 @@
           <span class="material-icons">close</span>
         </button>
       </div>
-
-      <div class="filter-group">
+      
+      <div class="filter-controls">
         <select v-model="selectedGrade">
           <option value="">All Grades</option>
           <option v-for="grade in availableGrades" :key="grade" :value="grade">
@@ -61,7 +71,24 @@
           <option value="quarter">This Quarter</option>
         </select>
         
-        <button @click="resetFilters" class="reset-filters-btn">
+        <div class="view-toggle">
+          <button 
+            @click="currentView = 'table'" 
+            class="view-btn" 
+            :class="{ active: currentView === 'table' }"
+          >
+            <span class="material-icons">table_chart</span>
+          </button>
+          <button 
+            @click="currentView = 'card'" 
+            class="view-btn" 
+            :class="{ active: currentView === 'card' }"
+          >
+            <span class="material-icons">grid_view</span>
+          </button>
+        </div>
+        
+        <button @click="resetFilters" class="refresh-btn">
           <span class="material-icons">refresh</span>
           Reset
         </button>
@@ -118,45 +145,36 @@
               Refresh
             </button>
           </div>
-          <div class="table-container">
+          
+          <!-- Table View -->
+          <div v-if="currentView === 'table'" class="table-container">
             <table class="registrations-table">
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Email</th>
-                  <th>LRN</th>
-                  <th>Grade</th>
-                  <th>Section</th>
-                  <th>Registered</th>
-                  <th>Actions</th>
+                  <th class="col-number">#</th>
+                  <th class="col-name">Student</th>
+                  <th class="col-lrn">LRN</th>
+                  <th class="col-grade">Grade</th>
+                  <th class="col-section">Section</th>
+                  <th class="col-registered">Registered</th>
+                  <th class="col-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="student in filteredPendingRegistrations" :key="student.id" class="table-row pending">
-                  <td class="student-cell">
-                    <div class="student-info">
-                      <div class="student-avatar">
-                        <img 
-                          v-if="student.profilePicture" 
-                          :src="getFullImageUrl(student.profilePicture)" 
-                          :alt="`${student.firstName} ${student.lastName}`"
-                        >
-                        <div v-else class="avatar-placeholder">
-                          {{ getInitials(student.firstName, student.lastName) }}
-                        </div>
-                      </div>
-                      <div class="student-details">
-                        <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
-                        <div class="status-badge pending">Pending</div>
-                      </div>
+                <tr v-for="(student, index) in filteredPendingRegistrations" :key="student.id" class="student-row pending">
+                  <td class="col-number">{{ index + 1 }}</td>
+                  <td class="col-name">
+                    <div class="student-name">
+                      <span class="name">{{ student.firstName }} {{ student.lastName }}</span>
+                      <span class="email">{{ student.email }}</span>
+                      <span class="status-badge pending">Pending</span>
                     </div>
                   </td>
-                  <td>{{ student.email }}</td>
-                  <td>{{ student.lrn || 'N/A' }}</td>
-                  <td>{{ student.gradeLevel || 'N/A' }}</td>
-                  <td>{{ student.section || 'N/A' }}</td>
-                  <td>{{ formatDate(student.createdAt) }}</td>
-                  <td class="actions-cell">
+                  <td class="col-lrn">{{ student.lrn || 'N/A' }}</td>
+                  <td class="col-grade">Grade {{ student.gradeLevel || 'N/A' }}</td>
+                  <td class="col-section">{{ student.section || 'N/A' }}</td>
+                  <td class="col-registered">{{ formatDate(student.createdAt) }}</td>
+                  <td class="col-actions">
                     <button 
                       @click="approveStudent(student.id)"
                       class="action-button approve"
@@ -177,6 +195,73 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Card View -->
+          <div v-else class="cards-container">
+            <div class="cards-grid">
+              <div v-for="student in filteredPendingRegistrations" :key="student.id" class="student-card pending">
+                <div class="card-header">
+                  <div class="student-info">
+                    <div class="student-avatar">
+                      <img 
+                        v-if="student.profilePicture" 
+                        :src="getFullImageUrl(student.profilePicture)" 
+                        :alt="`${student.firstName} ${student.lastName}`"
+                      >
+                      <div v-else class="avatar-placeholder">
+                        {{ getInitials(student.firstName, student.lastName) }}
+                      </div>
+                    </div>
+                    <div class="student-details">
+                      <h4 class="student-name">{{ student.firstName }} {{ student.lastName }}</h4>
+                      <p class="student-email">{{ student.email }}</p>
+                      <span class="status-badge pending">Pending</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-info">
+                    <div class="info-item">
+                      <span class="material-icons">badge</span>
+                      <span>{{ student.lrn || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">school</span>
+                      <span>Grade {{ student.gradeLevel || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">group</span>
+                      <span>{{ student.section || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">schedule</span>
+                      <span>{{ formatDate(student.createdAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button 
+                    @click="approveStudent(student.id)"
+                    class="action-button approve"
+                    :disabled="processingStudents.has(student.id)"
+                    title="Approve"
+                  >
+                    <span class="material-icons">check</span>
+                    Approve
+                  </button>
+                  <button 
+                    @click="showRejectModal(student)"
+                    class="action-button reject"
+                    :disabled="processingStudents.has(student.id)"
+                    title="Deny"
+                  >
+                    <span class="material-icons">close</span>
+                    Deny
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -201,47 +286,38 @@
               Refresh
             </button>
           </div>
-          <div class="table-container">
+          
+          <!-- Table View -->
+          <div v-if="currentView === 'table'" class="table-container">
             <table class="registrations-table">
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Email</th>
-                  <th>LRN</th>
-                  <th>Grade</th>
-                  <th>Section</th>
-                  <th>Approved</th>
-                  <th>Approved By</th>
-                  <th>Actions</th>
+                  <th class="col-number">#</th>
+                  <th class="col-name">Student</th>
+                  <th class="col-lrn">LRN</th>
+                  <th class="col-grade">Grade</th>
+                  <th class="col-section">Section</th>
+                  <th class="col-approved">Approved</th>
+                  <th class="col-approver">Approved By</th>
+                  <th class="col-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="student in filteredApprovedRegistrations" :key="student.id" class="table-row approved">
-                  <td class="student-cell">
-                    <div class="student-info">
-                      <div class="student-avatar">
-                        <img 
-                          v-if="student.profilePicture" 
-                          :src="getFullImageUrl(student.profilePicture)" 
-                          :alt="`${student.firstName} ${student.lastName}`"
-                        >
-                        <div v-else class="avatar-placeholder">
-                          {{ getInitials(student.firstName, student.lastName) }}
-                        </div>
-                      </div>
-                      <div class="student-details">
-                        <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
-                        <div class="status-badge approved">Approved</div>
-                      </div>
+                <tr v-for="(student, index) in filteredApprovedRegistrations" :key="student.id" class="student-row approved">
+                  <td class="col-number">{{ index + 1 }}</td>
+                  <td class="col-name">
+                    <div class="student-name">
+                      <span class="name">{{ student.firstName }} {{ student.lastName }}</span>
+                      <span class="email">{{ student.email }}</span>
+                      <span class="status-badge approved">Approved</span>
                     </div>
                   </td>
-                  <td>{{ student.email }}</td>
-                  <td>{{ student.lrn || 'N/A' }}</td>
-                  <td>{{ student.gradeLevel || 'N/A' }}</td>
-                  <td>{{ student.section || 'N/A' }}</td>
-                  <td>{{ formatDate(student.approvedAt) }}</td>
-                  <td>{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</td>
-                  <td class="actions-cell">
+                  <td class="col-lrn">{{ student.lrn || 'N/A' }}</td>
+                  <td class="col-grade">Grade {{ student.gradeLevel || 'N/A' }}</td>
+                  <td class="col-section">{{ student.section || 'N/A' }}</td>
+                  <td class="col-approved">{{ formatDate(student.approvedAt) }}</td>
+                  <td class="col-approver">{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</td>
+                  <td class="col-actions">
                     <button 
                       @click="showRejectModal(student)"
                       class="action-button reject"
@@ -254,6 +330,68 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Card View -->
+          <div v-else class="cards-container">
+            <div class="cards-grid">
+              <div v-for="student in filteredApprovedRegistrations" :key="student.id" class="student-card approved">
+                <div class="card-header">
+                  <div class="student-info">
+                    <div class="student-avatar">
+                      <img 
+                        v-if="student.profilePicture" 
+                        :src="getFullImageUrl(student.profilePicture)" 
+                        :alt="`${student.firstName} ${student.lastName}`"
+                      >
+                      <div v-else class="avatar-placeholder">
+                        {{ getInitials(student.firstName, student.lastName) }}
+                      </div>
+                    </div>
+                    <div class="student-details">
+                      <h4 class="student-name">{{ student.firstName }} {{ student.lastName }}</h4>
+                      <p class="student-email">{{ student.email }}</p>
+                      <span class="status-badge approved">Approved</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-info">
+                    <div class="info-item">
+                      <span class="material-icons">badge</span>
+                      <span>{{ student.lrn || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">school</span>
+                      <span>Grade {{ student.gradeLevel || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">group</span>
+                      <span>{{ student.section || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">check_circle</span>
+                      <span>{{ formatDate(student.approvedAt) }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">person</span>
+                      <span>{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button 
+                    @click="showRejectModal(student)"
+                    class="action-button reject"
+                    :disabled="processingStudents.has(student.id)"
+                    title="Deny"
+                  >
+                    <span class="material-icons">close</span>
+                    Deny
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -278,49 +416,40 @@
               Refresh
             </button>
           </div>
-          <div class="table-container">
+          
+          <!-- Table View -->
+          <div v-if="currentView === 'table'" class="table-container">
             <table class="registrations-table">
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Email</th>
-                  <th>LRN</th>
-                  <th>Grade</th>
-                  <th>Section</th>
-                  <th>Denied</th>
-                  <th>Denied By</th>
-                  <th>Reason</th>
-                  <th>Actions</th>
+                  <th class="col-number">#</th>
+                  <th class="col-name">Student</th>
+                  <th class="col-lrn">LRN</th>
+                  <th class="col-grade">Grade</th>
+                  <th class="col-section">Section</th>
+                  <th class="col-denied">Denied</th>
+                  <th class="col-denier">Denied By</th>
+                  <th class="col-reason">Reason</th>
+                  <th class="col-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="student in filteredRejectedRegistrations" :key="student.id" class="table-row rejected">
-                  <td class="student-cell">
-                    <div class="student-info">
-                      <div class="student-avatar">
-                        <img 
-                          v-if="student.profilePicture" 
-                          :src="getFullImageUrl(student.profilePicture)" 
-                          :alt="`${student.firstName} ${student.lastName}`"
-                        >
-                        <div v-else class="avatar-placeholder">
-                          {{ getInitials(student.firstName, student.lastName) }}
-                        </div>
-                      </div>
-                      <div class="student-details">
-                        <div class="student-name">{{ student.firstName }} {{ student.lastName }}</div>
-                        <div class="status-badge rejected">Denied</div>
-                      </div>
+                <tr v-for="(student, index) in filteredRejectedRegistrations" :key="student.id" class="student-row rejected">
+                  <td class="col-number">{{ index + 1 }}</td>
+                  <td class="col-name">
+                    <div class="student-name">
+                      <span class="name">{{ student.firstName }} {{ student.lastName }}</span>
+                      <span class="email">{{ student.email }}</span>
+                      <span class="status-badge rejected">Denied</span>
                     </div>
                   </td>
-                  <td>{{ student.email }}</td>
-                  <td>{{ student.lrn || 'N/A' }}</td>
-                  <td>{{ student.gradeLevel || 'N/A' }}</td>
-                  <td>{{ student.section || 'N/A' }}</td>
-                  <td>{{ formatDate(student.approvedAt) }}</td>
-                  <td>{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</td>
-                  <td class="rejection-reason">{{ student.rejectionReason || 'N/A' }}</td>
-                  <td class="actions-cell">
+                  <td class="col-lrn">{{ student.lrn || 'N/A' }}</td>
+                  <td class="col-grade">Grade {{ student.gradeLevel || 'N/A' }}</td>
+                  <td class="col-section">{{ student.section || 'N/A' }}</td>
+                  <td class="col-denied">{{ formatDate(student.approvedAt) }}</td>
+                  <td class="col-denier">{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</td>
+                  <td class="col-reason">{{ student.rejectionReason || 'N/A' }}</td>
+                  <td class="col-actions">
                     <button 
                       @click="approveStudent(student.id)"
                       class="action-button approve"
@@ -333,6 +462,72 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Card View -->
+          <div v-else class="cards-container">
+            <div class="cards-grid">
+              <div v-for="student in filteredRejectedRegistrations" :key="student.id" class="student-card rejected">
+                <div class="card-header">
+                  <div class="student-info">
+                    <div class="student-avatar">
+                      <img 
+                        v-if="student.profilePicture" 
+                        :src="getFullImageUrl(student.profilePicture)" 
+                        :alt="`${student.firstName} ${student.lastName}`"
+                      >
+                      <div v-else class="avatar-placeholder">
+                        {{ getInitials(student.firstName, student.lastName) }}
+                      </div>
+                    </div>
+                    <div class="student-details">
+                      <h4 class="student-name">{{ student.firstName }} {{ student.lastName }}</h4>
+                      <p class="student-email">{{ student.email }}</p>
+                      <span class="status-badge rejected">Denied</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-info">
+                    <div class="info-item">
+                      <span class="material-icons">badge</span>
+                      <span>{{ student.lrn || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">school</span>
+                      <span>Grade {{ student.gradeLevel || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">group</span>
+                      <span>{{ student.section || 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">cancel</span>
+                      <span>{{ formatDate(student.approvedAt) }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">person</span>
+                      <span>{{ student.approver ? `${student.approver.firstName} ${student.approver.lastName}` : 'N/A' }}</span>
+                    </div>
+                    <div class="info-item">
+                      <span class="material-icons">info</span>
+                      <span>{{ student.rejectionReason || 'N/A' }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-actions">
+                  <button 
+                    @click="approveStudent(student.id)"
+                    class="action-button approve"
+                    :disabled="processingStudents.has(student.id)"
+                    title="Approve"
+                  >
+                    <span class="material-icons">check</span>
+                    Approve
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -412,6 +607,7 @@ export default {
       error: null,
       processing: false,
       processingStudents: new Set(),
+      currentView: 'table', // Default to table view
       stats: {
         pending: 0,
         approved: 0,
@@ -451,6 +647,13 @@ export default {
   },
   mounted() {
     this.loadData();
+    // Set default view based on screen size
+    this.setDefaultView();
+    // Listen for window resize to update view
+    window.addEventListener('resize', this.handleResize);
+  },
+  beforeUnmount() {
+    window.removeEventListener('resize', this.handleResize);
   },
   methods: {
     async loadData() {
@@ -745,6 +948,20 @@ export default {
       this.selectedGrade = '';
       this.selectedSection = '';
       this.dateFilter = '';
+    },
+
+    setDefaultView() {
+      // Set cards as default on mobile, table on desktop
+      if (window.innerWidth <= 768) {
+        this.currentView = 'card';
+      } else {
+        this.currentView = 'table';
+      }
+    },
+
+    handleResize() {
+      // Update view based on screen size changes
+      this.setDefaultView();
     }
   }
 };
@@ -752,30 +969,69 @@ export default {
 
 <style scoped>
 .student-approval {
-  padding: 2rem;
   max-width: auto;
   margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
-.page-header {
+.header-container {
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+}
+
+.header-content h1 {
+  color: #159750;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  gap: 10px;
 }
 
-.page-header h1 {
-  color: #1a1a1a;
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: -0.5px;
+.header-content h1 .material-icons {
+  color: #159750;
+  font-size: 2.5rem;
 }
 
-.header-actions {
-  display: flex;
-  gap: 1rem;
-  align-items: flex-start;
+.header-background {
+  position: absolute;
+  top: 20%;
+  right: 5rem;
+  transform: translateY(-50%);
+  font-size: 8rem;
+  font-weight: 900;
+  color: rgba(0, 0, 0, 0.03);
+  z-index: 0;
+  user-select: none;
+  pointer-events: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.divider {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 1.5rem 0;
+  width: 100%;
+  max-width: auto;
+}
+
+.subtitle {
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.stats-section {
+  margin-bottom: 30px;
 }
 
 .stats-overview {
@@ -816,113 +1072,138 @@ export default {
   margin-top: 4px;
 }
 
-.filters-section {
-  background: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 2rem;
+.controls-section {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  gap: 20px;
+  flex-wrap: wrap;
 }
 
 .search-box {
   position: relative;
   display: flex;
   align-items: center;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  transition: all 0.2s ease;
+  background: white;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  flex: 1;
+  max-width: 400px;
 }
 
 .search-box:focus-within {
-  border-color: #19a759;
-  box-shadow: 0 0 0 2px rgba(25, 167, 89, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  border-color: #4CAF50;
 }
 
 .search-box .material-icons {
-  color: #6c757d;
-  margin-right: 0.5rem;
+  color: #666;
+  margin-right: 8px;
   font-size: 20px;
 }
 
 .uppercase-input {
   flex: 1;
   border: none;
-  background: transparent;
+  padding: 12px;
+  font-size: 16px;
   outline: none;
-  font-size: 14px;
-  color: #374151;
+  background: transparent;
 }
 
 .uppercase-input::placeholder {
-  color: #9ca3af;
+  color: #999;
 }
 
 .clear-search {
-  position: absolute;
-  right: 8px;
   background: none;
   border: none;
-  color: #6c757d;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  transition: all 0.2s;
+}
+
+.clear-search:hover {
+  color: #F44336;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.filter-controls select {
+  padding: 0 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  min-width: 150px;
+  height: 40px;
+}
+
+.filter-controls select:focus {
+  border-color: #4CAF50;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 5px;
+  background: #f5f5f5;
+  border-radius: 8px;
   padding: 4px;
-  border-radius: 4px;
+}
+
+.view-btn {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.clear-search:hover {
-  background: #e5e7eb;
-  color: #374151;
+.view-btn.active {
+  background: #4CAF50;
+  color: white;
 }
 
-.filter-group {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  flex-wrap: wrap;
+.view-btn:hover:not(.active) {
+  background: #e0e0e0;
 }
 
-.filter-group select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-  color: #374151;
-  min-width: 120px;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.filter-group select:focus {
-  outline: none;
-  border-color: #19a759;
-  box-shadow: 0 0 0 2px rgba(25, 167, 89, 0.1);
-}
-
-.reset-filters-btn {
+.refresh-btn {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: #6c757d;
+  gap: 8px;
+  padding: 0 20px;
+  background: #4CAF50;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s;
+  font-weight: 500;
+  height: 40px;
 }
 
-.reset-filters-btn:hover {
-  background: #5a6268;
+.refresh-btn:hover {
+  background: #43A047;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tabs {
@@ -1075,113 +1356,108 @@ export default {
 .table-container {
   background: white;
   border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
-  border: 1px solid #e9ecef;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .registrations-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
 }
 
 .registrations-table th {
-  background: #f8f9fa;
-  padding: 16px 20px;
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  padding: 16px 12px;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e9ecef;
-  white-space: nowrap;
-  font-size: 13px;
+  font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.registrations-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.registrations-table th:last-child {
+  border-top-right-radius: 12px;
 }
 
 .registrations-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
   vertical-align: middle;
-  color: #374151;
 }
 
-.table-row:hover {
-  background: #f9fafb;
+.student-row:hover {
+  background: #f8f9fa;
 }
 
-.table-row:last-child td {
+.student-row:last-child td {
   border-bottom: none;
 }
 
-.table-row.pending {
+.student-row.pending {
   border-left: 3px solid #f59e0b;
 }
 
-.table-row.approved {
+.student-row.approved {
   border-left: 3px solid #10b981;
 }
 
-.table-row.rejected {
+.student-row.rejected {
   border-left: 3px solid #ef4444;
 }
 
-.student-cell {
-  min-width: 220px;
-}
-
-.student-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.student-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 2px solid #f3f4f6;
-}
-
-.student-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.avatar-placeholder {
-  width: 100%;
-  height: 100%;
-  background: #19a759;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.col-number {
+  width: 60px;
+  text-align: center;
   font-weight: 600;
-  font-size: 14px;
+  color: #666;
 }
 
-.student-details {
-  flex: 1;
+.col-name {
+  min-width: 200px;
 }
 
 .student-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.student-name .name {
   font-weight: 600;
-  color: #1a1a1a;
-  margin-bottom: 4px;
-  font-size: 14px;
+  color: #333;
+}
+
+.student-name .email {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.col-lrn {
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+.col-grade,
+.col-section {
+  text-align: center;
+  font-weight: 500;
 }
 
 .status-badge {
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
   text-transform: uppercase;
-  display: inline-block;
   letter-spacing: 0.5px;
+  display: inline-block;
+  margin-top: 4px;
 }
 
 .status-badge.pending {
@@ -1199,8 +1475,155 @@ export default {
   color: #991b1b;
 }
 
-.actions-cell {
+.col-actions {
   white-space: nowrap;
+}
+
+.col-reason {
+  color: #ef4444;
+  font-style: italic;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* Card Styles */
+.cards-container {
+  margin-bottom: 20px;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.student-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-left: 4px solid;
+}
+
+.student-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.student-card.pending {
+  border-left-color: #f59e0b;
+}
+
+.student-card.approved {
+  border-left-color: #10b981;
+}
+
+.student-card.rejected {
+  border-left-color: #ef4444;
+}
+
+.card-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.student-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.student-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.student-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #4CAF50;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.student-details {
+  flex: 1;
+}
+
+.student-details .student-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.student-email {
+  color: #666;
+  font-size: 14px;
+  margin: 0 0 8px 0;
+}
+
+.card-body {
+  padding: 20px;
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #555;
+}
+
+.info-item .material-icons {
+  color: #666;
+  font-size: 18px;
+}
+
+.card-actions {
+  padding: 20px;
+  background: #f8f9fa;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.card-actions .action-button {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: auto;
+  height: auto;
 }
 
 .action-button {
@@ -1217,6 +1640,7 @@ export default {
   font-weight: 500;
   min-width: 36px;
   height: 36px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .action-button:disabled {
@@ -1232,6 +1656,7 @@ export default {
 .action-button.approve:hover:not(:disabled) {
   background: #059669;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
 }
 
 .action-button.reject {
@@ -1242,6 +1667,7 @@ export default {
 .action-button.reject:hover:not(:disabled) {
   background: #dc2626;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
 }
 
 .rejection-reason {
@@ -1554,13 +1980,12 @@ export default {
     padding: 1rem 1.2rem;
   }
   
-  .student-avatar {
-    width: 36px;
-    height: 36px;
+  .student-name .name {
+    font-size: 0.85rem;
   }
   
-  .student-name {
-    font-size: 0.85rem;
+  .student-name .email {
+    font-size: 0.75rem;
   }
   
   .status-badge {
@@ -1575,7 +2000,7 @@ export default {
     height: 32px;
   }
   
-  .rejection-reason {
+  .col-reason {
     font-size: 0.75rem;
     max-width: 150px;
   }
@@ -1723,13 +2148,12 @@ export default {
     padding: 0.8rem 1rem;
   }
   
-  .student-avatar {
-    width: 32px;
-    height: 32px;
+  .student-name .name {
+    font-size: 0.8rem;
   }
   
-  .student-name {
-    font-size: 0.8rem;
+  .student-name .email {
+    font-size: 0.7rem;
   }
   
   .status-badge {
@@ -1744,7 +2168,7 @@ export default {
     height: 28px;
   }
   
-  .rejection-reason {
+  .col-reason {
     font-size: 0.7rem;
     max-width: 130px;
   }
@@ -1892,13 +2316,12 @@ export default {
     padding: 0.6rem 0.8rem;
   }
   
-  .student-avatar {
-    width: 28px;
-    height: 28px;
+  .student-name .name {
+    font-size: 0.75rem;
   }
   
-  .student-name {
-    font-size: 0.75rem;
+  .student-name .email {
+    font-size: 0.65rem;
   }
   
   .status-badge {
@@ -1913,7 +2336,7 @@ export default {
     height: 24px;
   }
   
-  .rejection-reason {
+  .col-reason {
     font-size: 0.65rem;
     max-width: 110px;
   }
@@ -1950,17 +2373,39 @@ export default {
 
 @media (max-width: 768px) {
   .student-approval {
-    padding: 1rem;
+    padding: 10px 5px;
   }
   
-  .page-header {
-    flex-direction: column;
-    gap: 1rem;
+  .header-content h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
   }
   
-  .header-actions {
-    width: 100%;
-    flex-direction: column;
+  .header-content h1 .material-icons {
+    font-size: 2rem;
+  }
+  
+  .header-background {
+    position: absolute;
+    top: 60%;
+    right: 1rem;
+    transform: translateY(-50%);
+    font-size: 3rem;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.03);
+    z-index: 0;
+    user-select: none;
+    pointer-events: none;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .divider {
+    margin: 0.8rem 0;
   }
   
   .stats-overview {
@@ -1978,19 +2423,31 @@ export default {
     font-size: 18px;
   }
   
-  .filters-section {
-    padding: 1rem;
-  }
-  
-  .filter-group {
+  .controls-section {
     flex-direction: column;
-    align-items: stretch;
-    gap: 0.75rem;
+    gap: 1rem;
   }
   
-  .filter-group select {
+  .filter-controls {
     width: 100%;
-    min-width: auto;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  
+  .filter-controls select {
+    flex: 1;
+    font-size: 0.8rem;
+    padding: 0 0.8rem;
+    min-width: 120px;
+  }
+  
+  .search-box {
+    max-width: none;
+  }
+  
+  .search-box input {
+    font-size: 0.8rem;
+    padding: 0.4rem;
   }
   
   .tabs {
@@ -2020,13 +2477,16 @@ export default {
     font-size: 13px;
   }
   
-  .student-cell {
+  .col-name {
     min-width: 180px;
   }
   
-  .student-avatar {
-    width: 36px;
-    height: 36px;
+  .student-name .name {
+    font-size: 0.9rem;
+  }
+  
+  .student-name .email {
+    font-size: 0.75rem;
   }
   
   .action-button {
@@ -2034,6 +2494,65 @@ export default {
     height: 32px;
     padding: 6px 8px;
     margin: 0 2px;
+  }
+  
+  /* Card view responsive */
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .student-card {
+    margin-bottom: 0;
+  }
+  
+  .card-header {
+    padding: 15px;
+  }
+  
+  .student-info {
+    gap: 12px;
+  }
+  
+  .student-avatar {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .student-details .student-name {
+    font-size: 16px;
+  }
+  
+  .student-email {
+    font-size: 13px;
+  }
+  
+  .card-body {
+    padding: 15px;
+  }
+  
+  .card-info {
+    gap: 10px;
+  }
+  
+  .info-item {
+    font-size: 13px;
+  }
+  
+  .info-item .material-icons {
+    font-size: 16px;
+  }
+  
+  .card-actions {
+    padding: 15px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .card-actions .action-button {
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 13px;
   }
   
   .modal-content {
