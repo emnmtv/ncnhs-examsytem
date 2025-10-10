@@ -1,5 +1,5 @@
-export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
 // export const BASE_URL = 'http://localhost:3300/auth';
 // export const SOCKET_URL = 'http://localhost:3300/';
 // export const BASE_URL = 'https://emnmtv.shop/auth';

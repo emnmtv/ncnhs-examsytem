@@ -1,186 +1,223 @@
 <template>
-  <div class="create-task">
+  <div class="create-task-container">
     <div class="header-container">
       <div class="header-content">
-        <h1>Create Task<span class="material-icons">add_task</span></h1>
+        <h1>Create New Task<span class="material-icons">add_task</span></h1>
         <div class="divider"></div>
         <div class="header-text">
           <p class="subtitle">Create and assign new tasks to your students</p>
         </div>
       </div>
-      <div class="header-actions">
-        <button @click="$router.go(-1)" class="header-btn back-btn">
-          <span class="material-icons">arrow_back</span>
-          Back
-        </button>
-      </div>
-      <div class="header-background">NEW TASK</div>
+      <div class="header-background">CREATE</div>
     </div>
 
-    <div class="task-form-container">
-      <form @submit.prevent="handleSubmit" class="task-form">
-        <!-- Subject Selection -->
-        <div class="form-group">
-          <label>Subject</label>
-          <select v-model="selectedSubject" required>
-            <option value="">Select a subject</option>
-            <option v-for="subject in teacherSubjects" 
-                    :key="subject.id" 
-                    :value="subject.subject">
-              {{ subject.subject.name }} ({{ subject.subject.code }})
-            </option>
-          </select>
+    <form @submit.prevent="handleSubmit" class="task-form">
+      <!-- Task Details Card -->
+      <div class="card task-details-card">
+        <div class="card-header">
+          <h2><span class="material-icons">info</span> Task Details</h2>
         </div>
-
-        <!-- Task Details -->
-        <div class="form-group">
-          <label>Title</label>
-          <input 
-            type="text" 
-            v-model="taskData.title" 
-            required 
-            placeholder="Enter task title"
-          >
-        </div>
-
-        <div class="form-group">
-          <label>Description</label>
-          <textarea 
-            v-model="taskData.description" 
-            rows="4" 
-            placeholder="Enter task description"
-          ></textarea>
-        </div>
-
-        <!-- Changed to separate form groups to prevent overlap -->
+        <div class="card-body">
           <div class="form-group">
-            <label>Due Date</label>
-            <input 
-              type="datetime-local" 
-              v-model="taskData.dueDate" 
-              required
-              :min="minDate"
-            >
+            <label>Subject *</label>
+            <select v-model="selectedSubject" required class="form-select">
+              <option value="">Select a subject</option>
+              <option v-for="subject in teacherSubjects" 
+                      :key="subject.id" 
+                      :value="subject.subject">
+                {{ subject.subject.name }} ({{ subject.subject.code }})
+              </option>
+            </select>
+            <small>Select the subject this task is for</small>
           </div>
 
-          <div class="form-group">
-            <label>Total Score</label>
+          <div class="form-group full-width">
+            <label>Task Title *</label>
             <input 
-              type="number" 
-              v-model="taskData.totalScore" 
+              type="text" 
+              v-model="taskData.title" 
               required 
-              min="1"
+              placeholder="Enter task title"
+              class="form-input"
             >
-        </div>
+            <small>Give your task a descriptive title</small>
+          </div>
 
-        <!-- File Attachment -->
-        <div class="form-group">
-          <label>Attachments (Optional)</label>
-          <div class="file-input">
-            <input 
-              type="file"
-              ref="fileInput"
-              @change="handleFileChange"
-              multiple
-              style="display: none"
-            >
-            <div class="file-actions">
-              <button 
-                type="button" 
-                @click="$refs.fileInput.click()"
-                class="file-select-btn"
+          <div class="form-group full-width">
+            <label>Description</label>
+            <textarea 
+              v-model="taskData.description" 
+              rows="4" 
+              placeholder="Enter task description"
+              class="form-textarea"
+            ></textarea>
+            <small>Provide detailed instructions for your students (optional)</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Due Date *</label>
+              <input 
+                type="datetime-local" 
+                v-model="taskData.dueDate" 
+                required
+                :min="minDate"
+                class="form-input"
               >
-                <span class="material-icons">attach_file</span>
-                Select Files
-              </button>
-              <button 
-                v-if="selectedFiles.length > 0"
-                type="button"
-                @click="selectedFiles = []"
-                class="clear-files-btn"
-              >
-                <span class="material-icons">clear_all</span>
-                Clear All
-              </button>
+              <small>When should students submit this task?</small>
             </div>
-            <div class="selected-files-list">
-              <div v-for="(file, index) in selectedFiles" 
-                   :key="index" 
-                   class="selected-file">
-                <img :src="getFileIcon(file.name)" :alt="getFileType(file.name)" class="file-icon">
-                <span class="file-name">{{ file.name }}</span>
+
+            <div class="form-group">
+              <label>Total Score *</label>
+              <input 
+                type="number" 
+                v-model="taskData.totalScore" 
+                required 
+                min="1"
+                class="form-input"
+              >
+              <small>Maximum points for this task</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Attachments Card -->
+      <div class="card file-attachments-card">
+        <div class="card-header">
+          <h2><span class="material-icons">attach_file</span> File Attachments</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-group full-width">
+            <label>Attachments (Optional)</label>
+            <div class="file-input">
+              <input 
+                type="file"
+                ref="fileInput"
+                @change="handleFileChange"
+                multiple
+                style="display: none"
+              >
+              <div class="file-actions">
                 <button 
-                  type="button"
-                  @click="removeFile(index)" 
-                  class="remove-file"
+                  type="button" 
+                  @click="$refs.fileInput.click()"
+                  class="file-select-btn"
                 >
-                  <span class="material-icons">close</span>
+                  <span class="material-icons">attach_file</span>
+                  Select Files
+                </button>
+                <button 
+                  v-if="selectedFiles.length > 0"
+                  type="button"
+                  @click="selectedFiles = []"
+                  class="clear-files-btn"
+                >
+                  <span class="material-icons">clear_all</span>
+                  Clear All
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Student Selection -->
-        <div class="form-group">
-          <label>Assign to Students</label>
-          <div class="student-selection">
-            <div class="search-box">
-              <input 
-                type="text" 
-                v-model="studentSearch" 
-                placeholder="Search students by name or LRN..."
-              >
-            </div>
-            <div v-if="isLoadingStudents" class="loading-students">
-              <span class="material-icons-round rotating">sync</span>
-              <p>Loading students...</p>
-            </div>
-            <div v-else-if="allStudents.length === 0" class="no-students">
-              <p>No students found in the selected sections</p>
-            </div>
-            <div v-else class="students-list">
-              <div class="select-all">
-                <label class="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    :checked="selectedStudents.length === allStudents.length" 
-                    @change="selectedStudents = $event.target.checked ? allStudents.map(s => s.id) : []"
+              <div class="selected-files-list">
+                <div v-for="(file, index) in selectedFiles" 
+                     :key="index" 
+                     class="selected-file">
+                  <img :src="getFileIcon(file.name)" :alt="getFileType(file.name)" class="file-icon">
+                  <span class="file-name">{{ file.name }}</span>
+                  <button 
+                    type="button"
+                    @click="removeFile(index)" 
+                    class="remove-file"
                   >
-                  <strong>Select All Students</strong>
-                </label>
-              </div>
-              <div v-for="student in filteredStudents" 
-                   :key="student.id" 
-                   class="student-item">
-                <label class="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    :value="student.id" 
-                    v-model="selectedStudents"
-                  >
-                  {{ student.firstName }} {{ student.lastName }} 
-                  <span class="student-info">
-                    (LRN: {{ student.lrn }} | Grade {{ student.gradeLevel }}-{{ student.section }})
-                  </span>
-                </label>
+                    <span class="material-icons">close</span>
+                  </button>
+                </div>
               </div>
             </div>
+            <small>Upload supporting files for your task (documents, images, etc.)</small>
           </div>
         </div>
+      </div>
 
-        <!-- Submit Button -->
-        <div class="form-actions">
-          <button type="button" @click="$router.go(-1)" class="cancel-btn">
+      <!-- Student Assignment Card -->
+      <div class="card student-assignment-card">
+        <div class="card-header">
+          <h2><span class="material-icons">people</span> Student Assignment</h2>
+        </div>
+        <div class="card-body">
+          <div class="form-group full-width">
+            <label>Assign to Students *</label>
+            <div class="student-selection">
+              <div class="search-box">
+                <input 
+                  type="text" 
+                  v-model="studentSearch" 
+                  placeholder="Search students by name or LRN..."
+                  class="form-input"
+                >
+              </div>
+              <div v-if="isLoadingStudents" class="loading-students">
+                <span class="material-icons-round rotating">sync</span>
+                <p>Loading students...</p>
+              </div>
+              <div v-else-if="allStudents.length === 0" class="no-students">
+                <p>No students found in the selected sections</p>
+              </div>
+              <div v-else class="students-list">
+                <div class="select-all">
+                  <label class="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      :checked="selectedStudents.length === allStudents.length" 
+                      @change="selectedStudents = $event.target.checked ? allStudents.map(s => s.id) : []"
+                    >
+                    <strong>Select All Students</strong>
+                  </label>
+                </div>
+                <div v-for="student in filteredStudents" 
+                     :key="student.id" 
+                     class="student-item">
+                  <label class="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      :value="student.id" 
+                      v-model="selectedStudents"
+                    >
+                    {{ student.firstName }} {{ student.lastName }} 
+                    <span class="student-info">
+                      (LRN: {{ student.lrn }} | Grade {{ student.gradeLevel }}-{{ student.section }})
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <small>Select which students should receive this task</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <div class="action-buttons">
+          <button 
+            type="button" 
+            class="reset-button" 
+            @click="$router.go(-1)"
+          >
+            <span class="material-icons-round">arrow_back</span>
             Cancel
           </button>
-          <button type="submit" class="submit-btn" :disabled="isSubmitting">
-            <span class="material-icons">add_task</span>
+          
+          <button 
+            type="submit" 
+            class="create-button"
+            :disabled="isSubmitting"
+          >
+            <span class="material-icons-round">add_task</span>
             {{ isSubmitting ? 'Creating...' : 'Create Task' }}
           </button>
         </div>
-      </form>
-    </div>
+      </div>
+    </form>
   </div>
 </template>
 
@@ -496,8 +533,8 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.create-task {
-  max-width: auto;
+.create-task-container {
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -603,272 +640,281 @@ onMounted(() => {
   font-size: 1.1rem;
 }
 
-@media (max-width: 768px) {
-  .create-task {
-    padding: 10px;
-  }
-  
-  .header-container {
-    padding: 0;
-    margin-bottom: 20px;
-  }
-  
-  .header-content h1 {
-    font-size: 1.8rem;
-  }
-  
-  .header-content h1 .material-icons {
-    font-size: 1.8rem;
-  }
-  
-  .header-actions {
-    position: static;
-    margin-top: 15px;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .header-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .header-background {
-    font-size: 3rem;
-    top: 60%;
-    right: 1rem;
-  }
-  
-  .divider {
-    margin: 1rem 0;
-  }
-  
-  .subtitle {
-    font-size: 0.9rem;
-  }
-  
-  .task-form-container {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-  }
-  
-  .task-form {
-    gap: 1rem;
-  }
-  
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-  
-  .form-actions {
-    flex-direction: column-reverse;
-    gap: 0.75rem;
-  }
-  
-  .submit-btn, .cancel-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 0.75rem 1rem;
-  }
-  
-  .file-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-  
-  .file-select-btn, .clear-files-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .create-task {
-    padding: 5px;
-  }
-  
-  .header-content h1 {
-    font-size: 1.5rem;
-  }
-  
-  .header-content h1 .material-icons {
-    font-size: 1.5rem;
-  }
-  
-  .task-form-container {
-    padding: 0.75rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .task-form {
-    gap: 0.75rem;
-  }
-  
-  .form-group {
-    gap: 0.25rem;
-  }
-  
-  label {
-    font-size: 0.9rem;
-  }
-  
-  input[type="text"],
-  input[type="number"],
-  input[type="datetime-local"],
-  select,
-  textarea {
-    padding: 0.6rem;
-    font-size: 0.9rem;
-  }
-  
-  .students-list {
-    max-height: 250px;
-  }
-  
-  .student-item {
-    padding: 0.4rem;
-  }
-  
-  .student-info {
-    font-size: 0.75rem;
-  }
-}
-
-.task-form-container {
+/* Card Styles */
+.card {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
- max-width: 1200px;
-  margin: 0 auto;
-  margin-bottom: 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 25px;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-@media (max-width: 768px) {
-  .task-form-container {
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-  }
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
 
-@media (max-width: 480px) {
-  .task-form-container {
-    padding: 0.75rem;
-    border-radius: 6px;
-    margin-bottom: 0.75rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-}
-
-.task-form {
+.card-header {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  padding: 20px;
+  border-bottom: none;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Add texture layer to card headers */
+.card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 255, 255, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.03) 75%,
+      transparent 100%
+    );
+  pointer-events: none;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+.card-body {
+  padding: 25px;
+}
+
+/* Form Styles */
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-bottom: 0.5rem;
+  flex: 1;
+  margin-bottom: 20px;
 }
 
-@media (max-width: 768px) {
-  .task-form {
-    gap: 0.75rem;
-  }
-  
-  .form-group {
-    gap: 0.25rem;
-    margin-bottom: 0.3rem;
-  }
+.form-group.full-width {
+  flex: 1 1 100%;
 }
 
-@media (max-width: 480px) {
-  .task-form {
-  gap: 0.5rem;
-  }
-  
-  .form-group {
-    gap: 0.2rem;
-    margin-bottom: 0.25rem;
-  }
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+.form-group:last-child {
+  margin-bottom: 0;
 }
 
 label {
-  font-weight: 500;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
   color: #333;
-}
-
-input[type="text"],
-input[type="number"],
-input[type="datetime-local"],
-select,
-textarea {
-  padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
   font-size: 0.95rem;
 }
 
-@media (max-width: 768px) {
-  input[type="text"],
-  input[type="number"],
-  input[type="datetime-local"],
-  select,
-  textarea {
-    padding: 0.5rem;
-    font-size: 0.9rem;
-    border-radius: 4px;
-  }
+small {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.85rem;
+  font-style: italic;
 }
 
-@media (max-width: 480px) {
-  input[type="text"],
-  input[type="number"],
-  input[type="datetime-local"],
-  select,
-  textarea {
-    padding: 0.4rem;
-    font-size: 0.85rem;
-    border-radius: 4px;
-  }
+.form-input,
+.form-select,
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 10px;
+  font-size: 1rem;
+  background-color: white;
+  transition: all 0.3s ease;
+  font-family: inherit;
 }
 
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
+  transform: translateY(-1px);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+}
+
+.reset-button,
+.create-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.reset-button {
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+
+.reset-button:hover {
+  background-color: #e0e0e0;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.create-button {
+  background: linear-gradient(135deg, #4CAF50, #388E3C);
+  color: white;
+  box-shadow: 0 4px 10px rgba(76, 175, 80, 0.3);
+}
+
+.create-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z' fill='%23ffffff' fill-opacity='0.1' fill-rule='evenodd'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  z-index: 0;
+}
+
+.create-button:hover {
+  background: linear-gradient(135deg, #388E3C, #2E7D32);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(76, 175, 80, 0.4);
+}
+
+.create-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.reset-button .material-icons-round,
+.create-button .material-icons-round {
+  font-size: 1.2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* File Input Styles */
 .file-input {
   margin-top: 8px;
+}
+
+.file-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
 .file-select-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: #e3f2fd;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
   color: #1976d2;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.file-select-btn:hover {
+  background: linear-gradient(135deg, #bbdefb, #90caf9);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.3);
+}
+
+.clear-files-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  color: #dc2626;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.clear-files-btn:hover {
+  background: linear-gradient(135deg, #fecaca, #fca5a5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
+.selected-files-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .selected-file {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px;
+  padding: 12px;
   background: #f8f9fa;
-  border-radius: 4px;
-  margin-top: 8px;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
 .file-icon {
@@ -896,35 +942,47 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.2s ease;
 }
 
 .remove-file:hover {
   background-color: rgba(95, 99, 104, 0.1);
+  color: #dc2626;
 }
 
+/* Student Selection Styles */
 .student-selection {
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  border: 2px solid #e1e5e9;
+  border-radius: 10px;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.student-selection:focus-within {
+  border-color: #159750;
+  box-shadow: 0 0 0 3px rgba(21, 151, 80, 0.1);
 }
 
 .search-box {
-  padding: 0.75rem;
-  border-bottom: 1px solid #ddd;
+  padding: 15px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8f9fa;
 }
 
-.search-box input {
-  width: 100%;
+.search-box .form-input {
+  border: none;
+  background: white;
+  margin: 0;
 }
 
 .students-list {
   max-height: 300px;
   overflow-y: auto;
-  padding: 0.75rem;
+  padding: 15px;
 }
 
 .student-item {
-  padding: 0.4rem 0.3rem;
+  padding: 8px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -935,138 +993,31 @@ textarea {
 .checkbox-label {
   display: flex;
   align-items: flex-start;
-  gap: 0.4rem;
+  gap: 8px;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .checkbox-label input[type="checkbox"] {
-  margin-top: 0.2rem;
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  accent-color: #159750;
 }
 
 .student-info {
   color: #666;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   display: block;
-  margin-top: 0.1rem;
+  margin-top: 2px;
 }
 
-@media (max-width: 768px) {
-  .search-box {
-    padding: 0.5rem;
-  }
-  
-  .students-list {
-    padding: 0.5rem;
-    max-height: 250px;
-  }
-  
-  .student-item {
-    padding: 0.3rem 0.2rem;
-  }
-  
-  .checkbox-label {
-    font-size: 0.9rem;
-  }
-  
-  .student-info {
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .search-box {
-    padding: 0.4rem;
-  }
-  
-  .students-list {
-    padding: 0.4rem;
-    max-height: 220px;
-  }
-  
-  .student-item {
-    padding: 0.25rem 0.15rem;
-  }
-  
-  .checkbox-label {
-    font-size: 0.85rem;
-    gap: 0.3rem;
-  }
-  
-  .student-info {
-    font-size: 0.75rem;
-  }
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
-}
-
-.submit-btn,
-.cancel-btn {
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-@media (max-width: 768px) {
-  .form-actions {
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-  
-  .submit-btn,
-  .cancel-btn {
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    font-size: 0.9rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .form-actions {
-    gap: 0.4rem;
-    margin-top: 0.4rem;
-  }
-  
-  .submit-btn,
-  .cancel-btn {
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-  }
-}
-
-.submit-btn {
-  background: #159750;
-  color: white;
-  border: none;
-}
-
-.submit-btn:hover {
-  background: #0f7a3d;
-}
-
-.cancel-btn {
-  background: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-}
-
-.cancel-btn:hover {
-  background: #e0e0e0;
-}
-
-.submit-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
+.select-all {
+  padding: 12px;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 8px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
 }
 
 .loading-students,
@@ -1088,53 +1039,132 @@ textarea {
   to { transform: rotate(360deg); }
 }
 
-.select-all {
-  padding: 0.5rem;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 0.4rem;
-  background-color: #f5f5f5;
-}
-
 @media (max-width: 768px) {
-  .select-all {
-    padding: 0.4rem;
-    margin-bottom: 0.3rem;
+  .create-task-container {
+    padding: 10px;
+  }
+  
+  .header-container {
+    padding: 0;
+    margin-bottom: 20px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.8rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.8rem;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .reset-button,
+  .create-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .header-background {
+    font-size: 3rem;
+    top: 60%;
+    right: 1rem;
+  }
+  
+  .divider {
+    margin: 1rem 0;
+  }
+  
+  .subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .card-body {
+    padding: 15px;
+  }
+
+  .card-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .file-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .file-select-btn, .clear-files-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .students-list {
+    max-height: 250px;
   }
 }
 
 @media (max-width: 480px) {
-  .select-all {
-    padding: 0.3rem;
-    margin-bottom: 0.2rem;
+  .create-task-container {
+    padding: 5px;
+  }
+  
+  .header-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .header-content h1 .material-icons {
+    font-size: 1.5rem;
+  }
+
+  .card-body {
+    padding: 12px;
+  }
+
+  .card-header {
+    padding: 15px;
+  }
+
+  .card-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .form-input,
+  .form-select,
+  .form-textarea {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .reset-button,
+  .create-button {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+  }
+  
+  .students-list {
+    max-height: 220px;
+  }
+  
+  .student-item {
+    padding: 6px 0;
+  }
+  
+  .student-info {
+    font-size: 0.75rem;
   }
 }
 
-.file-actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
 
-.clear-files-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #fee2e2;
-  color: #dc2626;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.clear-files-btn:hover {
-  background: #fecaca;
-}
-
-.selected-files-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 </style>

@@ -17,6 +17,25 @@
           <p class="subtitle">View and manage tasks for {{ subject?.name }}</p>
         </div>
       </div>
+      <div class="header-actions">
+        <!-- View Toggle -->
+        <div class="view-toggle">
+          <button 
+            @click="currentView = 'table'" 
+            class="view-btn" 
+            :class="{ active: currentView === 'table' }"
+          >
+            <span class="material-icons">table_chart</span>
+          </button>
+          <button 
+            @click="currentView = 'card'" 
+            class="view-btn" 
+            :class="{ active: currentView === 'card' }"
+          >
+            <span class="material-icons">grid_view</span>
+          </button>
+        </div>
+      </div>
       <div class="header-background">TASKS</div>
     </div>
 
@@ -46,23 +65,24 @@
       </router-link>
     </div>
 
-    <!-- Tasks List -->
-    <div v-else class="tasks-container">
-      <div class="tasks-header">
-        <div class="search-box">
-          <span class="material-icons">search</span>
-          <input 
-            type="text" 
-            v-model="searchQuery" 
-            placeholder="Search tasks..."
-          >
-        </div>
-        <router-link :to="`/create-task/${subjectId}`" class="create-btn">
-          <span class="material-icons">add_task</span>
-          Create New Task
-        </router-link>
+    <!-- Tasks Header (Shared between views) -->
+    <div v-else class="tasks-header">
+      <div class="search-box">
+        <span class="material-icons">search</span>
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Search tasks..."
+        >
       </div>
+      <router-link :to="`/create-task/${subjectId}`" class="create-btn">
+        <span class="material-icons">add_task</span>
+        Create New Task
+      </router-link>
+    </div>
 
+    <!-- Card View -->
+    <div v-if="currentView === 'card'" class="tasks-container">
       <div class="tasks-grid">
         <div v-for="task in filteredTasks" 
              :key="task.id" 
@@ -130,6 +150,82 @@
         </div>
       </div>
     </div>
+    
+    <!-- Table View -->
+    <div v-if="currentView === 'table'" class="tasks-table-container">
+      <table class="tasks-table">
+        <thead>
+          <tr>
+            <th>Task Title</th>
+            <th>Status</th>
+            <th>Due Date</th>
+            <th>Score</th>
+            <th>Submissions</th>
+            <th>Description</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="task in filteredTasks" :key="task.id">
+            <td>
+              <div class="task-title-cell">
+                <span class="task-title">{{ task.title }}</span>
+              </div>
+            </td>
+            <td>
+              <span :class="['task-status-badge', getTaskStatus(task)]">
+                {{ formatTaskStatus(task) }}
+              </span>
+            </td>
+            <td>
+              <div class="due-date-cell">
+                <span class="due-date">{{ formatDate(task.dueDate) }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="score-cell">
+                <span class="score-badge">{{ task.totalScore }} pts</span>
+              </div>
+            </td>
+            <td>
+              <div class="submissions-cell">
+                <span class="submissions-count">{{ task.submissions?.length || 0 }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="description-cell">
+                <span class="task-description">{{ task.description || 'No description' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="action-buttons">
+                <button 
+                  class="action-btn view"
+                  @click="viewSubmissions(task)"
+                  title="View Submissions"
+                >
+                  <span class="material-icons">assignment_turned_in</span>
+                </button>
+                <button 
+                  class="action-btn edit"
+                  @click="editTask(task)"
+                  title="Edit Task"
+                >
+                  <span class="material-icons">edit</span>
+                </button>
+                <button 
+                  class="action-btn delete"
+                  @click="deleteTask(task)"
+                  title="Delete Task"
+                >
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
@@ -146,6 +242,7 @@ const tasks = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const searchQuery = ref('');
+const currentView = ref('table'); // Default to table view
 
 // Filter tasks based on search
 const filteredTasks = computed(() => {
@@ -633,46 +730,67 @@ onMounted(() => {
   justify-content: center;
   gap: 0.5rem;
   padding: 10px;
-  border: none;
+  border: 2px solid #159750;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: all 0.3s;
-  color: white;
+  transition: all 0.3s ease;
+  color: #159750;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
 }
 
-.view-btn {
+.action-btn:hover {
   background: #159750;
   color: white;
-}
-
-.view-btn:hover {
-  background: #107040;
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(21, 151, 80, 0.3);
 }
 
-.edit-btn {
-  background: #2196F3;
-  color: white;
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(21, 151, 80, 0.4);
 }
 
-.edit-btn:hover {
-  background: #1976D2;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
 }
 
-.delete-btn {
-  background: #f44336;
-  color: white;
+.action-btn:hover::before {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
 }
 
-.delete-btn:hover {
-  background: #d32f2f;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+.action-btn:active::before {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.action-btn .material-icons {
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover .material-icons {
+  animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 /* Loading, Error, and Empty States */
@@ -735,6 +853,250 @@ onMounted(() => {
 @keyframes rotate {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Header Actions */
+.header-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: flex;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+/* View Toggle Styles */
+.view-toggle {
+  display: flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-right: 15px;
+}
+
+.view-btn {
+  background: white;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn.active {
+  background: #f0f7ff;
+  color: #1976D2;
+}
+
+.view-btn:hover:not(.active) {
+  background: #f5f5f5;
+}
+
+.view-btn .material-icons {
+  font-size: 20px;
+}
+
+/* Table Styles */
+.tasks-table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0.7; }
+  to { opacity: 1; }
+}
+
+.tasks-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tasks-table th {
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
+  color: white;
+  font-weight: 600;
+  text-align: left;
+  padding: 16px 12px;
+  border-bottom: none;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  position: relative;
+  user-select: none;
+}
+
+.tasks-table th:first-child {
+  border-top-left-radius: 12px;
+}
+
+.tasks-table th:last-child {
+  border-top-right-radius: 12px;
+}
+
+.tasks-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #444;
+  vertical-align: middle;
+}
+
+.tasks-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.tasks-table tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Table Cell Styles */
+.task-title-cell,
+.due-date-cell,
+.score-cell,
+.submissions-cell,
+.description-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.task-status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.task-status-badge.active {
+  background-color: #e8f5e9;
+  color: #159750;
+}
+
+.task-status-badge.due-soon {
+  background-color: #fff8e1;
+  color: #ff8f00;
+}
+
+.task-status-badge.overdue {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.due-date {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.score-badge {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1976d2;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.submissions-count {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.task-description {
+  font-size: 0.85rem;
+  color: #666;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Action buttons in table */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid #159750;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #159750;
+  font-size: 0.9rem;
+  background: transparent;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn:hover {
+  background: #159750;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(21, 151, 80, 0.3);
+  text-decoration: none;
+}
+
+.action-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(21, 151, 80, 0.4);
+}
+
+.action-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover::before {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.action-btn:active::before {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.action-btn .material-icons {
+  font-size: 18px;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.action-btn:hover .material-icons {
+  animation: pulse 0.6s ease-in-out;
 }
 
 /* 150% DPI and High Resolution Screens */
@@ -841,6 +1203,55 @@ onMounted(() => {
   .action-btn {
     padding: 8px;
     font-size: 0.85rem;
+  }
+
+  /* Table responsive styles */
+  .tasks-table th,
+  .tasks-table td {
+    padding: 12px 10px;
+    font-size: 0.85rem;
+  }
+
+  .tasks-table th {
+    font-size: 0.8rem;
+    padding: 14px 10px;
+  }
+
+  .task-title {
+    font-size: 0.9rem;
+  }
+
+  .task-status-badge {
+    font-size: 0.75rem;
+    padding: 3px 6px;
+  }
+
+  .due-date {
+    font-size: 0.8rem;
+  }
+
+  .score-badge {
+    font-size: 0.75rem;
+    padding: 3px 6px;
+  }
+
+  .submissions-count {
+    font-size: 0.85rem;
+  }
+
+  .task-description {
+    font-size: 0.8rem;
+    max-width: 150px;
+  }
+
+  .action-btn {
+    width: 28px;
+    height: 28px;
+    border-width: 1.5px;
+  }
+
+  .action-btn .material-icons {
+    font-size: 16px;
   }
 }
 
@@ -1125,6 +1536,26 @@ onMounted(() => {
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
+  }
+
+  /* Table responsive styles for mobile */
+  .tasks-table-container {
+    display: none !important;
+  }
+  
+  .tasks-container {
+    display: block !important;
+  }
+}
+
+/* Desktop: Show both views based on currentView state */
+@media (min-width: 769px) {
+  .tasks-container {
+    display: block !important;
+  }
+  
+  .tasks-table-container {
+    display: block !important;
   }
 }
 </style>

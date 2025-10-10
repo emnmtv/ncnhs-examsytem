@@ -88,7 +88,7 @@
     </div>
     
     <!-- Card View -->
-    <div v-else-if="currentView === 'card'" class="exams-card-grid">
+    <div v-if="currentView === 'card'" class="exams-card-grid">
       <div 
         v-for="exam in filteredSortedExams" 
         :key="exam.id" 
@@ -178,7 +178,7 @@
     </div>
     
     <!-- Table View -->
-    <div v-else class="exams-table-container">
+    <div v-if="currentView === 'table'" class="exams-table-container">
       <table class="exams-table">
         <thead>
           <tr>
@@ -2178,10 +2178,10 @@ const viewMPS = (exam) => {
   }
 }
 
-/* Desktop: Force table view */
+/* Desktop: Show both views based on currentView state */
 @media (min-width: 769px) {
   .exams-card-grid {
-    display: none !important;
+    display: grid !important;
   }
   
   .exams-table-container {

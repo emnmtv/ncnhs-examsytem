@@ -69,7 +69,7 @@
                 class="form-select"
                 :disabled="loadingSubjects"
               >
-                <option value="">Select a subject (optional)</option>
+                <option value="">Select a subject</option>
                 <option 
                   v-for="subject in teacherSubjects" 
                   :key="subject.subject.id" 
@@ -79,7 +79,7 @@
                 </option>
               </select>
               <small v-if="loadingSubjects">Loading subjects...</small>
-              <small v-else>Select the subject this exam is for (optional)</small>
+              <small v-else>Select the subject this exam is for</small>
             </div>
           </div>
           
