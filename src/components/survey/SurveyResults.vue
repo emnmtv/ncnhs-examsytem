@@ -418,15 +418,15 @@ export default {
       const counts = {};
       let options = [];
       try {
-        options = typeof question.options === 'string' 
-          ? JSON.parse(question.options) 
-          : Array.isArray(question.options) 
-            ? question.options 
-            : [];
+        let raw = question.options;
+        if (typeof raw === 'string') {
+          raw = JSON.parse(raw);
+        }
+        options = Array.isArray(raw) ? raw.map(o => (typeof o === 'string' ? { text: o } : o)) : [];
       } catch (e) {
         console.error('Error parsing options:', e);
       }
-      options.forEach(option => counts[option] = 0);
+      options.forEach(option => counts[option.text] = 0);
 
       question.answers?.forEach(answer => {
         try {
@@ -447,18 +447,18 @@ export default {
       let options = [];
       
       try {
-        options = typeof question.options === 'string' 
-          ? JSON.parse(question.options) 
-          : Array.isArray(question.options) 
-            ? question.options 
-            : [];
+        let raw = question.options;
+        if (typeof raw === 'string') {
+          raw = JSON.parse(raw);
+        }
+        options = Array.isArray(raw) ? raw.map(o => (typeof o === 'string' ? { text: o } : o)) : [];
       } catch (e) {
         console.error('Error parsing options:', e);
         return counts;
       }
       
       // Initialize counts for all options
-      options.forEach(option => counts[option] = 0);
+      options.forEach(option => counts[option.text] = 0);
 
       question.answers?.forEach(answer => {
         try {
@@ -484,7 +484,7 @@ export default {
 
           // Only count valid options that exist in the question
           selectedOptions
-            .filter(option => options.includes(option))
+            .filter(option => options.some(o => o.text === option))
             .forEach(option => {
               counts[option]++;
             });

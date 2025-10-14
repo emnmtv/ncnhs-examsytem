@@ -4,8 +4,8 @@
 // export const SOCKET_URL = 'http://localhost:3300/';
 // export const BASE_URL = 'https://emnmtv.shop/auth';
 // export const SOCKET_URL = 'https://emnmtv.shop/';
-// export const BASE_URL = 'https://ncnhs.online/auth';
-// export const SOCKET_URL = 'https://ncnhs.online/';
+export const BASE_URL = 'https://ncnhs.online/auth';
+export const SOCKET_URL = 'https://ncnhs.online/';
 const decodeToken = (token) => {
   try {
     return JSON.parse(atob(token.split('.')[1]));

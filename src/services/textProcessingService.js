@@ -425,9 +425,11 @@ class FileProcessingService {
   parseFormattedExamQuestions(text) {
     const questions = [];
     
-    // Identify questions in the format "Question X Multiple Choice"
-    const questionPattern = /(?:Question\s+\d+|^\s*\d+\s*\.)/gm;
+    // Identify questions in various formats including answer-embedded numbers like A1, B2, etc.
+    const questionPattern = /(?:Question\s+\d+|^\s*\d+\s*\.|^\s*[A-D]\d+\s*\.)/gm;
     const matches = Array.from(text.matchAll(questionPattern));
+    
+    console.log(`Question pattern matching found ${matches.length} potential questions:`, matches.map(m => m[0]));
     
     for (let i = 0; i < matches.length; i++) {
       const startPos = matches[i].index;
@@ -446,6 +448,14 @@ class FileProcessingService {
           questionType = 'true_false';
         } else if (questionBlock.includes('Enumeration')) {
           questionType = 'enumeration';
+        }
+        
+        // Check if the answer is embedded in the question number (like A1, B2, etc.)
+        let embeddedAnswerFromNumber = '';
+        const questionNumberMatch = questionBlock.match(/(?:^|\s)([A-D])\d+[\.\)]/);
+        if (questionNumberMatch) {
+          embeddedAnswerFromNumber = questionNumberMatch[1];
+          console.log(`Found embedded answer in question number: ${embeddedAnswerFromNumber}`);
         }
         
         // Extract question text and embedded A) B) C) D) options
@@ -495,20 +505,41 @@ class FileProcessingService {
         } 
         // If no embedded options in a single line, try other approaches
         else {
-          // Find the main question text (usually first non-empty line or line with question mark)
+          // Find the main question text including any scenario/context
+          let contextLines = [];
+          let foundQuestion = false;
+          
           for (const line of questionLines) {
             // Skip the question number/header line
             if (line.match(/^Question\s+\d+|^\s*\d+\s*\./) && !questionText) continue;
             
-            // If line contains a question mark, it's likely the question text
-            if (line.includes('?') && !line.match(/^[A-D]\)/) && !line.match(/^\d+\./)) {
-              questionText = line.trim();
+            // Skip empty lines
+            if (!line.trim()) continue;
+            
+            // Skip option lines (A), B), C), D))
+            if (line.match(/^[A-D]\)/)) continue;
+            
+            // If we haven't found the question yet, collect context/scenario lines
+            if (!foundQuestion) {
+              // If line contains a question mark, it's the main question
+              if (line.includes('?') && !line.match(/^\d+\./)) {
+                // Add this line to context (it's the actual question)
+                contextLines.push(line.trim());
+                foundQuestion = true;
+              } else {
+                // This is scenario/context text, collect it
+                contextLines.push(line.trim());
+              }
+            }
+            // If we already found the question, stop collecting
+            else {
               break;
             }
-            // Otherwise take the first non-empty line that isn't an option
-            else if (!questionText && line.trim() && !line.match(/^[A-D]\)/) && !line.match(/^\d+\./)) {
-              questionText = line.trim();
-            }
+          }
+          
+          // Join all context lines to form the complete question text
+          if (contextLines.length > 0) {
+            questionText = contextLines.join(' ');
           }
           
           // Look for embedded A) B) C) D) options
@@ -606,11 +637,12 @@ class FileProcessingService {
           }
         }
         
-        // Clean up the question text
+        // Clean up and sanitize the question text
         if (questionText) {
-          // Remove leading question number
+          // Remove leading question number (including answer-embedded ones like A1, B2, etc.)
           questionText = questionText.replace(/^Question\s+\d+\s*[:.\-]?\s*/i, '');
           questionText = questionText.replace(/^\d+\s*[:.\-]?\s*/i, '');
+          questionText = questionText.replace(/^(?:^|\s)[A-D]\d+[\.\)]\s*/i, '');
           
           // Remove any "Multiple Choice" or "True/False" labels
           questionText = questionText.replace(/^(Multiple Choice|True\/False)\s*[:.\-]?\s*/i, '');
@@ -625,6 +657,9 @@ class FileProcessingService {
           // Remove any "Answer: X)" pattern from the question
           const answerPattern = /Answer:\s*[A-D]\)?\s*[^\n]*/i;
           questionText = questionText.replace(answerPattern, '').trim();
+          
+          // Sanitize to strip inline options and appended rationales
+          questionText = this.sanitizeQuestionText(questionText, questionType);
         }
         
         // Only add if we have necessary content
@@ -632,12 +667,35 @@ class FileProcessingService {
           // Make sure options don't contain the answer pattern
           options = options.map(opt => opt.replace(/Answer:.*$/i, '').trim());
           
-          questions.push({
+          // If we found an embedded answer in the question number, prioritize it over any other answer
+          if (embeddedAnswerFromNumber && questionType === 'multipleChoice') {
+            const answerLetter = embeddedAnswerFromNumber;
+            const letterIndex = answerLetter.charCodeAt(0) - 'A'.charCodeAt(0);
+            
+            // If the answer letter corresponds to an option, use that option
+            if (letterIndex >= 0 && letterIndex < options.length) {
+              const embeddedAnswer = options[letterIndex];
+              if (embeddedAnswer !== correctAnswer) {
+                console.log(`Overriding answer with embedded answer from question number: ${embeddedAnswerFromNumber} -> ${embeddedAnswer} (was: ${correctAnswer})`);
+              }
+              correctAnswer = embeddedAnswer;
+            }
+          }
+          
+          const question = {
             text: questionText,
             type: questionType,
             options: options,
             correctAnswer: correctAnswer
-          });
+          };
+          
+          // Mark questions with embedded answers to preserve them during post-processing
+          if (embeddedAnswerFromNumber) {
+            question.hasEmbeddedAnswer = true;
+            question.embeddedAnswerLetter = embeddedAnswerFromNumber;
+          }
+          
+          questions.push(question);
         }
       } catch (error) {
         console.error('Error parsing formatted question:', error);
@@ -778,15 +836,21 @@ class FileProcessingService {
       
       "${cleanedBlock}"
       
+      IMPORTANT: Include ALL context, scenario, and background information in the question text. 
+      If there's a scenario or explanation before the actual question, include it all.
+      
+      SPECIAL NOTE: Sometimes the answer is embedded in the question number (like A1, B2, etc.).
+      If you see a question number like A1, B2, C3, or D4, the letter (A, B, C, or D) might be the correct answer.
+      
       Identify:
-      1. Question text
+      1. Complete question text (including any scenario, context, or background information)
       2. Question type (multiple choice, true/false, enumeration)
       3. Options (if multiple choice)
-      4. Correct answer
+      4. Correct answer (check if it's embedded in the question number)
       
       Format as JSON:
       {
-        "text": "question text",
+        "text": "complete question text including scenario/context",
         "type": "multipleChoice|true_false|enumeration",
         "options": ["option1", "option2", ...] (for multiple choice only),
         "correctAnswer": "correct answer"
@@ -820,13 +884,20 @@ class FileProcessingService {
       // Prepare the AI prompt - make it extremely clear and explicit
       const aiPrompt = `Extract exam questions from the following text. For each question:
       
-      1. Extract the question text exactly as written
+      CRITICAL: Include ALL scenario, context, and background information in the question text.
+      If a question has a scenario or explanation before the actual question, include it all.
+      
+      SPECIAL: Sometimes the answer is embedded in the question number (like A1, B2, etc.).
+      If you see a question number like A1, B2, C3, or D4, the letter (A, B, C, or D) might be the correct answer.
+      
+      1. Extract the COMPLETE question text including any scenario/context/explanations
       2. Determine the question type:
          - "multipleChoice" for questions with options
          - "true_false" for true/false questions
          - "enumeration" for short answer questions
+         - "essay" for open-ended questions requiring a written response
       3. For multiple choice, extract all options
-      4. Identify the correct answer
+      4. Identify the correct answer (including checking question numbers for embedded answers). For essay, leave correctAnswer empty and do not include options.
       
       Format your response as a valid JSON array like this:
       [
@@ -1003,13 +1074,19 @@ class FileProcessingService {
     
     console.log(`Processing ${questions.length} extracted questions:`, JSON.stringify(questions.slice(0, 2)));
     
-    // Process each question to ensure it has the correct format
-    const standardizedQuestions = questions.map((q) => {
-      // Skip if question is null or undefined
-      if (!q) {
-        console.log(`Question is null or undefined`);
-        return null;
-      }
+        // Process each question to ensure it has the correct format
+        const standardizedQuestions = questions.map((q) => {
+          // Skip if question is null or undefined
+          if (!q) {
+            console.log(`Question is null or undefined`);
+            return null;
+          }
+          
+          // Skip AI enhancement for questions with embedded answers
+          if (q.hasEmbeddedAnswer) {
+            console.log(`Preserving embedded answer for question: ${q.text.substring(0, 30)}...`);
+            return q;
+          }
       
       try {
         // Create a standardized question object with fallbacks for everything
@@ -1019,6 +1096,9 @@ class FileProcessingService {
           options: Array.isArray(q.options) ? [...q.options] : [],
           correctAnswer: (q.correctAnswer || q.answer || "").toString().trim()
         };
+
+        // Sanitize question text coming from AI to remove appended rationales/inline options
+        standardizedQuestion.text = this.sanitizeQuestionText(standardizedQuestion.text, standardizedQuestion.type);
         
         // Ensure we have question text
         if (!standardizedQuestion.text || standardizedQuestion.text.length < 3) {
@@ -1245,6 +1325,11 @@ class FileProcessingService {
     if (typeLower.includes('enum') || typeLower.includes('list') || typeLower.includes('short') || typeLower.includes('answer')) {
       return 'enumeration';
     }
+
+    // Map essay variations
+    if (typeLower.includes('essay') || typeLower.includes('open') || typeLower.includes('constructed') || typeLower.includes('free')) {
+      return 'essay';
+    }
     
     // Default to multiple choice
     return 'multipleChoice';
@@ -1271,6 +1356,8 @@ class FileProcessingService {
         
         // Check if question text needs improvement
         if (improvedQuestion.text) {
+          // Sanitize to keep scenario+stem only and strip rationales/inline options
+          improvedQuestion.text = this.sanitizeQuestionText(improvedQuestion.text, improvedQuestion.type);
           // Fix merged words without spaces
           improvedQuestion.text = this.fixMergedWords(improvedQuestion.text);
             
@@ -1488,19 +1575,74 @@ class FileProcessingService {
         return word;
       }
       
-      // Try to split long words at logical points
-      return word
-        .replace(/([a-z])([A-Z])/g, '$1 $2')
-        .replace(/([^aeiou])([aeiou])/g, (match, p1, p2) => {
+      // Try to split long words at logical points, but be more conservative
+      let fixedWord = word.replace(/([a-z])([A-Z])/g, '$1 $2');
+      
+      // Only split on vowel patterns if the word is very long and likely merged
+      if (word.length > 20) {
+        fixedWord = fixedWord.replace(/([^aeiou])([aeiou])/g, (match, p1, p2) => {
           // Only add space if not at the beginning and not following another vowel
-          if (word.indexOf(match) > 2) {
+          if (word.indexOf(match) > 3) {
             return `${p1} ${p2}`;
           }
           return match;
         });
+      }
+      
+      return fixedWord;
     });
     
     return fixedWords.join(' ');
+  }
+  
+  /**
+   * Sanitize question text by removing explanations/rationales and inline options.
+   * Keeps scenario/context and the main question stem only.
+   * @param {string} text - Raw question text
+   * @param {string} questionType - Question type
+   * @returns {string}
+   */
+  sanitizeQuestionText(text, questionType) {
+    if (!text) return '';
+    let sanitized = text.replace(/\s+/g, ' ').trim();
+    
+    // If options appear inline like "A. ... B. ..." or "A) ... B) ...", cut before the first option marker
+    const inlineOptionIdx = sanitized.search(/(?:^|\s)[A-D][\.\)]\s/);
+    if (inlineOptionIdx > -1) {
+      sanitized = sanitized.substring(0, inlineOptionIdx).trim();
+    }
+    
+    // Prefer taking only up to the first question mark for MC/TF to avoid appended rationales.
+    // If no question mark exists, trim to the first sentence period.
+    if (questionType === 'multipleChoice' || questionType === 'true_false') {
+      const qmIndex = sanitized.indexOf('?');
+      if (qmIndex !== -1) {
+        sanitized = sanitized.substring(0, qmIndex + 1).trim();
+      } else {
+        const periodIndex = sanitized.indexOf('.');
+        if (periodIndex !== -1) {
+          sanitized = sanitized.substring(0, periodIndex + 1).trim();
+        }
+      }
+    }
+    
+    // Deduplicate repeated sentences possibly introduced by AI echoes
+    const parts = sanitized.split(/([\.\?！!])\s+/); // keep delimiters
+    const rebuilt = [];
+    const seen = new Set();
+    for (let i = 0; i < parts.length; i += 2) {
+      const sentence = (parts[i] || '').trim();
+      const delim = parts[i + 1] || '';
+      if (!sentence) continue;
+      const key = sentence.toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        rebuilt.push(sentence + delim);
+      }
+    }
+    sanitized = rebuilt.join(' ').replace(/\s+/g, ' ').trim();
+    
+    return sanitized;
   }
   
   /**
@@ -1516,9 +1658,9 @@ class FileProcessingService {
     try {
       console.log('Enhancing incomplete questions with AI...');
       
-      // Filter questions that need AI enhancement
-      const questionsNeedingEnhancement = questions.filter(q => q.needsAIEnhancement);
-      console.log(`Found ${questionsNeedingEnhancement.length} questions needing AI enhancement`);
+      // Filter questions that need AI enhancement, but exclude those with embedded answers
+      const questionsNeedingEnhancement = questions.filter(q => q.needsAIEnhancement && !q.hasEmbeddedAnswer);
+      console.log(`Found ${questionsNeedingEnhancement.length} questions needing AI enhancement (excluding ${questions.filter(q => q.hasEmbeddedAnswer).length} with embedded answers)`);
       
       if (questionsNeedingEnhancement.length === 0) {
         return questions;
@@ -1700,8 +1842,8 @@ class FileProcessingService {
         try {
           // Process each question in the batch
           const processedBatch = await Promise.all(batch.map(async (question) => {
-            // Skip validation for non-factual questions
-            if (!this.isFactualQuestion(question.text)) {
+            // Skip validation for non-factual questions or questions with embedded answers
+            if (!this.isFactualQuestion(question.text) || question.hasEmbeddedAnswer) {
               return question;
             }
             
@@ -1799,7 +1941,8 @@ class FileProcessingService {
               
               // Apply corrections
               if (validationData.correctedQuestion) {
-                correctedQuestion.text = validationData.correctedQuestion;
+                // Re-sanitize to strip any appended rationale/options that AI may add
+                correctedQuestion.text = this.sanitizeQuestionText(validationData.correctedQuestion, correctedQuestion.type);
               }
               
               if (validationData.correctedOptions && Array.isArray(validationData.correctedOptions)) {
@@ -1864,6 +2007,19 @@ class FileProcessingService {
         }
       }
       
+      // First, try direct parsing to detect embedded answers
+      console.log('Trying direct parsing first to detect embedded answers...');
+      const directParsedQuestions = this.parseFormattedExamQuestions(textContent);
+      
+      if (directParsedQuestions && directParsedQuestions.length > 0) {
+        console.log(`Direct parsing found ${directParsedQuestions.length} questions with embedded answers`);
+        // Apply post-processing to improve questions while preserving embedded answers
+        return this.postProcessQuestions(directParsedQuestions);
+      }
+      
+      // If direct parsing didn't find questions, continue with AI extraction
+      console.log('Direct parsing found no questions, falling back to AI extraction...');
+      
       // First, try to extract answers that might be hidden in other parts of the document
       const potentialAnswers = this.extractPotentialAnswers(textContent);
       console.log('Found potential answers:', potentialAnswers);
@@ -1874,13 +2030,19 @@ class FileProcessingService {
       // Create a more detailed prompt that explains exactly what we want
       const prompt = `I need you to extract exam questions from this text. The text may contain poorly formatted content, merged words, or unclear structure.
 
+CRITICAL INSTRUCTION: Include ALL scenario, context, and background information in the question text.
+If a question has a scenario or explanation before the actual question, include it all in the question text.
+
+SPECIAL: Sometimes the answer is embedded in the question number (like A1, B2, etc.).
+If you see a question number like A1, B2, C3, or D4, the letter (A, B, C, or D) might be the correct answer.
+
 Your task:
 1. Identify all possible exam questions in the text
 2. For each question:
-   - Extract the question text (fix any merged words or formatting issues)
+   - Extract the COMPLETE question text including any scenario/context/explanations (fix any merged words or formatting issues)
    - Determine the question type (multiple choice, true/false, or enumeration)
    - Extract all options for multiple choice questions
-   - Identify or determine the correct answer
+   - Identify or determine the correct answer (including checking question numbers for embedded answers)
 
 If you see placeholder questions (like "________________________________________?") or generic options ("Option A", etc.):
 - Use the context and subject matter of other questions to create meaningful questions
@@ -1890,11 +2052,11 @@ If you see placeholder questions (like "________________________________________
 I've found these potential answers in the document that might match some questions:
 ${JSON.stringify(potentialAnswers)}
 
-Format each question as a JSON object with these fields:
+      Format each question as a JSON object with these fields:
 - text: The question text
-- type: "multipleChoice", "true_false", or "enumeration"
-- options: Array of options (for multiple choice only)
-- correctAnswer: The correct answer
+      - type: "multipleChoice", "true_false", "enumeration", or "essay"
+      - options: Array of options (for multiple choice only; omit for essay)
+      - correctAnswer: The correct answer (omit or empty string for essay)
 
 Return a JSON array of all extracted questions. Example:
 [

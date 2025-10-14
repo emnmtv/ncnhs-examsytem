@@ -62,7 +62,8 @@
               class="option-item"
             >
               <div class="circle"></div>
-              <span class="option-text">{{ option }}</span>
+              <img v-if="option.imageUrl" :src="option.imageUrl" alt="option image" class="option-image" />
+              <span class="option-text">{{ option.text }}</span>
             </div>
           </div>
 
@@ -77,7 +78,8 @@
               class="option-item"
             >
               <div class="checkbox"></div>
-              <span class="option-text">{{ option }}</span>
+              <img v-if="option.imageUrl" :src="option.imageUrl" alt="option image" class="option-image" />
+              <span class="option-text">{{ option.text }}</span>
             </div>
           </div>
 
@@ -132,13 +134,12 @@ export default {
 
     const getOptions = (options) => {
       if (!options) return [];
-      if (Array.isArray(options)) return options;
-      try {
-        return JSON.parse(options);
-      } catch (error) {
-        console.error('Error parsing options:', error);
-        return [];
+      let parsed = options;
+      if (typeof options === 'string') {
+        try { parsed = JSON.parse(options); } catch { parsed = []; }
       }
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(o => typeof o === 'string' ? { text: o, imageUrl: null } : { text: o.text, imageUrl: o.imageUrl });
     };
 
     const handlePrint = () => {
@@ -190,10 +191,12 @@ export default {
 <style scoped>
 /* General Styles */
 .survey-preview-container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px;
   background: white;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
 /* Print Controls */
@@ -281,10 +284,15 @@ export default {
 /* Questions Section */
 .questions-section {
   margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .question-item {
-  margin-bottom: 2rem;
+  margin-bottom: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #e5e7eb;
 }
 
 .question-header {
@@ -303,14 +311,17 @@ export default {
 
 /* Options */
 .options-list {
-  padding-left: 2rem;
+  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .option-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px 56px 1fr;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 12px;
 }
 
 .circle {
@@ -318,6 +329,14 @@ export default {
   height: 20px;
   border: 2px solid #666;
   border-radius: 50%;
+}
+
+.option-image {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
 }
 
 .checkbox {
@@ -417,21 +436,21 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .print-controls {
-    flex-direction: column;
-    gap: 1rem;
+  .print-controls { flex-direction: column; gap: 1rem; }
+  .export-controls { width: 100%; flex-direction: column; }
+  .back-btn, .print-btn, .download-btn { width: 100%; justify-content: center; }
+
+  /* Mobile: remove white background like answer view */
+  .survey-preview-container {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
   }
 
-  .export-controls {
-    width: 100%;
-    flex-direction: column;
-  }
-
-  .back-btn,
-  .print-btn,
-  .download-btn {
-    width: 100%;
-    justify-content: center;
-  }
+  .survey-header { border-bottom: none; margin-bottom: 1rem; }
+  .question-item { border-bottom: 1px solid #eee; }
+  .option-item { grid-template-columns: 18px 48px 1fr; gap: 10px; }
+  .option-image { width: 48px; height: 48px; border-radius: 6px; }
 }
 </style> 

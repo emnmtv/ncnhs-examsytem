@@ -931,8 +931,25 @@
               class="result-question-item"
             >
               <div class="result-question-header">
-                <span class="question-number">Question {{ index + 1 }}</span>
-                <span class="question-type">{{ formatQuestionType(question.type) }}</span>
+                <div class="result-header-left">
+                  <input 
+                    type="checkbox" 
+                    :id="`doc-q-${index}`" 
+                    :checked="isDocumentSelected(index)" 
+                    @change="toggleDocumentSelection(index)"
+                  />
+                  <label :for="`doc-q-${index}`" class="select-label">Select</label>
+                  <span class="question-number">Question {{ index + 1 }}</span>
+                  <span class="question-type">{{ formatQuestionType(question.type) }}</span>
+                </div>
+                <button 
+                  type="button" 
+                  class="remove-result-btn" 
+                  @click="removeDocumentResultItem(index)"
+                  title="Remove this extracted question"
+                >
+                  <span class="material-icons-round">delete</span>
+                </button>
               </div>
               <p class="question-text">{{ question.text }}</p>
               
@@ -959,21 +976,44 @@
         </div>
       </div>
 
-      <div class="side-panel-footer">
-        <button 
-          class="cancel-btn" 
-          @click="closeDocumentUploadModal"
-        >
-          Cancel
-        </button>
-        <button 
-          class="import-btn" 
-          @click="importDocumentQuestions"
-          :disabled="!documentResult || documentResult.length === 0 || documentProcessing"
-        >
-          <span class="material-icons">add_circle</span>
-          Add to Exam
-        </button>
+      <div class="side-panel-footer enhanced-footer">
+        <div class="footer-left">
+          <button 
+            class="cancel-btn" 
+            @click="closeDocumentUploadModal"
+          >
+            Cancel
+          </button>
+        </div>
+        <div class="footer-center">
+          <div class="selection-info">{{ selectedDocumentIndexes.length }} selected</div>
+        </div>
+        <div class="footer-right">
+          <button 
+            type="button"
+            class="select-toggle-btn"
+            @click="selectAllDocumentResults"
+            :disabled="!documentResult || documentResult.length === 0"
+          >
+            Select All
+          </button>
+          <button 
+            type="button"
+            class="select-toggle-btn"
+            @click="deselectAllDocumentResults"
+            :disabled="selectedDocumentIndexes.length === 0"
+          >
+            Deselect All
+          </button>
+          <button 
+            class="import-btn" 
+            @click="importDocumentQuestions"
+            :disabled="!documentResult || documentResult.length === 0 || selectedDocumentIndexes.length === 0 || documentProcessing"
+          >
+            <span class="material-icons">add_circle</span>
+            Add to Exam
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1038,6 +1078,7 @@ export default {
     const documentProcessing = ref(false);
     const documentResult = ref(null);
     const showDocumentUploadModal = ref(false);
+    const selectedDocumentIndexes = ref([]);
     // Text input functionality
     const documentTab = ref('file'); // Default to file upload tab
     const documentText = ref('');
@@ -1255,6 +1296,46 @@ export default {
       }
     });
 
+    // Auto-select all when new results arrive
+    watch(documentResult, (val) => {
+      if (Array.isArray(val)) {
+        selectedDocumentIndexes.value = val.map((_, i) => i);
+      } else {
+        selectedDocumentIndexes.value = [];
+      }
+    });
+
+    const toggleDocumentSelection = (index) => {
+      const pos = selectedDocumentIndexes.value.indexOf(index);
+      if (pos === -1) {
+        selectedDocumentIndexes.value.push(index);
+      } else {
+        selectedDocumentIndexes.value.splice(pos, 1);
+      }
+    };
+
+    const isDocumentSelected = (index) => {
+      return selectedDocumentIndexes.value.includes(index);
+    };
+
+    const removeDocumentResultItem = (index) => {
+      if (!documentResult.value) return;
+      documentResult.value.splice(index, 1);
+      // Re-map selections since indexes shifted
+      selectedDocumentIndexes.value = selectedDocumentIndexes.value
+        .filter(i => i !== index)
+        .map(i => (i > index ? i - 1 : i));
+    };
+
+    const selectAllDocumentResults = () => {
+      if (!documentResult.value) return;
+      selectedDocumentIndexes.value = documentResult.value.map((_, i) => i);
+    };
+
+    const deselectAllDocumentResults = () => {
+      selectedDocumentIndexes.value = [];
+    };
+
     // Function to check for duplicate questions and answers
     const checkForDuplicates = (newQuestions) => {
       const duplicates = {
@@ -1334,16 +1415,37 @@ export default {
 
     const importDocumentQuestions = async () => {
       if (!documentResult.value || documentResult.value.length === 0) return;
+      if (!selectedDocumentIndexes.value.length) {
+        Swal.fire('Nothing Selected', 'Please select at least one question to import.', 'info');
+        return;
+      }
 
-      // Check for duplicates
-      const duplicates = checkForDuplicates(documentResult.value);
-      
-      // If duplicates found, show warning dialog
+      // Pre-import confirmation warning
+      const { isConfirmed } = await Swal.fire({
+        icon: 'warning',
+        title: 'Please Review Before Importing',
+        html: `
+          <div style="text-align:left;line-height:1.6;">
+            <p><strong>Make sure to review all questions and answers.</strong></p>
+            <p>AI can make mistakes when extracting from documents. Double‑check for correctness, clarity, and alignment with your exam.</p>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Import Selected',
+        cancelButtonText: 'Review Again',
+        confirmButtonColor: '#4CAF50',
+        cancelButtonColor: '#9e9e9e'
+      });
+      if (!isConfirmed) return;
+
+      const selectedQuestions = selectedDocumentIndexes.value.map(i => documentResult.value[i]);
+
+      // Check for duplicates among selected
+      const duplicates = checkForDuplicates(selectedQuestions);
+
       if (duplicates.questions.length > 0 || duplicates.answers.length > 0) {
         const result = await showDuplicateValidationDialog(duplicates);
-        
         if (!result.isConfirmed) {
-          // User cancelled the import
           Swal.fire({
             icon: 'info',
             title: 'Import Cancelled',
@@ -1355,19 +1457,16 @@ export default {
         }
       }
 
-      // Add extracted questions to the exam
+      // Add only selected questions
       let addedCount = 0;
       let skippedCount = 0;
 
-      documentResult.value.forEach((extractedQuestion, index) => {
-        // Check if this question is a duplicate of existing questions
-        const isDuplicate = duplicates.questions.some(dup => dup.index === index);
-        
+      selectedQuestions.forEach((extractedQuestion, idx) => {
+        const isDuplicate = duplicates.questions.some(dup => dup.index === idx);
         if (isDuplicate) {
           skippedCount++;
           return;
         }
-
         questions.value.push({
           text: extractedQuestion.text,
           type: extractedQuestion.type,
@@ -1381,30 +1480,26 @@ export default {
       });
 
       closeDocumentUploadModal();
-      
-      // Show appropriate success message
+
       if (skippedCount > 0) {
         Swal.fire({
           icon: 'success',
-          title: 'Questions Imported with Warnings',
+          title: 'Imported with Warnings',
           html: `
             <div style="text-align: left;">
-              <p><strong>Successfully added:</strong> ${addedCount} questions</p>
+              <p><strong>Added:</strong> ${addedCount} questions</p>
               <p><strong>Skipped duplicates:</strong> ${skippedCount} questions</p>
-              <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
-                Duplicate questions were automatically skipped to prevent redundancy.
-              </p>
             </div>
           `,
-          timer: 4000,
+          timer: 3500,
           showConfirmButton: true
         });
       } else {
         Swal.fire({
           icon: 'success',
-          title: 'Questions Added Successfully',
+          title: 'Questions Added',
           text: `${addedCount} questions have been added to your exam.`,
-          timer: 2000,
+          timer: 1800,
           showConfirmButton: false
         });
       }
@@ -2697,7 +2792,14 @@ export default {
       availableAiModels,
       selectedAiModel,
       updatePreferredModel,
-      goBack
+      goBack,
+      // Document selection helpers
+      selectedDocumentIndexes,
+      toggleDocumentSelection,
+      isDocumentSelected,
+      removeDocumentResultItem,
+      selectAllDocumentResults,
+      deselectAllDocumentResults
     };
   }
 };
@@ -4326,6 +4428,47 @@ small {
   gap: 10px;
 }
 
+.enhanced-footer {
+  align-items: center;
+}
+
+.footer-left, .footer-center, .footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.footer-left {
+  flex: 1;
+}
+
+.footer-center {
+  justify-content: center;
+}
+
+.footer-right {
+  gap: 8px;
+}
+
+.select-toggle-btn {
+  padding: 10px 14px;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.select-toggle-btn:hover:not(:disabled) {
+  background-color: #eaeaea;
+}
+
+.select-toggle-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .cancel-btn {
   padding: 10px 20px;
   background-color: #f5f5f5;
@@ -4893,6 +5036,35 @@ small {
   margin-bottom: 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid #f0f0f0;
+}
+
+.result-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.remove-result-btn {
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-result-btn:hover {
+  background: #ffcdd2;
 }
 
 .question-number {
@@ -5763,6 +5935,35 @@ small {
   margin-bottom: 10px;
   padding-bottom: 10px;
   border-bottom: 1px solid #eee;
+}
+
+.result-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.select-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.remove-result-btn {
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.remove-result-btn:hover {
+  background: #ffcdd2;
 }
 
 .question-options p.correct-answer {

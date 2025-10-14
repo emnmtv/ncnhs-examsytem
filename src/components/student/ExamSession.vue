@@ -16,6 +16,12 @@
       <div v-if="timerEnabled" class="timer-container" :class="{ 'warning': remainingTime <= 300 }">
         <i class="fas fa-clock"></i> Time Remaining: {{ formatTime(remainingTime) }}
       </div>
+      
+      <!-- Anti-cheat warning counters -->
+      <div v-if="antiCheatEnabled && !examSubmitted" class="warning-counter">
+        <i class="fas fa-exclamation-triangle"></i>
+        Warnings: {{ violationCount }} | Tab switches: {{ tabSwitchCount }}
+      </div>
     </div>
     
     <!-- Loading State -->
@@ -254,6 +260,13 @@ export default {
       timerEnabled: false,
       timerInterval: null,
       remainingTime: 0, // in seconds
+      // Anti-cheat state
+      violationCount: 0,
+      maxViolations: 3,
+      antiCheatEnabled: false,
+      enforceFullscreen: true,
+      lastVisibilityViolationAt: null,
+      tabSwitchCount: 0,
     };
   },
   computed: {
@@ -303,6 +316,8 @@ export default {
     this.clearPolling();
     // Clean up the timer interval
     this.stopTimer();
+    // Disable anti-cheat listeners
+    this.disableAntiCheat();
     if (this.socket) {
       this.socket.off('examStatusUpdate');
       this.socket.off('examStopped');
@@ -347,6 +362,155 @@ export default {
     }
   },
   methods: {
+    // Anti-cheat: enable listeners and optionally require fullscreen
+    enableAntiCheat() {
+      if (this.antiCheatEnabled || this.examSubmitted) return;
+      this.antiCheatEnabled = true;
+
+      document.addEventListener('visibilitychange', this.handleVisibilityChange);
+      window.addEventListener('blur', this.handleWindowBlur);
+      document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+      document.addEventListener('contextmenu', this.preventContextMenu);
+      document.addEventListener('copy', this.preventClipboard, true);
+      document.addEventListener('cut', this.preventClipboard, true);
+      document.addEventListener('paste', this.preventClipboard, true);
+      document.addEventListener('keydown', this.preventShortcuts, true);
+
+      if (this.enforceFullscreen) {
+        this.requestFullscreenWithPrompt();
+      }
+    },
+
+    disableAntiCheat() {
+      if (!this.antiCheatEnabled) return;
+      this.antiCheatEnabled = false;
+
+      document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+      window.removeEventListener('blur', this.handleWindowBlur);
+      document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
+      document.removeEventListener('contextmenu', this.preventContextMenu);
+      document.removeEventListener('copy', this.preventClipboard, true);
+      document.removeEventListener('cut', this.preventClipboard, true);
+      document.removeEventListener('paste', this.preventClipboard, true);
+      document.removeEventListener('keydown', this.preventShortcuts, true);
+    },
+
+    async requestFullscreenWithPrompt() {
+      // If already fullscreen or API not available, skip prompt
+      if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+      try {
+        await Swal.fire({
+          title: 'Enter Fullscreen',
+          text: 'For exam security, the test will run in fullscreen. Exiting may count as a violation.',
+          icon: 'info',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          confirmButtonText: 'Enter Fullscreen'
+        });
+      } catch (_) {
+        // If dialog was dismissed, continue
+      }
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (e) {
+        // If user blocks fullscreen, count a violation but continue exam
+        this.registerViolation('Fullscreen was not enabled.');
+      }
+    },
+
+    handleFullscreenChange() {
+      if (!this.enforceFullscreen || this.examSubmitted) return;
+      const isFullscreen = !!document.fullscreenElement;
+      if (!isFullscreen) {
+        // Ignore when viewing image modal
+        if (this.fullscreenImage) return;
+        this.registerViolation('Exited fullscreen during the exam.');
+        // Prompt to re-enter
+        this.requestFullscreenWithPrompt();
+      }
+    },
+
+    handleVisibilityChange() {
+      if (document.hidden) {
+        // Debounce rapid toggles
+        const now = Date.now();
+        if (!this.lastVisibilityViolationAt || now - this.lastVisibilityViolationAt > 1500) {
+          this.lastVisibilityViolationAt = now;
+          this.tabSwitchCount += 1;
+          this.registerViolation('Tab/window switched away from the exam.');
+        }
+      }
+    },
+
+    handleWindowBlur() {
+      // Additional safety: count blur as potential switch
+      if (document.hidden) return; // already handled by visibility
+      this.registerViolation('Window lost focus during the exam.');
+    },
+
+    preventContextMenu(e) {
+      if (!this.examSubmitted) {
+        e.preventDefault();
+      }
+    },
+
+    preventClipboard(e) {
+      if (!this.examSubmitted) {
+        e.preventDefault();
+        this.registerViolation('Copy/Cut/Paste is disabled during the exam.');
+      }
+    },
+
+    preventShortcuts(e) {
+      if (this.examSubmitted) return;
+      const key = e.key?.toLowerCase();
+      const ctrlOrMeta = e.ctrlKey || e.metaKey;
+      // Block common shortcuts that aid searching/saving/printing/devtools
+      if (
+        (ctrlOrMeta && ['f','p','s','c','v','x','a','h','g'].includes(key)) ||
+        key === 'f12' ||
+        key === 'printscreen'
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.registerViolation('Blocked restricted keyboard shortcut.');
+      }
+    },
+
+    registerViolation(reason) {
+      // Do not double count while submitting
+      if (this.isSubmitting || this.examSubmitted) return;
+      this.violationCount += 1;
+
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true
+      });
+      Toast.fire({
+        icon: 'warning',
+        title: `Exam security warning (${this.violationCount}/${this.maxViolations})`,
+        text: `${reason} (Tab switches: ${this.tabSwitchCount})`
+      });
+
+      // Require at least 2 tab switches before auto-submit
+      if (this.violationCount >= this.maxViolations && this.tabSwitchCount >= 2) {
+        Swal.fire({
+          title: 'Too Many Violations',
+          text: 'Your exam will be auto-submitted due to repeated violations and tab switches.',
+          icon: 'error',
+          showConfirmButton: false,
+          timer: 2000
+        });
+        // Short delay so user sees the message
+        setTimeout(() => {
+          this.submitAnswers();
+        }, 1500);
+      }
+    },
+
     // Set up polling with appropriate interval
     setupPolling() {
       // Clear any existing interval first
@@ -415,6 +579,9 @@ export default {
           // Save the initial state
           this.saveExamState();
         }
+
+        // Enable anti-cheat protections once the exam is ready
+        this.enableAntiCheat();
       }
     },
     
@@ -506,6 +673,9 @@ export default {
         // Stop the timer if it's running
         this.stopTimer();
         this.clearTimerState();
+
+        // Disable anti-cheat once submitted
+        this.disableAntiCheat();
         
         // Store the score result but don't show it yet
         this.scoreResult = response.score;

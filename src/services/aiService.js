@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const OPENROUTER_API_KEY = '*';
+export const OPENROUTER_API_KEY = '@';
 export const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // Define available models in order of preference
@@ -172,18 +172,20 @@ export const generateExamQuestions = async (
   1. The question text
   2. ${questionType === 'multiple_choice' ? 'Four possible options (without A, B, C, D labels)' : 
      questionType === 'true_false' ? 'Whether True or False is correct' : 
-     'The correct answer for enumeration'}
-  3. The correct answer exactly matching one of the options text (without any label like A, B, C, etc.)
+     questionType === 'enumeration' ? 'The correct answer for enumeration' :
+     'Leave options and correctAnswer empty for essay'}
+  ${questionType === 'essay' ? '' : '3. The correct answer exactly matching one of the options text (without any label like A, B, C, etc.)'}
   
   Format your response as a JSON array like this:
   [
     {
       "text": "Question text here",
       "type": "${questionType === 'multiple_choice' ? 'multipleChoice' : 
-                questionType === 'true_false' ? 'true_false' : 'enumeration'}",
+                questionType === 'true_false' ? 'true_false' : 
+                questionType === 'enumeration' ? 'enumeration' : 'essay'}",
       ${questionType === 'multiple_choice' ? 
       '"options": ["First option text", "Second option text", "Third option text", "Fourth option text"],' : ''}
-      "correctAnswer": "Exact text of the correct answer"
+      ${questionType === 'essay' ? '"correctAnswer": ""' : '"correctAnswer": "Exact text of the correct answer"'}
     }
   ]
   
@@ -583,24 +585,31 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
       Provide ONLY a comma-separated list of brief terms or short phrases (1-5 words each) that directly answer the question.
       Do NOT provide full sentences, explanations, or definitions.
       Format as: "term1, term2, term3, ..."`;
+    } else if (questionType === 'essay') {
+      // Essay: no correct answer, just confirm type
+      return {
+        questionType: 'essay',
+        answer: ''
+      };
     }
   } else {
     // Detect question type and generate appropriate response
     prompt = `Analyze this exam question and determine:
-    1. The most appropriate question type (multiple_choice, true_false, or enumeration)
+    1. The most appropriate question type (multiple_choice, true_false, enumeration, or essay)
     2. The correct answer based on the question type
     
     Question: "${questionText}"
     
     Respond in JSON format:
     {
-      "detectedType": "multiple_choice|true_false|enumeration",
+      "detectedType": "multiple_choice|true_false|enumeration|essay",
       "answer": ANSWER_BASED_ON_TYPE
     }
     
     For multiple_choice: "answer" should be an object with "correctAnswer" and "options" array
     For true_false: "answer" should be either "true" or "false" 
-    For enumeration: "answer" should be a comma-separated string of brief terms (NOT full sentences)`;
+    For enumeration: "answer" should be a comma-separated string of brief terms (NOT full sentences)
+    For essay: "answer" should be an empty string`;
   }
   
   try {
@@ -660,6 +669,11 @@ export const detectQuestionTypeAndAnswer = async (questionText, questionType = n
           return {
             questionType: 'enumeration',
             answer: result.answer.toUpperCase()
+          };
+        } else if (result.detectedType === 'essay') {
+          return {
+            questionType: 'essay',
+            answer: ''
           };
         }
       }

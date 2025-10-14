@@ -151,11 +151,25 @@
                       class="option-item"
                     >
                       <input 
-                        v-model="question.options[optIndex]"
+                        v-model="option.text"
                         type="text" 
-                        :placeholder="`Option ${optIndex + 1}`"
+                        :placeholder="`Option ${optIndex + 1} text`"
                         required
                       />
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        @change="onOptionImageChange($event, question, optIndex)"
+                      />
+                      <img v-if="option.imageUrl" :src="option.imageUrl" alt="preview" class="option-thumb" />
+                      <button 
+                        v-if="option.imageUrl"
+                        type="button"
+                        class="remove-option-btn"
+                        @click="clearOptionImage(question, optIndex)"
+                      >
+                        <span class="material-icons-round">image_not_supported</span>
+                      </button>
                       <button 
                         type="button" 
                         class="remove-option-btn"
@@ -219,7 +233,7 @@
 <script>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { createSurvey } from '@/services/authService';
+import { createSurvey, uploadImage, getFullImageUrl } from '@/services/authService';
 import Swal from 'sweetalert2';
 
 export default {
@@ -238,7 +252,7 @@ export default {
       questions.value.push({
         questionText: '',
         questionType: 'multiple_choice',
-        options: ['', ''],
+        options: [{ text: '', imageUrl: '' }, { text: '', imageUrl: '' }],
         required: true,
         order: questions.value.length
       });
@@ -272,7 +286,7 @@ export default {
     const setQuestionType = (question, type) => {
       question.questionType = type;
       if (type === 'multiple_choice' || type === 'checkbox') {
-        question.options = ['', ''];
+        question.options = [{ text: '', imageUrl: '' }, { text: '', imageUrl: '' }];
       } else {
         delete question.options;
       }
@@ -282,11 +296,36 @@ export default {
       if (!Array.isArray(question.options)) {
         question.options = [];
       }
-      question.options.push('');
+      question.options.push({ text: '', imageUrl: '' });
     };
 
     const removeOption = (question, optionIndex) => {
       question.options.splice(optionIndex, 1);
+    };
+
+    const fileToDataUrl = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const onOptionImageChange = async (e, question, optIndex) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      try {
+        const dataUrl = await fileToDataUrl(file);
+        const { imageUrl } = await uploadImage(dataUrl);
+        question.options[optIndex].imageUrl = getFullImageUrl(imageUrl);
+      } catch (err) {
+        Swal.fire({ title: 'Upload failed', text: err.message || 'Could not upload image', icon: 'error' });
+      } finally {
+        e.target.value = '';
+      }
+    };
+
+    const clearOptionImage = (question, optIndex) => {
+      question.options[optIndex].imageUrl = '';
     };
 
     const handleSubmit = async () => {
@@ -302,7 +341,10 @@ export default {
             questionText: q.questionText,
             questionType: q.questionType,
             options: ['multiple_choice', 'checkbox'].includes(q.questionType) ? 
-              JSON.stringify(q.options.filter(opt => opt.trim())) : null,
+              q.options
+                .filter(opt => (opt.text || '').trim())
+                .map(opt => ({ text: opt.text.trim(), imageUrl: (opt.imageUrl || '').trim() || null }))
+              : null,
             required: q.required,
             order: q.order
           }))
@@ -356,6 +398,8 @@ export default {
       setQuestionType,
       addOption,
       removeOption,
+      onOptionImageChange,
+      clearOptionImage,
       handleSubmit,
       resetForm
     };
@@ -721,6 +765,14 @@ export default {
   padding: 10px;
   border: 2px solid #e0e0e0;
   border-radius: 6px;
+}
+
+.option-thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #ddd;
 }
 
 .remove-option-btn {

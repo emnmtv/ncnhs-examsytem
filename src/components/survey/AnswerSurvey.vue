@@ -70,13 +70,14 @@
               v-for="(option, index) in getOptions(question.options)" 
               :key="index"
               class="option"
-              @click="selectOption(question.id, option)"
+              @click="selectOption(question.id, option.text)"
             >
               <div 
                 class="radio-button"
-                :class="{ selected: answers[question.id] === option }"
+                :class="{ selected: answers[question.id] === option.text }"
               ></div>
-              <span class="option-text">{{ option }}</span>
+              <img v-if="option.imageUrl" :src="option.imageUrl" alt="option image" class="option-image" @click.stop="openFullscreenImage(option.imageUrl)" />
+              <span class="option-text">{{ option.text }}</span>
             </div>
           </div>
 
@@ -89,16 +90,17 @@
               v-for="(option, index) in getOptions(question.options)" 
               :key="index"
               class="option"
-              @click="toggleCheckboxOption(question.id, option)"
+              @click="toggleCheckboxOption(question.id, option.text)"
             >
               <div 
                 class="checkbox"
-                :class="{ selected: isOptionSelected(question.id, option) }"
+                :class="{ selected: isOptionSelected(question.id, option.text) }"
               >
-                <span v-if="isOptionSelected(question.id, option)" 
+                <span v-if="isOptionSelected(question.id, option.text)" 
                   class="material-icons-round check-icon">check</span>
               </div>
-              <span class="option-text">{{ option }}</span>
+              <img v-if="option.imageUrl" :src="option.imageUrl" alt="option image" class="option-image" @click.stop="openFullscreenImage(option.imageUrl)" />
+              <span class="option-text">{{ option.text }}</span>
             </div>
           </div>
 
@@ -175,6 +177,15 @@
         </button>
       </div>
     </div>
+    <!-- Fullscreen image modal -->
+    <div v-if="fullscreenImage" class="fullscreen-image-modal" @click="closeFullscreenImage">
+      <div class="fullscreen-image-container" @click.stop>
+        <img :src="fullscreenImage" alt="Fullscreen option image" />
+        <button class="close-fullscreen-btn" @click="closeFullscreenImage">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -197,6 +208,7 @@ export default {
     const submitted = ref(false);
     const currentPage = ref(0);
     const QUESTIONS_PER_PAGE = 5;
+    const fullscreenImage = ref(null);
 
     const totalPages = computed(() => {
       if (!survey.value?.questions) return 0;
@@ -269,11 +281,11 @@ export default {
       }
     });
 
-    const selectOption = (questionId, option) => {
-      answers.value[questionId] = option;
+    const selectOption = (questionId, optionText) => {
+      answers.value[questionId] = optionText;
     };
 
-    const toggleCheckboxOption = (questionId, option) => {
+    const toggleCheckboxOption = (questionId, optionText) => {
       // Initialize as array if not exists
       if (!answers.value[questionId]) {
         answers.value[questionId] = [];
@@ -284,10 +296,10 @@ export default {
         ? answers.value[questionId]
         : [];
       
-      const index = currentAnswers.indexOf(option);
+      const index = currentAnswers.indexOf(optionText);
       if (index === -1) {
         // Add option if not selected
-        currentAnswers.push(option);
+        currentAnswers.push(optionText);
       } else {
         // Remove option if already selected
         currentAnswers.splice(index, 1);
@@ -297,23 +309,22 @@ export default {
       answers.value[questionId] = currentAnswers;
     };
 
-    const isOptionSelected = (questionId, option) => {
+    const isOptionSelected = (questionId, optionText) => {
       if (!answers.value[questionId]) return false;
       const currentAnswers = Array.isArray(answers.value[questionId]) 
         ? answers.value[questionId] 
         : [answers.value[questionId]];
-      return currentAnswers.includes(option);
+      return currentAnswers.includes(optionText);
     };
 
     const getOptions = (options) => {
       if (!options) return [];
-      if (Array.isArray(options)) return options;
-      try {
-        return typeof options === 'string' ? JSON.parse(options) : [];
-      } catch (error) {
-        console.error('Error parsing options:', error);
-        return [];
+      let parsed = options;
+      if (typeof options === 'string') {
+        try { parsed = JSON.parse(options); } catch { parsed = []; }
       }
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map(o => typeof o === 'string' ? { text: o, imageUrl: null } : { text: o.text, imageUrl: o.imageUrl });
     };
 
     const handleSubmit = async () => {
@@ -324,7 +335,7 @@ export default {
 
         const formattedAnswers = Object.entries(answers.value).map(([questionId, answer]) => ({
           questionId: parseInt(questionId),
-          answer: answer.toString()
+          answer
         }));
 
         const response = await submitSurveyResponse(surveyCode.value, {
@@ -369,6 +380,16 @@ export default {
       }
     };
 
+    const openFullscreenImage = (imageUrl) => {
+      fullscreenImage.value = imageUrl;
+      document.body.style.overflow = 'hidden';
+    };
+
+    const closeFullscreenImage = () => {
+      fullscreenImage.value = null;
+      document.body.style.overflow = '';
+    };
+
     return {
       surveyCode,
       survey,
@@ -394,6 +415,9 @@ export default {
       resetForm,
       nextPage,
       previousPage,
+      fullscreenImage,
+      openFullscreenImage,
+      closeFullscreenImage,
     };
   }
 };
@@ -487,9 +511,9 @@ export default {
 
 .survey-form {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 1.25rem;
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
 }
 
 .survey-info {
@@ -515,10 +539,10 @@ export default {
 }
 
 .question-card {
-  background: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 8px;
-  border: 1px solid #eee;
+  background: transparent;
+  padding: 0.5rem 0;
+  border-radius: 0;
+  border: none;
 }
 
 .question-text {
@@ -535,41 +559,103 @@ export default {
 .multiple-choice {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 10px;
 }
 
 .option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px 64px 1fr;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  background: white;
-  border-radius: 6px;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e6e8eb;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.035);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.15s ease, box-shadow 0.2s ease, border-color 0.15s ease;
+  min-height: 64px;
 }
 
 .option:hover {
-  background: #f5f5f5;
+  background: #f8fafc;
+  border-color: #dbe1e8;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.option-image {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  background-color: #fff;
+}
+
+.fullscreen-image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.fullscreen-image-container {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+}
+
+.fullscreen-image-container img {
+  max-width: 100%;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+}
+
+.close-fullscreen-btn {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  background-color: white;
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.close-fullscreen-btn:hover {
+  background-color: #f44336;
+  color: white;
 }
 
 .radio-button {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #bdbdbd;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #b0b7c3;
   border-radius: 50%;
   position: relative;
-}
-
-.radio-button.selected {
-  border-color: #4CAF50;
 }
 
 .radio-button.selected::after {
   content: '';
   position: absolute;
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   background: #4CAF50;
   border-radius: 50%;
   top: 50%;
@@ -698,14 +784,44 @@ export default {
 
   .code-input-section {
     padding: 1.5rem;
+    background: transparent;
+    box-shadow: none;
   }
 
   .survey-form {
-    padding: 1.5rem;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
   }
 
   .question-card {
-    padding: 1rem;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .answer-survey-container {
+    padding: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .survey-header h1 {
+    font-size: 1.4rem;
+  }
+
+  .survey-header {
+    margin-bottom: 0;
+  }
+
+  .description {
+    font-size: 0.9rem;
+  }
+
+  .question-text {
+    font-size: 1rem;
   }
 
   .navigation-controls {
@@ -716,6 +832,41 @@ export default {
   .submit-btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .option-image {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  /* Make options full-width with stacked image and smaller caption */
+  .option {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 8px 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .option-image {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .option-text {
+    font-size: 0.95rem;
+    line-height: 1.25rem;
+    word-break: break-word;
+  }
+
+  .questions-container {
+    gap: 4px;
   }
 }
 
@@ -792,7 +943,7 @@ button {
 .question-progress {
   text-align: center;
   color: #666;
-  margin: 1rem 0;
+  margin: 0.5rem 0 1rem;
   font-size: 0.9rem;
 }
 
