@@ -1042,9 +1042,10 @@ export default {
       durationMinutes: null,
       startDateTime: '',
       endDateTime: '',
-      maxAttempts: null,
+      
       attemptSpacing: null,
-      studentExamHistory: true
+      studentExamHistory: false,
+      maxAttempts: 1
     });
     
     // Add state for active settings tab
@@ -1120,9 +1121,9 @@ export default {
               durationMinutes: exam.durationMinutes || null,
               startDateTime: exam.startDateTime ? new Date(exam.startDateTime).toISOString().slice(0, 16) : '',
               endDateTime: exam.endDateTime ? new Date(exam.endDateTime).toISOString().slice(0, 16) : '',
-              maxAttempts: exam.maxAttempts || null,
+              maxAttempts: exam.maxAttempts || 1,
               attemptSpacing: exam.attemptSpacing || null,
-              studentExamHistory: exam.studentExamHistory !== undefined ? exam.studentExamHistory : true
+              studentExamHistory: exam.studentExamHistory !== undefined ? exam.studentExamHistory : false
             };
             
             // Set selected subject if classCode matches a subject code
@@ -1978,9 +1979,9 @@ export default {
         durationMinutes: null,
         startDateTime: '',
         endDateTime: '',
-        maxAttempts: null,
+        maxAttempts: 1,
         attemptSpacing: null,
-        studentExamHistory: true
+        studentExamHistory: false
       };
       selectedSubjectId.value = '';
       questions.value = [];

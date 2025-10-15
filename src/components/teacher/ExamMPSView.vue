@@ -1273,189 +1273,267 @@ const getScoreClass = (score) => {
 };
 
 // Export data as CSV
-const exportData = () => {
+const exportData = async () => {
   if (!mpsData.value) return;
   
-  // Create HTML for a styled table export
-  const htmlTable = `
-    <html>
-      <head>
-        <style>
-          body { 
-            font-family: Arial, sans-serif;
-            color: #333;
-            line-height: 1.4;
+  try {
+    const ExcelJS = await import('exceljs');
+
+    // Load the XLSX template from public assets
+    const templateResponse = await fetch('/assets/item-analysis-template.xlsx', { cache: 'no-store' });
+    if (!templateResponse.ok) throw new Error('Failed to load XLSX template');
+    const templateBuffer = await templateResponse.arrayBuffer();
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(templateBuffer);
+
+    // Use the first worksheet by default (or named 'template' if present)
+    let worksheet = workbook.getWorksheet('template');
+    if (!worksheet) worksheet = workbook.worksheets[0];
+
+    // Fill common header/footer fields in the template
+    try {
+      const teacherName = mpsData.value.exam?.teacher?.name || '';
+      const totalItems = mpsData.value.overallStats?.totalPossible || (mpsData.value.exam?.totalItems) || '';
+
+      let preparedFilled = false;
+      let itemsFilled = false;
+
+      for (let r = 1; r <= 120; r++) {
+        const row = worksheet.getRow(r);
+        row.eachCell((cell, colNumber) => {
+          const text = (cell.value || '').toString().trim().toLowerCase();
+          if (!text) return;
+
+          // Test Item count e.g., "Test Item:" or "Test Items"
+          if (!itemsFilled && text.includes('test item')) {
+            let target = row.getCell(colNumber + 1);
+            target.value = totalItems;
+            target.alignment = { vertical: 'middle', horizontal: 'left' };
+            itemsFilled = true;
           }
-          table { 
-            border-collapse: collapse; 
-            width: 100%; 
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
+
+          // Prepared by label near the footer (place name below the label if present)
+          if (!preparedFilled && text.includes('prepared by')) {
+            const belowRow = worksheet.getRow(r + 1);
+            let placed = false;
+            // Priority 1: same column, next row
+            if (belowRow) {
+              const c1 = belowRow.getCell(colNumber);
+              if (!c1.value) {
+                c1.value = teacherName;
+                c1.alignment = { vertical: 'middle', horizontal: 'left' };
+                placed = true;
+              }
+            }
+            // Priority 2: next row, next column
+            if (!placed && belowRow) {
+              const c2 = belowRow.getCell(colNumber + 1);
+              if (!c2.value) {
+                c2.value = teacherName;
+                c2.alignment = { vertical: 'middle', horizontal: 'left' };
+                placed = true;
+              }
+            }
+            // Fallback: same row, next column
+            if (!placed) {
+              const c3 = row.getCell(colNumber + 1);
+              c3.value = teacherName;
+              c3.alignment = { vertical: 'middle', horizontal: 'left' };
+            }
+            preparedFilled = true;
           }
-          th, td { 
-            border: 1px solid #ddd; 
-            padding: 8px; 
-            text-align: center;
+        });
+        if (preparedFilled && itemsFilled) break;
+      }
+    } catch (e) {
+      console.warn('Header/footer autofill skipped:', e);
+    }
+
+    // Attempt to locate header row by looking for known headers
+    // Fallback to row 14 (based on provided template preview)
+    let headerRowIndex = 14;
+    for (let r = 10; r <= 20; r++) {
+      const row = worksheet.getRow(r);
+      const values = row.values.map(v => (typeof v === 'string' ? v.toLowerCase() : ''));
+      if (values.some(v => v && v.includes('learning area')) && values.some(v => v && v.includes('mps'))) {
+        headerRowIndex = r;
+        break;
+      }
+    }
+
+    const headerRow = worksheet.getRow(headerRowIndex);
+    const colMap = {};
+    headerRow.eachCell((cell, colNumber) => {
+      const key = String(cell.value || '').toLowerCase();
+      if (key.includes('learning area')) colMap.learningArea = colNumber;
+      else if (key === 'grade') colMap.grade = colNumber;
+      else if (key.includes('section')) colMap.section = colNumber;
+      else if (key.includes('number of takers')) colMap.takers = colNumber;
+      else if (key.includes('highest')) colMap.highest = colNumber;
+      else if (key.includes('lowest')) colMap.lowest = colNumber;
+      else if (key.includes('total score')) colMap.totalScore = colNumber;
+      else if (key === 'mean') colMap.mean = colNumber;
+      else if (key === 'mps') colMap.mps = colNumber;
+    });
+
+    const sections = Array.isArray(mpsData.value.sectionMPS) ? mpsData.value.sectionMPS : [];
+    const startRow = headerRowIndex + 1; // write directly on the first row after headers
+
+    // Write section rows
+    sections.forEach((s, i) => {
+      const row = worksheet.getRow(startRow + i);
+      // Learning Area (subject/title) on the same row as Grade & Section
+      if (colMap.learningArea) {
+        const learningArea = mpsData.value.exam?.subject || mpsData.value.exam?.title || '';
+        const laCell = row.getCell(colMap.learningArea);
+        laCell.value = learningArea;
+        // Auto-size text: small base font + shrink and wrap to fit cell width
+        const titleLen = (learningArea || '').length;
+        let fontSize = 10;
+        if (titleLen > 120) fontSize = 7;
+        else if (titleLen > 90) fontSize = 8;
+        else if (titleLen > 60) fontSize = 9;
+        laCell.font = { size: fontSize, bold: false };
+        laCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, shrinkToFit: true };
+      }
+      // Ensure Grade and Section are separated into their own columns
+      let gradeValue = s.gradeLevel || '';
+      let sectionValue = s.section || '';
+      if ((!gradeValue || !sectionValue) && typeof s.section === 'string') {
+        const gradeMatch = s.section.match(/(?:grade\s*)?(\d{1,2})/i);
+        if (!gradeValue && gradeMatch) gradeValue = gradeMatch[1];
+        const sectMatch = s.section.match(/[-\s]*([A-Za-z]+)\s*$/);
+        if (!sectionValue && sectMatch) sectionValue = sectMatch[1];
+      }
+      if (colMap.grade) row.getCell(colMap.grade).value = gradeValue;
+      if (colMap.section) row.getCell(colMap.section).value = sectionValue;
+      if (colMap.takers) row.getCell(colMap.takers).value = s.studentCount || 0;
+      if (colMap.highest) row.getCell(colMap.highest).value = (s.highestScoreRaw != null ? s.highestScoreRaw : (s.highestPercentage != null ? Number(s.highestPercentage).toFixed(1) + '%' : ''));
+      if (colMap.lowest) row.getCell(colMap.lowest).value = (s.lowestScoreRaw != null ? s.lowestScoreRaw : (s.lowestPercentage != null ? Number(s.lowestPercentage).toFixed(1) + '%' : ''));
+      if (colMap.totalScore) {
+        const totalPossible = s.totalPossible || mpsData.value.overallStats?.totalPossible || 0;
+        const avgRaw = ((s.mps || 0) / 100) * totalPossible; // average raw per taker
+        const totalRaw = Number((avgRaw * (s.studentCount || 0)).toFixed(2));
+        row.getCell(colMap.totalScore).value = totalRaw;
+      }
+      if (colMap.mean) {
+        const total = s.totalPossible || mpsData.value.overallStats?.totalPossible || 0;
+        row.getCell(colMap.mean).value = total ? Number(((s.mps || 0) * total / 100).toFixed(2)) : '';
+      }
+      if (colMap.mps) row.getCell(colMap.mps).value = Number((s.mps || 0).toFixed(2));
+      row.commit();
+    });
+
+    // Fill a dedicated TOTAL row if the template already includes one;
+    // otherwise, skip adding our own TOTAL row to avoid layout conflicts.
+    let totalRow = null;
+    for (let r = headerRowIndex; r <= headerRowIndex + 30; r++) {
+      const row = worksheet.getRow(r);
+      let found = false;
+      row.eachCell((cell) => {
+        const val = (cell.value || '').toString().trim().toLowerCase();
+        if (val === 'total' || val === 'totals') found = true;
+      });
+      if (found) { totalRow = row; break; }
+    }
+    if (totalRow) {
+      if (colMap.takers) totalRow.getCell(colMap.takers).value = mpsData.value.totalStudents || 0;
+      if (colMap.highest) totalRow.getCell(colMap.highest).value = mpsData.value.overallStats?.highestScoreRaw || 0;
+      if (colMap.lowest) totalRow.getCell(colMap.lowest).value = mpsData.value.overallStats?.lowestScoreRaw || 0;
+      if (colMap.totalScore) {
+        // Sum of total scores of takers across sections
+        const grandTotal = sections.reduce((sum, s) => {
+          const totalPossible = s.totalPossible || mpsData.value.overallStats?.totalPossible || 0;
+          const avgRaw = ((s.mps || 0) / 100) * totalPossible;
+          return sum + (avgRaw * (s.studentCount || 0));
+        }, 0);
+        totalRow.getCell(colMap.totalScore).value = Number(grandTotal.toFixed(2));
+      }
+      if (colMap.mean) {
+        const total = mpsData.value.overallStats?.totalPossible || 0;
+        totalRow.getCell(colMap.mean).value = total ? Number(((mpsData.value.overallMPS || 0) * total / 100).toFixed(2)) : '';
+      }
+      if (colMap.mps) totalRow.getCell(colMap.mps).value = Number((mpsData.value.overallMPS || 0).toFixed(2));
+      totalRow.commit();
+    }
+
+    // Auto-adjust Most/Least Learned sections based on the number of ITEM rows
+    try {
+      const normalize = v => (v || '').toString().trim().toLowerCase();
+      const findRowContaining = (text, from = 1, to = worksheet.rowCount) => {
+        const needle = text.toLowerCase();
+        for (let r = from; r <= to; r++) {
+          const row = worksheet.getRow(r);
+          let found = false;
+          row.eachCell((cell) => { if (normalize(cell.value).includes(needle)) found = true; });
+          if (found) return r;
+        }
+        return -1;
+      };
+
+      const adjustBand = (titleText) => {
+        const titleRow = findRowContaining(titleText, 1, worksheet.rowCount);
+        if (titleRow === -1) return;
+        const headerRowIdx = findRowContaining('item', titleRow, titleRow + 6);
+        if (headerRowIdx === -1) return;
+        const headerRow = worksheet.getRow(headerRowIdx);
+        let itemCol = 0, compCol = 0, intervCol = 0;
+        headerRow.eachCell((cell, col) => {
+          const key = normalize(cell.value);
+          if (key === 'item') itemCol = col;
+          if (key.includes('competenc')) compCol = col;
+          if (key.includes('intervention')) intervCol = col;
+        });
+        if (!itemCol || !compCol) return;
+
+        // Count actual rows by non-empty ITEM column
+        let r = headerRowIdx + 1;
+        let count = 0;
+        while (r <= headerRowIdx + 100) {
+          const row = worksheet.getRow(r);
+          const itemVal = row.getCell(itemCol).value;
+          if (itemVal === undefined || itemVal === null || normalize(itemVal) === '') break;
+          count++; r++;
+        }
+
+        // Apply wrapping and proportional height
+        for (let i = 0; i < count; i++) {
+          const row = worksheet.getRow(headerRowIdx + 1 + i);
+          const compCell = row.getCell(compCol);
+          compCell.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left', shrinkToFit: true };
+          let textLen = normalize(compCell.value).length;
+          if (intervCol) {
+            const ic = row.getCell(intervCol);
+            ic.alignment = { wrapText: true, vertical: 'middle', horizontal: 'left', shrinkToFit: true };
+            textLen += normalize(ic.value).length;
           }
-          th { 
-            background-color: #f8f8f8; 
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 2px solid #ddd;
-          }
-          .center { text-align: center; }
-          .header { 
-            display: flex; 
-            align-items: center; 
-            margin-bottom: 20px; 
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 15px;
-          }
-          .header img { height: 80px; margin-right: 20px; }
-          .title { 
-            font-size: 22px; 
-            font-weight: bold; 
-            color: #333;
-            margin: 0;
-          }
-          .subtitle { 
-            font-size: 16px; 
-            margin: 5px 0 15px 0;
-            color: #555;
-          }
-          .info { margin-bottom: 20px; }
-          .section-title { 
-            background-color: #f8f8f8; 
-            padding: 8px; 
-            font-weight: bold; 
-            margin-top: 20px; 
-            margin-bottom: 10px;
-            border-left: 4px solid #ddd;
-          }
-          tr:nth-child(even) {
-            background-color: #f9f9f9;
-          }
-          .footer {
-            margin-top: 20px; 
-            font-size: 12px; 
-            color: #666; 
-            text-align: center; 
-            border-top: 1px solid #ddd; 
-            padding-top: 10px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <img src="${NcnhsLogo}" alt="School Logo" style="height: 80px; margin-right: 20px;">
-          <div>
-            <div class="title">New Cabalan National High School</div>
-            <div class="subtitle">Exam Mean Percentage Score Report</div>
-            <div class="info">
-              <p><strong>Exam:</strong> ${mpsData.value.exam.title}</p>
-              <p><strong>Test Code:</strong> ${mpsData.value.exam.testCode}</p>
-              <p><strong>Teacher:</strong> ${mpsData.value.exam.teacher ? mpsData.value.exam.teacher.name : 'N/A'}</p>
-              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="section-title">Summary Statistics</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Overall MPS</th>
-              <th>Total Students</th>
-              <th>Highest Score</th>
-              <th>Lowest Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="center">${mpsData.value.overallMPS.toFixed(1)}%</td>
-              <td class="center">${mpsData.value.totalStudents}</td>
-              <td class="center">${mpsData.value.overallStats.highestScoreRaw || 0}/${mpsData.value.overallStats.totalPossible || 0} (${mpsData.value.overallStats.highestPercentage?.toFixed(1) || 0}%)</td>
-              <td class="center">${mpsData.value.overallStats.lowestScoreRaw || 0}/${mpsData.value.overallStats.totalPossible || 0} (${mpsData.value.overallStats.lowestPercentage?.toFixed(1) || 0}%)</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <div class="section-title">Score Distribution</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Excellent (90-100%)</th>
-              <th>Good (80-89%)</th>
-              <th>Satisfactory (70-79%)</th>
-              <th>Fair (60-69%)</th>
-              <th>Poor (Below 60%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="center">${mpsData.value.overallStats.scoreDistribution.excellent}</td>
-              <td class="center">${mpsData.value.overallStats.scoreDistribution.good}</td>
-              <td class="center">${mpsData.value.overallStats.scoreDistribution.satisfactory}</td>
-              <td class="center">${mpsData.value.overallStats.scoreDistribution.fair}</td>
-              <td class="center">${mpsData.value.overallStats.scoreDistribution.poor}</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <div class="section-title">Section Performance</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Section</th>
-              <th>MPS (%)</th>
-              <th>Students</th>
-              <th>Highest Score</th>
-              <th>Lowest Score</th>
-              <th>Excellent</th>
-              <th>Good</th>
-              <th>Satisfactory</th>
-              <th>Fair</th>
-              <th>Poor</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${mpsData.value.sectionMPS.map(section => {
-              return `
-                <tr>
-                  <td>${section.section}</td>
-                  <td class="center">${section.mps.toFixed(1)}%</td>
-                  <td class="center">${section.studentCount}</td>
-                  <td class="center">${section.highestScoreRaw || 0}/${section.totalPossible || 0} (${section.highestPercentage?.toFixed(1) || 0}%)</td>
-                  <td class="center">${section.lowestScoreRaw || 0}/${section.totalPossible || 0} (${section.lowestPercentage?.toFixed(1) || 0}%)</td>
-                  <td class="center">${section.distribution.excellent}</td>
-                  <td class="center">${section.distribution.good}</td>
-                  <td class="center">${section.distribution.satisfactory}</td>
-                  <td class="center">${section.distribution.fair}</td>
-                  <td class="center">${section.distribution.poor}</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-        
-        <div class="footer">
-          <p>Report Generated: ${new Date().toLocaleString()}</p>
-          <p>New Cabalan National High School - Examination Analysis System</p>
-        </div>
-      </body>
-    </html>
-  `;
-  
-  // Create a Blob with the HTML content
-  const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel' });
+          const lines = Math.max(1, Math.ceil(textLen / 85));
+          row.height = Math.max(row.height || 15, 14 * lines + 6);
+          row.commit();
+        }
+      };
+
+      adjustBand('most learned competencies');
+      adjustBand('least learned competencies');
+    } catch (e) {
+      console.warn('Competency auto-adjust failed:', e);
+    }
+
+    // Download the filled workbook
+    const outBuffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([outBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `MPS_${mpsData.value.exam.testCode}.xls`);
-  link.style.display = 'none';
+    link.href = url;
+    link.download = `MPS_${mpsData.value.exam?.testCode || 'report'}.xlsx`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('Excel export failed:', err);
+  }
 };
 
 // Print the report
