@@ -5071,3 +5071,37 @@ export const getStudentAnalytics = async (filters = {}) => {
     throw error;
   }
 };
+
+/**
+ * Get detailed review information for a question
+ * @param {number} questionId - The ID of the question
+ * @returns {Promise<Object>} Question review details with student answers
+ */
+export const getQuestionReviewDetails = async (questionId) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    console.log('AuthService: Fetching question review details', { questionId });
+
+    const response = await fetch(`${BASE_URL}/question/${questionId}/review`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch question review details");
+    }
+
+    const data = await response.json();
+    console.log('AuthService: Question review details fetched successfully', data);
+    return data;
+  } catch (error) {
+    console.error("AuthService: Get question review details error:", error);
+    throw error;
+  }
+};

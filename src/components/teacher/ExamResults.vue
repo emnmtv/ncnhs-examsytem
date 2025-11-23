@@ -615,15 +615,18 @@
 
         <!-- Grid View for Analysis -->
         <div v-if="analysisViewMode === 'grid'" class="analysis-grid">
-          <div v-for="item in paginatedAnalysis" :key="item.questionId" class="analysis-card">
+          <div v-for="item in paginatedAnalysis" :key="item.questionId" class="analysis-card clickable" @click="viewQuestionReview(item.questionId)">
             <div class="question-header">
               <span class="question-number">#{{ item.questionNumber }}</span>
-              <span 
-                class="difficulty-badge"
-                :class="getDifficultyClass(item.percentageCorrect)"
-              >
-                {{ getDifficultyLabel(item.percentageCorrect) }}
-              </span>
+              <div class="question-header-right">
+                <span 
+                  class="difficulty-badge"
+                  :class="getDifficultyClass(item.percentageCorrect)"
+                >
+                  {{ getDifficultyLabel(item.percentageCorrect) }}
+                </span>
+                <span class="material-icons view-question-icon">visibility</span>
+              </div>
             </div>
             <div class="question-text">{{ item.questionText }}</div>
             <div class="answer-info">
@@ -673,7 +676,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="item in paginatedAnalysis" :key="item.questionId" class="analysis-row">
+              <tr v-for="item in paginatedAnalysis" :key="item.questionId" class="analysis-row clickable" @click="viewQuestionReview(item.questionId)">
                 <td class="col-number">{{ item.questionNumber }}</td>
                 <td class="col-question">
                   <div class="question-text">{{ item.questionText }}</div>
@@ -1745,6 +1748,10 @@ const allAttempts = ref({}); // userId -> array of attempts
       });
     };
 
+    const viewQuestionReview = (questionId) => {
+      router.push(`/question-review/${questionId}`);
+    };
+
     const viewPartResults = () => {
       router.push({
         name: 'ExamPartResults',
@@ -2584,6 +2591,7 @@ const allAttempts = ref({}); // userId -> array of attempts
       showAnalysisPagination,
       isMobile,
       viewStudentAnswers,
+      viewQuestionReview,
       viewPartResults,
       viewArchivedResults,
       // Add export-related functionality to returned object
@@ -3294,6 +3302,16 @@ const allAttempts = ref({}); // userId -> array of attempts
 
 .analysis-row:hover {
   background: #f8f9fa;
+}
+
+.analysis-row.clickable {
+  cursor: pointer;
+}
+
+.analysis-row.clickable:hover {
+  background: #e8f5e9;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(21, 151, 80, 0.15);
 }
 
 /* Analysis Column Styles */
@@ -5258,10 +5276,37 @@ tr:hover {
   box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 
+.analysis-card.clickable {
+  cursor: pointer;
+}
+
+.analysis-card.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(21, 151, 80, 0.2);
+  border: 1px solid rgba(21, 151, 80, 0.3);
+}
+
 .question-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.question-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-question-icon {
+  color: #159750;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+.analysis-card.clickable:hover .view-question-icon {
+  color: #0bcc4e;
+  transform: scale(1.2);
 }
 
 .question-number {

@@ -392,7 +392,8 @@
               <div 
                 v-for="question in analytics?.examItemAnalysis?.questionsNeedingReview?.slice(0, 5)" 
                 :key="question.id" 
-                class="question-item"
+                class="question-item clickable"
+                @click="viewQuestionReview(question.id)"
               >
                 <div class="question-info">
                   <h4>{{ question.examTitle }}</h4>
@@ -405,6 +406,7 @@
                 </div>
                 <div class="question-status">
                   <span class="status-badge review">Needs Review</span>
+                  <span class="material-icons view-icon">visibility</span>
                 </div>
               </div>
             </div>
@@ -447,8 +449,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { getTeacherAnalytics, getTeacherAssignedSubjects } from '@/services/authService'
 import Chart from 'chart.js/auto'
+
+const router = useRouter()
 
 // Reactive data
 const loading = ref(false)
@@ -711,6 +716,11 @@ const renderCharts = () => {
   } catch (error) {
     console.error('Error rendering charts:', error)
   }
+}
+
+// Navigate to question review details
+const viewQuestionReview = (questionId) => {
+  router.push(`/question-review/${questionId}`)
 }
 
 // Initialize dashboard
@@ -1523,6 +1533,18 @@ onUnmounted(() => {
   border: 1px solid #e9ecef;
   border-radius: 8px;
   background: #f8f9fa;
+  transition: all 0.2s;
+}
+
+.question-item.clickable {
+  cursor: pointer;
+}
+
+.question-item.clickable:hover {
+  background: #e9ecef;
+  border-color: #159750;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .question-info h4 {
@@ -1561,6 +1583,24 @@ onUnmounted(() => {
 .status-badge.review {
   background: #fff3cd;
   color: #856404;
+}
+
+.question-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.view-icon {
+  color: #159750;
+  font-size: 1.5rem;
+  transition: transform 0.2s;
+}
+
+.question-item.clickable:hover .view-icon {
+  transform: scale(1.2);
+  color: #0bcc4e;
 }
 
 /* Quick Actions */

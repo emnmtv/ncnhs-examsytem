@@ -357,6 +357,12 @@ const routes = [
     name: 'StudentDashboard',
     component: () => import('@/components/student/Dashboard.vue'),
     meta: { requiresAuth: true, roles: ['student'] }
+  },
+  {
+    path: '/question-review/:questionId',
+    name: 'QuestionReviewDetails',
+    component: () => import('@/components/teacher/QuestionReviewDetails.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
   }
   
  
