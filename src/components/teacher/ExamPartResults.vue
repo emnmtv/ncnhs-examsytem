@@ -23,30 +23,45 @@
     </div>
 
     <div v-else class="scores-content">
-      <div class="filters">
-        <div class="filter-group">
-          <label for="section">Section:</label>
-          <select id="section" v-model="filters.section">
+      <!-- Search and Filter -->
+      <div class="table-controls">
+        <div class="search-container">
+          <span class="material-icons search-icon">search</span>
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search students by name, LRN, or section..." 
+            class="search-input"
+          />
+          <button v-if="searchQuery" @click="clearSearch" class="clear-search-btn">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="filter-container">
+          <select v-model="filters.gradeLevel" @change="applyFilter" class="grade-filter">
+            <option value="">All Grades</option>
+            <option v-for="grade in uniqueGrades" :key="grade" :value="grade">
+              Grade {{ grade }}
+            </option>
+          </select>
+          <select v-model="filters.section" @change="applyFilter" class="section-filter">
             <option value="">All Sections</option>
             <option v-for="section in uniqueSections" :key="section" :value="section">
               {{ section }}
             </option>
           </select>
+          <select v-model="filters.sortBy" @change="applyFilter" class="sort-filter">
+            <option value="">Sort By</option>
+            <option value="highest">Highest to Lowest</option>
+            <option value="lowest">Lowest to Highest</option>
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+          </select>
         </div>
-        
-        <div class="search-container">
-          <div class="search-box">
-            <span class="material-icons search-icon">search</span>
-            <input 
-              type="text"
-              v-model="searchQuery"
-              placeholder="Search by name or LRN..."
-              class="search-input"
-            >
-          </div>
-        </div>
+      </div>
 
-        <!-- Legend Toggle -->
+      <!-- Legend Toggle -->
+      <div class="legend-toggle-wrapper">
         <div class="legend-toggle-container">
           <label class="legend-toggle">
             <input type="checkbox" v-model="showLegend">
@@ -126,6 +141,7 @@
               </th>
               <th>Total Score</th>
               <th>Percentage</th>
+              <th>Performance</th>
             </tr>
           </thead>
           <tbody>
@@ -141,9 +157,15 @@
               <td :class="getTotalScoreClass(result.totalScore, maxTotalScore)">
                 {{ result.totalScore }}
               </td>
-                          <td :class="getPercentageClass(result.percentage)">
-              {{ typeof result.percentage === 'number' ? result.percentage.toFixed(2) : 'N/A' }}%
-            </td>
+              <td :class="getPercentageClass(result.percentage)">
+                {{ typeof result.percentage === 'number' ? result.percentage.toFixed(2) : 'N/A' }}%
+              </td>
+              <td :class="getPercentageClass(result.percentage)">
+                <div class="legend-indicator">
+                  <span class="legend-dot" :class="getPercentageClass(result.percentage)"></span>
+                  <span class="legend-label">{{ getPerformanceLabel(result.percentage) }}</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -229,7 +251,11 @@ export default {
     const examTitle = ref('');
     const examParts = ref([]);
     const results = ref([]);
-    const filters = ref({ section: '' });
+    const filters = ref({ 
+      gradeLevel: '',
+      section: '',
+      sortBy: ''
+    });
     const searchQuery = ref('');
     const maxTotalScore = ref(0);
     const showLegend = ref(false); // Toggle for legend display
@@ -261,6 +287,7 @@ export default {
             userId: score.student.id,
             studentName: `${score.student.firstName} ${score.student.lastName}`,
             lrn: score.student.lrn,
+            gradeLevel: score.student.gradeLevel,
             section: score.student.section,
             totalScore: score.overallScore.total.points,
             percentage: score.overallScore.total.percentage,
@@ -285,6 +312,11 @@ export default {
         loading.value = false;
       }
     };
+
+    const uniqueGrades = computed(() => {
+      const grades = new Set(results.value.map(r => r.gradeLevel).filter(g => g != null));
+      return Array.from(grades).sort((a, b) => a - b);
+    });
 
     const uniqueSections = computed(() => {
       return [...new Set(results.value.map(r => r.section))].sort();
@@ -340,14 +372,54 @@ export default {
     });
 
     const filteredResults = computed(() => {
-      return results.value.filter(result => {
-        const matchesSection = !filters.value.section || result.section === filters.value.section;
-        const searchTerm = searchQuery.value.toLowerCase();
-        const matchesSearch = !searchTerm || 
-          result.studentName.toLowerCase().includes(searchTerm) ||
-          result.lrn.toLowerCase().includes(searchTerm);
-        return matchesSection && matchesSearch;
+      // First, get all matching results based on filters and search
+      let matchingResults = results.value.filter(result => {
+        const matchesGrade = !filters.value.gradeLevel || 
+          result.gradeLevel === parseInt(filters.value.gradeLevel);
+        const matchesSection = !filters.value.section || 
+          result.section === filters.value.section;
+        
+        // Add search filtering with type checking
+        const searchLower = searchQuery.value.toLowerCase();
+        const matchesSearch = searchLower === '' || 
+          result.studentName.toLowerCase().includes(searchLower) ||
+          (result.lrn?.toString() || '').toLowerCase().includes(searchLower) ||
+          (result.section || '').toLowerCase().includes(searchLower);
+        
+        return matchesGrade && matchesSection && matchesSearch;
       });
+      
+      // Apply sorting if a sort option is selected
+      if (filters.value.sortBy) {
+        matchingResults = [...matchingResults].sort((a, b) => {
+          switch (filters.value.sortBy) {
+            case 'highest': {
+              // Sort by percentage (highest to lowest)
+              return (b.percentage || 0) - (a.percentage || 0);
+            }
+            case 'lowest': {
+              // Sort by percentage (lowest to highest)
+              return (a.percentage || 0) - (b.percentage || 0);
+            }
+            case 'name-asc': {
+              // Sort by name (A-Z)
+              const nameA = a.studentName.toLowerCase();
+              const nameB = b.studentName.toLowerCase();
+              return nameA.localeCompare(nameB);
+            }
+            case 'name-desc': {
+              // Sort by name (Z-A)
+              const nameA2 = a.studentName.toLowerCase();
+              const nameB2 = b.studentName.toLowerCase();
+              return nameB2.localeCompare(nameA2);
+            }
+            default:
+              return 0;
+          }
+        });
+      }
+      
+      return matchingResults;
     });
 
     const startIndex = computed(() => (resultsPage.value - 1) * resultsPageSize.value);
@@ -406,6 +478,14 @@ export default {
       return 'score-failing';
     };
 
+    const getPerformanceLabel = (percentage) => {
+      if (typeof percentage !== 'number' || isNaN(percentage)) return 'N/A';
+      if (percentage >= 90) return 'Excellent';
+      if (percentage >= 80) return 'Good';
+      if (percentage >= 75) return 'Passing';
+      return 'Failing';
+    };
+
     // Difficulty analysis helpers
     const getPartDifficulty = (partId) => {
       return partDifficultyAnalysis.value.find(part => part.id === partId);
@@ -426,6 +506,14 @@ export default {
       }
     };
 
+    const clearSearch = () => {
+      searchQuery.value = '';
+    };
+
+    const applyFilter = () => {
+      // Filter is applied automatically through computed property
+    };
+
     const goBack = () => {
       router.back();
     };
@@ -444,6 +532,7 @@ export default {
       filters,
       searchQuery,
       showLegend,
+      uniqueGrades,
       uniqueSections,
       filteredResults,
       paginatedResults,
@@ -461,6 +550,9 @@ export default {
       getPartDifficulty,
       getPartDifficultyClass,
       getDifficultyIcon,
+      getPerformanceLabel,
+      clearSearch,
+      applyFilter,
       goBack
     };
   }
@@ -571,6 +663,43 @@ th {
 .score-zero {
   color: #666;
   background: #f5f5f5;
+}
+
+/* Legend Indicator Column */
+.legend-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot.score-excellent {
+  background: #2e7d32;
+}
+
+.legend-dot.score-good {
+  background: #1565c0;
+}
+
+.legend-dot.score-passing {
+  background: #f57c00;
+}
+
+.legend-dot.score-failing {
+  background: #c62828;
+}
+
+.legend-label {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 /* Loading state */
@@ -691,20 +820,117 @@ th {
   background: white;
 }
 
-/* Filters and search styles */
-.filters {
+/* Table Controls - Search and Filter */
+.table-controls {
   display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
+  margin-bottom: 20px;
+  gap: 20px;
 }
 
-/* Legend Toggle Styles */
+.search-container {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 40px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.clear-search-btn:hover {
+  color: #333;
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.grade-filter,
+.section-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  cursor: pointer;
+}
+
+.sort-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.grade-filter:focus,
+.section-filter:focus,
+.sort-filter:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.15);
+}
+
+/* Legend Toggle Wrapper */
+.legend-toggle-wrapper {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .legend-toggle-container {
   display: flex;
   align-items: center;
-  margin-left: auto;
 }
 
 .legend-toggle {
@@ -762,57 +988,6 @@ th {
   color: #673ab7;
 }
 
-.filter-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.filter-group label {
-  font-weight: 600;
-  color: #333;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: white;
-  font-size: 14px;
-}
-
-.search-container {
-  flex: 1;
-  max-width: 300px;
-}
-
-.search-box {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #666;
-  font-size: 20px;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 10px 10px 40px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-  background: white;
-}
-
-.search-input:focus {
-  outline: none;
-  border-color: #673ab7;
-  box-shadow: 0 0 0 2px rgba(103, 58, 183, 0.1);
-}
 
 /* Error state */
 .error {
@@ -1053,14 +1228,37 @@ th.part-unknown {
     gap: 15px;
   }
 
-  .filters {
+  .table-controls {
     flex-direction: column;
-    gap: 15px;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .search-container {
+    max-width: none;
+  }
+
+  .search-input {
+    padding: 10px 12px 10px 40px;
+    font-size: 0.9rem;
+  }
+
+  .grade-filter,
+  .section-filter,
+  .sort-filter {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    min-width: 120px;
+  }
+
+  .legend-toggle-wrapper {
+    margin-bottom: 15px;
+    justify-content: flex-start;
   }
 
   .legend-toggle-container {
     margin-left: 0;
-    margin-top: 10px;
   }
 
   .toggle-label {
@@ -1110,6 +1308,18 @@ th.part-unknown {
   .page-size-selector {
     margin-left: 0;
     margin-top: 1rem;
+  }
+
+  .filter-container {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .grade-filter,
+  .section-filter,
+  .sort-filter {
+    flex: 1;
+    min-width: calc(50% - 4px);
   }
 }
 </style>

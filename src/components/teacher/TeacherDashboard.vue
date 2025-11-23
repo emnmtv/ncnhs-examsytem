@@ -81,7 +81,7 @@
           </div>
         </div>
         
-        <div class="stat-card grading">
+        <!-- <div class="stat-card grading">
           <div class="stat-icon">
             <span class="material-icons">grading</span>
           </div>
@@ -89,7 +89,7 @@
             <h3>{{ analytics?.overview?.gradingProgress || 0 }}%</h3>
             <p>Grading Progress</p>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <!-- Charts Section -->
@@ -129,9 +129,9 @@
           </div>
           <div class="chart-content">
             <canvas ref="subjectChart"></canvas>
-            </div>
           </div>
         </div>
+      </div>
         
       <!-- Analytics Tables -->
       <div class="analytics-tables">
@@ -156,6 +156,49 @@
                 <div class="student-info">
                   <h4>{{ student.firstName }} {{ student.lastName }}</h4>
                   <p>{{ student.gradeLevel }}-{{ student.section }}</p>
+                  
+                  <!-- Subject Performance -->
+                  <div class="student-subjects" v-if="student.topSubjects && student.topSubjects.length > 0">
+                    <div class="detail-label">
+                      <span class="material-icons">menu_book</span>
+                      <strong>Top Subjects ({{ student.subjectCount || 0 }} total):</strong>
+                    </div>
+                    <div class="subject-badges-list">
+                      <span class="subject-badge" v-for="subject in student.topSubjects.slice(0, 3)" :key="subject.name || subject.subjectName">
+                        {{ subject.name || subject.subjectName }} ({{ Math.round(subject.score || subject.averageScore || 0) }}%)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Exam Details -->
+                  <div class="student-exams" v-if="student.recentExams && student.recentExams.length > 0">
+                    <div class="detail-label">
+                      <span class="material-icons">quiz</span>
+                      <strong>Recent Exams ({{ student.examCount || 0 }} total):</strong>
+                    </div>
+                    <div class="exam-list">
+                      <div class="exam-item" v-for="exam in student.recentExams.slice(0, 2)" :key="exam.id || exam.examId">
+                        <span class="exam-name">{{ exam.examTitle || exam.title }}</span>
+                        <span class="exam-score">{{ Math.round(exam.score || exam.percentage || 0) }}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Overall Stats -->
+                  <div class="student-stats" v-if="student.examCount !== undefined || student.subjectCount !== undefined">
+                    <span class="stat-item" v-if="student.examCount !== undefined">
+                      <span class="material-icons">assignment</span>
+                      {{ student.examCount || 0 }} exams
+                    </span>
+                    <span class="stat-item" v-if="student.subjectCount !== undefined">
+                      <span class="material-icons">menu_book</span>
+                      {{ student.subjectCount || 0 }} subjects
+                    </span>
+                    <span class="stat-item" v-if="student.avgExamScore !== undefined">
+                      <span class="material-icons">trending_up</span>
+                      Avg: {{ Math.round(student.avgExamScore) }}%
+                    </span>
+                  </div>
                 </div>
                 <div class="student-score">
                   <span class="score">{{ Math.round(student.overallAvg) }}%</span>
@@ -163,7 +206,7 @@
                     <div class="score-fill" :style="{ width: student.overallAvg + '%' }"></div>
                   </div>
                 </div>
-          </div>
+              </div>
             </div>
           </div>
         </div>
@@ -188,20 +231,150 @@
                 <div class="student-info">
                   <h4>{{ student.firstName }} {{ student.lastName }}</h4>
                   <p>{{ student.gradeLevel }}-{{ student.section }}</p>
+                  
+                  <!-- Attention Reasons -->
                   <div class="attention-reasons">
                     <span v-if="student.overallAvg < 60" class="reason">Low Score</span>
                     <span v-if="student.overTimeExams > 2" class="reason">Time Issues</span>
                     <span v-if="student.examCount > 0 && student.avgExamScore < 50" class="reason">Poor Exam Performance</span>
+                  </div>
+                  
+                  <!-- Struggling Subjects -->
+                  <div class="student-subjects struggling" v-if="student.strugglingSubjects && student.strugglingSubjects.length > 0">
+                    <div class="detail-label">
+                      <span class="material-icons">warning</span>
+                      <strong>Struggling Subjects ({{ student.subjectCount || 0 }} total):</strong>
+                    </div>
+                    <div class="subject-badges-list">
+                      <span class="subject-badge struggling-badge" v-for="subject in student.strugglingSubjects.slice(0, 3)" :key="subject.name || subject.subjectName">
+                        {{ subject.name || subject.subjectName }} ({{ Math.round(subject.score || subject.averageScore || 0) }}%)
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <!-- Recent Exam Performance -->
+                  <div class="student-exams" v-if="student.recentExams && student.recentExams.length > 0">
+                    <div class="detail-label">
+                      <span class="material-icons">quiz</span>
+                      <strong>Recent Exams ({{ student.examCount || 0 }} total):</strong>
+                    </div>
+                    <div class="exam-list">
+                      <div class="exam-item struggling-exam" v-for="exam in student.recentExams.slice(0, 2)" :key="exam.id || exam.examId">
+                        <span class="exam-name">{{ exam.examTitle || exam.title }}</span>
+                        <span class="exam-score">{{ Math.round(exam.score || exam.percentage || 0) }}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Overall Stats -->
+                  <div class="student-stats" v-if="student.examCount !== undefined || student.subjectCount !== undefined">
+                    <span class="stat-item" v-if="student.examCount !== undefined">
+                      <span class="material-icons">assignment</span>
+                      {{ student.examCount || 0 }} exams
+                    </span>
+                    <span class="stat-item" v-if="student.subjectCount !== undefined">
+                      <span class="material-icons">menu_book</span>
+                      {{ student.subjectCount || 0 }} subjects
+                    </span>
+                    <span class="stat-item" v-if="student.avgExamScore !== undefined">
+                      <span class="material-icons">trending_down</span>
+                      Avg: {{ Math.round(student.avgExamScore) }}%
+                    </span>
                   </div>
                 </div>
                 <div class="student-score">
                   <span class="score">{{ Math.round(student.overallAvg) }}%</span>
                 </div>
               </div>
-          </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Student Performance by Subject -->
+      <div class="subject-performance-section">
+        <div class="section-header">
+          <h3>Student Performance by Subject</h3>
+          <p>Detailed breakdown of student performance across all subjects</p>
+        </div>
+        
+        <div v-if="!analytics?.subjectPerformance || analytics?.subjectPerformance.length === 0" class="empty-state">
+          <span class="material-icons">menu_book</span>
+          <p>No subject performance data available</p>
+        </div>
+        
+        <div v-else class="subject-performance-grid">
+          <div 
+            v-for="subject in analytics.subjectPerformance" 
+            :key="subject.subjectId || subject.subjectName"
+            class="subject-performance-card"
+          >
+            <div class="subject-card-header">
+              <div class="subject-title">
+                <span class="material-icons">menu_book</span>
+                <h4>{{ subject.subjectName || 'Unknown Subject' }}</h4>
+              </div>
+              <div class="subject-stats">
+                <span class="subject-avg-score" :class="getPerformanceClass(subject.averageScore)">
+                  {{ Math.round(subject.averageScore || 0) }}%
+                </span>
+                <span class="subject-students">{{ subject.studentCount || 0 }} students</span>
+              </div>
+            </div>
+            
+            <div class="subject-performance-breakdown">
+              <div class="performance-distribution">
+                <div class="dist-item">
+                  <span class="dist-label">Excellent (85%+)</span>
+                  <span class="dist-count excellent">{{ subject.excellentCount || 0 }}</span>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Good (75-84%)</span>
+                  <span class="dist-count good">{{ subject.goodCount || 0 }}</span>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Fair (60-74%)</span>
+                  <span class="dist-count fair">{{ subject.fairCount || 0 }}</span>
+                </div>
+                <div class="dist-item">
+                  <span class="dist-label">Needs Improvement (&lt;60%)</span>
+                  <span class="dist-count needs-improvement">{{ subject.needsImprovementCount || 0 }}</span>
+                </div>
+              </div>
+              
+              <div class="subject-top-students" v-if="subject.topStudents && subject.topStudents.length > 0">
+                <h5>Top Performers in this Subject</h5>
+                <div class="top-students-list">
+                  <div 
+                    v-for="(student, idx) in subject.topStudents.slice(0, 3)" 
+                    :key="student.id || idx"
+                    class="top-student-item"
+                  >
+                    <span class="student-rank-small">{{ idx + 1 }}</span>
+                    <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
+                    <span class="student-score-small">{{ Math.round(student.score || 0) }}%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="subject-struggling-students" v-if="subject.strugglingStudents && subject.strugglingStudents.length > 0">
+                <h5>Students Needing Support</h5>
+                <div class="struggling-students-list">
+                  <div 
+                    v-for="(student, idx) in subject.strugglingStudents.slice(0, 3)" 
+                    :key="student.id || idx"
+                    class="struggling-student-item"
+                  >
+                    <span class="material-icons">warning</span>
+                    <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
+                    <span class="student-score-small">{{ Math.round(student.score || 0) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
         
       <!-- Question Analysis -->
       <div class="question-analysis">
@@ -229,11 +402,11 @@
                     <span class="metric">Easiness: {{ Math.round(question.easiness * 100) }}%</span>
                     <span class="metric">Discrimination: {{ Math.round(question.discrimination * 100) }}%</span>
                   </div>
-          </div>
+                </div>
                 <div class="question-status">
                   <span class="status-badge review">Needs Review</span>
-            </div>
-          </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -545,6 +718,14 @@ onMounted(async () => {
   await loadSubjects()
   await loadAnalytics()
 })
+
+// Get performance class based on score
+const getPerformanceClass = (score) => {
+  if (score >= 85) return 'excellent'
+  if (score >= 75) return 'good'
+  if (score >= 60) return 'fair'
+  return 'needs-improvement'
+}
 
 // Cleanup charts on unmount
 onUnmounted(() => {
@@ -911,6 +1092,126 @@ onUnmounted(() => {
   font-size: 0.8rem;
 }
 
+.student-subjects {
+  margin-top: 10px;
+}
+
+.student-subjects.struggling {
+  margin-top: 8px;
+}
+
+.detail-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.detail-label .material-icons {
+  font-size: 1rem;
+  color: #159750;
+}
+
+.student-subjects.struggling .detail-label .material-icons {
+  color: #ff9800;
+}
+
+.detail-label strong {
+  font-weight: 600;
+}
+
+.subject-badges-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.subject-badge {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.subject-badge.struggling-badge {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.student-exams {
+  margin-top: 10px;
+}
+
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exam-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.exam-item.struggling-exam {
+  background: #fff3e0;
+}
+
+.exam-name {
+  flex: 1;
+  color: #333;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+.exam-score {
+  font-weight: 600;
+  color: #159750;
+  font-size: 0.85rem;
+}
+
+.exam-item.struggling-exam .exam-score {
+  color: #f44336;
+}
+
+.student-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.stat-item .material-icons {
+  font-size: 0.9rem;
+  color: #159750;
+}
+
+.student-item.attention .stat-item .material-icons {
+  color: #ff9800;
+}
+
 .attention-reasons {
   display: flex;
   gap: 5px;
@@ -949,6 +1250,229 @@ onUnmounted(() => {
   height: 100%;
   background: linear-gradient(90deg, #4CAF50, #8BC34A);
   transition: width 0.3s;
+}
+
+/* Student Performance by Subject */
+.subject-performance-section {
+  margin-bottom: 30px;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-header h3 {
+  color: #333;
+  font-size: 1.3rem;
+  margin: 0 0 5px 0;
+}
+
+.section-header p {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.subject-performance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.subject-performance-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subject-performance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
+.subject-card-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #dee2e6;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subject-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subject-title .material-icons {
+  color: #159750;
+  font-size: 1.5rem;
+}
+
+.subject-title h4 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.subject-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.subject-avg-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.subject-avg-score.excellent {
+  color: #4CAF50;
+}
+
+.subject-avg-score.good {
+  color: #8BC34A;
+}
+
+.subject-avg-score.fair {
+  color: #FFC107;
+}
+
+.subject-avg-score.needs-improvement {
+  color: #F44336;
+}
+
+.subject-students {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.subject-performance-breakdown {
+  padding: 20px;
+}
+
+.performance-distribution {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.dist-label {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.dist-count {
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.dist-count.excellent {
+  background: #d4edda;
+  color: #155724;
+}
+
+.dist-count.good {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.dist-count.fair {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.dist-count.needs-improvement {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.subject-top-students,
+.subject-struggling-students {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e9ecef;
+}
+
+.subject-top-students h5,
+.subject-struggling-students h5 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.top-students-list,
+.struggling-students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.top-student-item,
+.struggling-student-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.struggling-student-item {
+  background: #fff3cd;
+}
+
+.student-rank-small {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #159750;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.student-name {
+  flex: 1;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.student-score-small {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #159750;
+}
+
+.struggling-student-item .student-score-small {
+  color: #F44336;
+}
+
+.struggling-student-item .material-icons {
+  font-size: 1rem;
+  color: #ffc107;
+  flex-shrink: 0;
 }
 
 /* Question Analysis */
@@ -1110,6 +1634,14 @@ onUnmounted(() => {
     grid-template-columns: 1fr;
   }
   
+  .subject-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .performance-distribution {
+    grid-template-columns: 1fr;
+  }
+  
   .stats-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
@@ -1141,6 +1673,38 @@ onUnmounted(() => {
   .student-score {
     margin-left: 0;
     width: 100%;
+  }
+  
+  .subject-badges-list {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .exam-list {
+    gap: 4px;
+  }
+  
+  .student-stats {
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .subject-performance-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .subject-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .subject-stats {
+    align-items: flex-start;
+  }
+  
+  .performance-distribution {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

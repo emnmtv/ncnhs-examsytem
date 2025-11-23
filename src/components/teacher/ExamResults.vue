@@ -156,6 +156,13 @@
               {{ section }}
             </option>
           </select>
+          <select v-model="filters.sortBy" @change="applyFilter" class="sort-filter">
+            <option value="">Sort By</option>
+            <option value="highest">Highest to Lowest</option>
+            <option value="lowest">Lowest to Highest</option>
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+          </select>
         </div>
       </div>
 
@@ -1010,7 +1017,8 @@ const loading = ref(true);
 const error = ref(null);
 const filters = ref({
   gradeLevel: '',
-  section: ''
+  section: '',
+  sortBy: ''
 });
     const itemAnalysis = ref([]);
     const analysisFilters = ref({
@@ -1405,7 +1413,7 @@ const allAttempts = ref({}); // userId -> array of attempts
 
     const filteredResults = computed(() => {
       // First, get all matching results based on filters and search
-      const matchingResults = processedResults.value.filter(result => {
+      let matchingResults = processedResults.value.filter(result => {
         const matchesGrade = !filters.value.gradeLevel || 
           result.user.gradeLevel === filters.value.gradeLevel;
         const matchesSection = !filters.value.section || 
@@ -1421,6 +1429,34 @@ const allAttempts = ref({}); // userId -> array of attempts
         
         return matchesGrade && matchesSection && matchesSearch;
       });
+      
+      // Apply sorting if a sort option is selected
+      if (filters.value.sortBy) {
+        matchingResults = [...matchingResults].sort((a, b) => {
+          switch (filters.value.sortBy) {
+            case 'highest':
+              // Sort by percentage (highest to lowest)
+              return (b.percentage || 0) - (a.percentage || 0);
+            case 'lowest':
+              // Sort by percentage (lowest to highest)
+              return (a.percentage || 0) - (b.percentage || 0);
+            case 'name-asc': {
+              // Sort by name (A-Z)
+              const nameA = `${a.user.firstName} ${a.user.lastName}`.toLowerCase();
+              const nameB = `${b.user.firstName} ${b.user.lastName}`.toLowerCase();
+              return nameA.localeCompare(nameB);
+            }
+            case 'name-desc': {
+              // Sort by name (Z-A)
+              const nameA2 = `${a.user.firstName} ${a.user.lastName}`.toLowerCase();
+              const nameB2 = `${b.user.firstName} ${b.user.lastName}`.toLowerCase();
+              return nameB2.localeCompare(nameA2);
+            }
+            default:
+              return 0;
+          }
+        });
+      }
       
       return matchingResults;
     });
@@ -3190,8 +3226,21 @@ const allAttempts = ref({}); // userId -> array of attempts
   cursor: pointer;
 }
 
+.sort-filter {
+  padding: 12px 16px;
+  border: 2px solid #e1e5e9;
+  border-radius: 25px;
+  font-size: 0.95rem;
+  background: #fff;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  cursor: pointer;
+}
+
 .grade-filter:focus,
 .section-filter:focus,
+.sort-filter:focus,
 .difficulty-filter:focus,
 .success-rate-filter:focus {
   outline: none;
@@ -3342,6 +3391,7 @@ const allAttempts = ref({}); // userId -> array of attempts
   
   .grade-filter,
   .section-filter,
+  .sort-filter,
   .difficulty-filter,
   .success-rate-filter {
     padding: 10px 14px;
@@ -3410,6 +3460,7 @@ const allAttempts = ref({}); // userId -> array of attempts
   
   .grade-filter,
   .section-filter,
+  .sort-filter,
   .difficulty-filter,
   .success-rate-filter {
     padding: 9px 12px;
@@ -3478,6 +3529,7 @@ const allAttempts = ref({}); // userId -> array of attempts
   
   .grade-filter,
   .section-filter,
+  .sort-filter,
   .difficulty-filter,
   .success-rate-filter {
     padding: 8px 10px;
@@ -3553,6 +3605,7 @@ const allAttempts = ref({}); // userId -> array of attempts
 
   .grade-filter,
   .section-filter,
+  .sort-filter,
   .difficulty-filter,
   .success-rate-filter {
     padding: 10px 12px;
@@ -3627,6 +3680,7 @@ const allAttempts = ref({}); // userId -> array of attempts
 
   .grade-filter,
   .section-filter,
+  .sort-filter,
   .difficulty-filter,
   .success-rate-filter {
     padding: 8px 10px;

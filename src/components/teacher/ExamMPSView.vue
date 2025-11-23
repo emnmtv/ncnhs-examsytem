@@ -26,6 +26,9 @@
       <button class="action-btn pdf-btn" @click="downloadPDF">
         <i class="fas fa-file-pdf"></i> Download PDF
       </button>
+      <button class="action-btn analysis-btn" @click="toggleDataAnalysis" :disabled="loading || !mpsData">
+        <i class="fas fa-chart-line"></i> Data Analysis
+      </button>
       <button class="action-btn ai-btn" @click="toggleAIAnalysis" :disabled="loading || !mpsData">
         <i class="fas fa-brain"></i> AI Analysis
       </button>
@@ -52,6 +55,174 @@
       <span class="material-icons-round">analytics</span>
       <p>No MPS data available</p>
       <p class="empty-subtext">There are no scores recorded for this exam yet.</p>
+    </div>
+
+    <!-- Data Analysis Panel (Non-AI) -->
+    <div v-if="showDataAnalysis && mpsData" class="data-analysis-panel">
+      <div class="card-header">
+        <h2>
+          <span class="material-icons">analytics</span>
+          Data Analysis & Insights
+        </h2>
+        <div class="header-controls">
+          <label class="include-print-label">
+            <input type="checkbox" v-model="includeAnalysisInPrint">
+            <span>Include in Print/PDF</span>
+          </label>
+          <button class="close-btn" @click="showDataAnalysis = false">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="analysis-content">
+        <div v-if="dataAnalysis" class="analysis-result">
+          <!-- Overall Performance Summary -->
+          <div class="analysis-section">
+            <h3><span class="material-icons">assessment</span> Overall Performance Summary</h3>
+            <div class="summary-text">{{ dataAnalysis.summary }}</div>
+          </div>
+
+          <!-- Performance Insights -->
+          <div class="analysis-section" v-if="dataAnalysis.insights && dataAnalysis.insights.length > 0">
+            <h3><span class="material-icons">lightbulb</span> Key Insights</h3>
+            <ul class="insights-list">
+              <li v-for="(insight, idx) in dataAnalysis.insights" :key="'data-insight-'+idx">
+                {{ insight }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section Comparison -->
+          <div class="analysis-section" v-if="dataAnalysis.sectionComparison">
+            <h3><span class="material-icons">compare_arrows</span> Section Performance Comparison</h3>
+            <div class="comparison-content">
+              <div class="comparison-item comparison-top" v-if="dataAnalysis.sectionComparison.topSection">
+                <span class="material-icons trending-up">trending_up</span>
+                <strong>Top Performing Section:</strong> {{ dataAnalysis.sectionComparison.topSection.name }} 
+                (MPS: {{ dataAnalysis.sectionComparison.topSection.mps.toFixed(1) }}%)
+              </div>
+              <div class="comparison-item comparison-bottom" v-if="dataAnalysis.sectionComparison.bottomSection">
+                <span class="material-icons trending-down">trending_down</span>
+                <strong>Needs Improvement:</strong> {{ dataAnalysis.sectionComparison.bottomSection.name }} 
+                (MPS: {{ dataAnalysis.sectionComparison.bottomSection.mps.toFixed(1) }}%)
+              </div>
+              <div class="comparison-gap" v-if="dataAnalysis.sectionComparison.gap">
+                <strong>Performance Gap:</strong> {{ dataAnalysis.sectionComparison.gap.toFixed(1) }}% 
+                between highest and lowest performing sections
+              </div>
+            </div>
+          </div>
+
+          <!-- Score Distribution Analysis -->
+          <div class="analysis-section" v-if="dataAnalysis.distributionAnalysis">
+            <h3><span class="material-icons">pie_chart</span> Score Distribution Analysis</h3>
+            <div class="distribution-analysis">
+              <p>{{ dataAnalysis.distributionAnalysis }}</p>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="analysis-section" v-if="dataAnalysis.recommendations && dataAnalysis.recommendations.length > 0">
+            <h3><span class="material-icons">recommend</span> Recommendations</h3>
+            <ol class="recommendations-list">
+              <li v-for="(rec, idx) in dataAnalysis.recommendations" :key="'data-rec-'+idx">
+                {{ rec }}
+              </li>
+            </ol>
+          </div>
+
+          <!-- Statistical Highlights -->
+          <div class="analysis-section" v-if="dataAnalysis.statistics">
+            <h3><span class="material-icons">bar_chart</span> Statistical Highlights</h3>
+            <div class="stats-grid">
+              <div class="stat-highlight" v-if="dataAnalysis.statistics.averageMPS">
+                <div class="stat-label">Average MPS</div>
+                <div class="stat-value">{{ dataAnalysis.statistics.averageMPS.toFixed(1) }}%</div>
+              </div>
+              <div class="stat-highlight" v-if="dataAnalysis.statistics.medianMPS">
+                <div class="stat-label">Median MPS</div>
+                <div class="stat-value">{{ dataAnalysis.statistics.medianMPS.toFixed(1) }}%</div>
+              </div>
+              <div class="stat-highlight" v-if="dataAnalysis.statistics.standardDeviation">
+                <div class="stat-label">Standard Deviation</div>
+                <div class="stat-value">{{ dataAnalysis.statistics.standardDeviation.toFixed(2) }}</div>
+              </div>
+              <div class="stat-highlight" v-if="dataAnalysis.statistics.passingRate">
+                <div class="stat-label">Passing Rate (≥75%)</div>
+                <div class="stat-value">{{ dataAnalysis.statistics.passingRate.toFixed(1) }}%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top & Low Performers -->
+          <div class="analysis-section performers-section" v-if="mpsData && (mpsData.topPerformers || mpsData.lowPerformers)">
+            <h3><span class="material-icons">emoji_events</span> Student Performance Highlights</h3>
+            
+            <!-- Top Performers -->
+            <div class="performers-section top-performers" v-if="mpsData.topPerformers && mpsData.topPerformers.length > 0">
+              <h4><span class="material-icons">trending_up</span> Top Performers</h4>
+              <div class="performers-list">
+                <div v-for="(student, idx) in mpsData.topPerformers" :key="'data-top-'+idx" class="performer-item top">
+                  <div class="performer-rank">{{ idx + 1 }}</div>
+                  <div class="performer-info">
+                    <div class="performer-name">{{ student.name }}</div>
+                    <div class="performer-details">
+                      <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                      <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                    </div>
+                  </div>
+                  <div class="performer-badge excellent">
+                    <span class="material-icons">star</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Low Performers -->
+            <div class="performers-section low-performers" v-if="mpsData.lowPerformers && mpsData.lowPerformers.length > 0">
+              <h4><span class="material-icons">trending_down</span> Students Needing Support</h4>
+              <div class="performers-list">
+                <div v-for="(student, idx) in mpsData.lowPerformers" :key="'data-low-'+idx" class="performer-item low">
+                  <div class="performer-rank">{{ (mpsData.topPerformers?.length || 0) + idx + 1 }}</div>
+                  <div class="performer-info">
+                    <div class="performer-name">{{ student.name }}</div>
+                    <div class="performer-details">
+                      <span class="performer-section">{{ student.gradeLevel }}-{{ student.section }}</span>
+                      <span class="performer-score">{{ student.score }}/{{ student.total }} ({{ student.percentage.toFixed(1) }}%)</span>
+                    </div>
+                  </div>
+                  <div class="performer-badge needs-improvement">
+                    <span class="material-icons">support</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Performance Insights -->
+            <div class="performance-insights" v-if="mpsData.topPerformers && mpsData.lowPerformers">
+              <h4><span class="material-icons">analytics</span> Performance Insights</h4>
+              <div class="insights-grid">
+                <div class="insight-card">
+                  <div class="insight-value">{{ mpsData.topPerformers.length }}</div>
+                  <div class="insight-label">Top Performers</div>
+                  <div class="insight-desc">Students scoring in the top tier</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-value">{{ mpsData.lowPerformers.length }}</div>
+                  <div class="insight-label">Need Support</div>
+                  <div class="insight-desc">Students requiring additional help</div>
+                </div>
+                <div class="insight-card">
+                  <div class="insight-value">{{ ((mpsData.topPerformers[0]?.percentage || 0) - (mpsData.lowPerformers[0]?.percentage || 0)).toFixed(1) }}%</div>
+                  <div class="insight-label">Score Gap</div>
+                  <div class="insight-desc">Difference between highest and lowest</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- AI Analysis Panel -->
@@ -777,6 +948,182 @@
         </table>
       </div>
 
+      <div class="print-signatures">
+        <div class="signature-section">
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Prepared by:</div>
+            <div class="signature-name">{{ mpsData.exam.teacher ? mpsData.exam.teacher.name : '___________________' }}</div>
+            <div class="signature-role">Teacher</div>
+          </div>
+          <div class="signature-box">
+            <div class="signature-line"></div>
+            <div class="signature-label">Noted by:</div>
+            <div class="signature-name">___________________</div>
+            <div class="signature-role">Principal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Analysis Section (Print/PDF) -->
+      <div v-if="includeAnalysisInPrint && dataAnalysis" class="print-analysis">
+        <div class="print-analysis-header">
+          <h2>DATA ANALYSIS & INSIGHTS</h2>
+        </div>
+        
+        <div class="print-analysis-content">
+          <!-- Overall Performance Summary -->
+          <div class="print-analysis-section">
+            <h3>Overall Performance Summary</h3>
+            <p>{{ dataAnalysis.summary }}</p>
+          </div>
+
+          <!-- Key Insights -->
+          <div class="print-analysis-section" v-if="dataAnalysis.insights && dataAnalysis.insights.length > 0">
+            <h3>Key Insights</h3>
+            <ul>
+              <li v-for="(insight, idx) in dataAnalysis.insights" :key="'print-insight-'+idx">
+                {{ insight }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Section Comparison -->
+          <div class="print-analysis-section" v-if="dataAnalysis.sectionComparison">
+            <h3>Section Performance Comparison</h3>
+            <div v-if="dataAnalysis.sectionComparison.topSection">
+              <strong>Top Performing Section:</strong> {{ dataAnalysis.sectionComparison.topSection.name }} 
+              (MPS: {{ dataAnalysis.sectionComparison.topSection.mps.toFixed(1) }}%)
+            </div>
+            <div v-if="dataAnalysis.sectionComparison.bottomSection">
+              <strong>Needs Improvement:</strong> {{ dataAnalysis.sectionComparison.bottomSection.name }} 
+              (MPS: {{ dataAnalysis.sectionComparison.bottomSection.mps.toFixed(1) }}%)
+            </div>
+            <div v-if="dataAnalysis.sectionComparison.gap">
+              <strong>Performance Gap:</strong> {{ dataAnalysis.sectionComparison.gap.toFixed(1) }}% 
+              between highest and lowest performing sections
+            </div>
+          </div>
+
+          <!-- Score Distribution Analysis -->
+          <div class="print-analysis-section" v-if="dataAnalysis.distributionAnalysis">
+            <h3>Score Distribution Analysis</h3>
+            <p>{{ dataAnalysis.distributionAnalysis }}</p>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="print-analysis-section" v-if="dataAnalysis.recommendations && dataAnalysis.recommendations.length > 0">
+            <h3>Recommendations</h3>
+            <ol>
+              <li v-for="(rec, idx) in dataAnalysis.recommendations" :key="'print-rec-'+idx">
+                {{ rec }}
+              </li>
+            </ol>
+          </div>
+
+          <!-- Statistical Highlights -->
+          <div class="print-analysis-section" v-if="dataAnalysis.statistics">
+            <h3>Statistical Highlights</h3>
+            <table class="stats-table">
+              <tbody>
+                <tr v-if="dataAnalysis.statistics.averageMPS">
+                  <td><strong>Average MPS:</strong></td>
+                  <td>{{ dataAnalysis.statistics.averageMPS.toFixed(1) }}%</td>
+                </tr>
+                <tr v-if="dataAnalysis.statistics.medianMPS">
+                  <td><strong>Median MPS:</strong></td>
+                  <td>{{ dataAnalysis.statistics.medianMPS.toFixed(1) }}%</td>
+                </tr>
+                <tr v-if="dataAnalysis.statistics.standardDeviation">
+                  <td><strong>Standard Deviation:</strong></td>
+                  <td>{{ dataAnalysis.statistics.standardDeviation.toFixed(2) }}</td>
+                </tr>
+                <tr v-if="dataAnalysis.statistics.passingRate">
+                  <td><strong>Passing Rate (≥75%):</strong></td>
+                  <td>{{ dataAnalysis.statistics.passingRate.toFixed(1) }}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Top & Low Performers (Print) -->
+          <div class="print-analysis-section" v-if="mpsData && (mpsData.topPerformers || mpsData.lowPerformers)">
+            <h3>Student Performance Highlights</h3>
+            
+            <!-- Top Performers -->
+            <div v-if="mpsData.topPerformers && mpsData.topPerformers.length > 0">
+              <h4>Top Performers</h4>
+              <table class="performers-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Section</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(student, idx) in mpsData.topPerformers" :key="'print-top-'+idx">
+                    <td class="center">{{ idx + 1 }}</td>
+                    <td>{{ student.name }}</td>
+                    <td class="center">{{ student.gradeLevel }}-{{ student.section }}</td>
+                    <td class="center">{{ student.score }}/{{ student.total }}</td>
+                    <td class="center">{{ student.percentage.toFixed(1) }}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Low Performers -->
+            <div v-if="mpsData.lowPerformers && mpsData.lowPerformers.length > 0" style="margin-top: 8px;">
+              <h4>Students Needing Support</h4>
+              <table class="performers-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Section</th>
+                    <th>Score</th>
+                    <th>Percentage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(student, idx) in mpsData.lowPerformers" :key="'print-low-'+idx">
+                    <td class="center">{{ (mpsData.topPerformers?.length || 0) + idx + 1 }}</td>
+                    <td>{{ student.name }}</td>
+                    <td class="center">{{ student.gradeLevel }}-{{ student.section }}</td>
+                    <td class="center">{{ student.score }}/{{ student.total }}</td>
+                    <td class="center">{{ student.percentage.toFixed(1) }}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Performance Insights (Print) -->
+            <div v-if="mpsData.topPerformers && mpsData.lowPerformers" style="margin-top: 8px;">
+              <h4>Performance Insights</h4>
+              <table class="stats-table">
+                <tbody>
+                  <tr>
+                    <td><strong>Top Performers:</strong></td>
+                    <td>{{ mpsData.topPerformers.length }} students</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Need Support:</strong></td>
+                    <td>{{ mpsData.lowPerformers.length }} students</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Score Gap:</strong></td>
+                    <td>{{ ((mpsData.topPerformers[0]?.percentage || 0) - (mpsData.lowPerformers[0]?.percentage || 0)).toFixed(1) }}%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="print-footer">
         <p>Report Generated: {{ new Date().toLocaleString() }}</p>
         <p>New Cabalan National High School - Examination Analysis System</p>
@@ -801,6 +1148,11 @@ const mpsData = ref(null);
 const mpsChart = ref(null);
 let chartInstance = null;
 const viewMode = ref('chart');
+
+// Data Analysis related refs (Non-AI)
+const showDataAnalysis = ref(false);
+const includeAnalysisInPrint = ref(true); // Default to include in print/PDF
+const dataAnalysis = ref(null);
 
 // AI Analysis related refs
 const showAIAnalysis = ref(false);
@@ -958,6 +1310,9 @@ const loadMPSData = async () => {
   try {
     const data = await getExamMPS(examId.value);
     mpsData.value = data;
+    
+    // Generate data analysis automatically
+    generateDataAnalysis();
     
     // Use double nextTick to ensure DOM is fully updated
     nextTick(() => {
@@ -1636,6 +1991,9 @@ const downloadPDF = () => {
     // Use a small delay to ensure styles are applied
     setTimeout(() => {
       try {
+        // A4 landscape: 297mm x 210mm (approximately 1123px x 794px at 96dpi)
+        const a4LandscapeWidth = 1123; // pixels for A4 landscape width
+        
         // Create a clone of the print view to work with
         const element = document.createElement('div');
         element.innerHTML = document.querySelector('.print-only').innerHTML;
@@ -1644,45 +2002,82 @@ const downloadPDF = () => {
         // Apply professional styling to the cloned element
         element.style.cssText = `
           font-family: Arial, Helvetica, sans-serif;
-          font-size: 10pt;
+          font-size: 8pt;
           line-height: 1.2;
           color: #000;
           background: white;
-          width: 100%;
-          max-width: 100%;
+          width: ${a4LandscapeWidth}px;
+          max-width: ${a4LandscapeWidth}px;
           padding: 10px;
           box-sizing: border-box;
           overflow: hidden;
+          page-break-inside: avoid;
+          margin: 0 auto;
         `;
         
         // Fix potential HTML issues - ensure all tables have proper structure
         const tables = element.querySelectorAll('table');
         tables.forEach(table => {
-          // Apply professional table styling
+          // Determine if this is the details table (has many columns)
+          const isDetailsTable = table.classList.contains('details-table') || 
+                                 table.querySelector('th')?.textContent?.includes('Section');
+          
+          // Apply professional table styling with fixed layout
           table.style.cssText = `
             width: 100%;
             max-width: 100%;
             border-collapse: collapse;
-            font-size: 10pt;
-            margin-bottom: 15px;
+            font-size: 7.5pt;
+            margin-bottom: 10px;
             border: 2px solid #000;
             table-layout: fixed;
+            page-break-inside: avoid;
           `;
+          
+          // Set column widths for details table to prevent overflow
+          if (isDetailsTable) {
+            const headerCells = table.querySelectorAll('thead th');
+            const totalCols = headerCells.length;
+            if (totalCols > 0) {
+              // Calculate widths: Section gets more space, others share evenly
+              headerCells.forEach((th, index) => {
+                let width = '';
+                if (index === 0) {
+                  // Section column - wider
+                  width = '12%';
+                } else if (index === 1) {
+                  // MPS column
+                  width = '8%';
+                } else if (index === 2) {
+                  // Students column
+                  width = '7%';
+                } else if (index === 3 || index === 4) {
+                  // Highest/Lowest Score columns
+                  width = '10%';
+                } else {
+                  // Distribution columns (Excellent, Good, etc.)
+                  width = `${Math.floor(53 / (totalCols - 5))}%`;
+                }
+                th.style.width = width;
+              });
+            }
+          }
           
           // Style table headers
           const headers = table.querySelectorAll('th');
           headers.forEach(th => {
             th.style.cssText = `
               border: 1px solid #000;
-              padding: 6px 4px;
+              padding: 4px 2px;
               text-align: center;
               vertical-align: middle;
               background-color: #f0f0f0;
               font-weight: bold;
-              font-size: 10pt;
+              font-size: 7.5pt;
               color: #000;
               word-wrap: break-word;
               overflow: hidden;
+              white-space: normal;
             `;
           });
           
@@ -1691,13 +2086,15 @@ const downloadPDF = () => {
           cells.forEach(td => {
             td.style.cssText = `
               border: 1px solid #000;
-              padding: 6px 4px;
+              padding: 4px 2px;
               text-align: center;
               vertical-align: middle;
               background-color: #fff;
               color: #000;
               word-wrap: break-word;
               overflow: hidden;
+              font-size: 7.5pt;
+              white-space: normal;
             `;
           });
           
@@ -1706,7 +2103,7 @@ const downloadPDF = () => {
           sectionNames.forEach(td => {
             td.style.cssText = `
               border: 1px solid #000;
-              padding: 6px 4px;
+              padding: 4px 2px;
               text-align: left;
               vertical-align: middle;
               background-color: #f8f8f8;
@@ -1714,57 +2111,328 @@ const downloadPDF = () => {
               font-weight: bold;
               word-wrap: break-word;
               overflow: hidden;
+              font-size: 7.5pt;
+              white-space: normal;
             `;
           });
         });
         
-        document.body.appendChild(element);
-      
-        // Setup PDF options for landscape
-        const options = {
-          margin: [5, 5, 5, 5],
-          filename: `MPS_Report_${mpsData.value.exam.testCode}.pdf`,
-          image: { type: 'jpeg', quality: 0.95 },
-          html2canvas: { 
-            scale: 1.2, 
-            useCORS: true, 
-            logging: false,
-            backgroundColor: '#ffffff',
-            width: 1200,
-            height: 800
-          },
-          jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'landscape'
-          }
-        };
-        
-        // Generate PDF
-        html2pdf()
-          .set(options)
-          .from(element)
-          .save()
-          .then(() => {
-            // Cleanup - remove the cloned element
-            document.body.removeChild(element);
-            // Reset view mode
-            viewMode.value = originalView;
-          })
-          .catch(error => {
-            console.error('PDF generation failed:', error);
-            // Cleanup even on error
-            if (document.body.contains(element)) {
-              document.body.removeChild(element);
+        // Style signature section
+        const signatureSection = element.querySelector('.print-signatures');
+        if (signatureSection) {
+          signatureSection.style.cssText = `
+            margin-top: 30px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          `;
+          
+          const signatureBoxes = signatureSection.querySelectorAll('.signature-box');
+          signatureBoxes.forEach(box => {
+            box.style.cssText = `
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              min-width: 200px;
+              text-align: center;
+            `;
+            
+            const signatureLine = box.querySelector('.signature-line');
+            if (signatureLine) {
+              signatureLine.style.cssText = `
+                width: 200px;
+                height: 0;
+                border-top: 2px solid #000;
+                margin-bottom: 50px;
+                margin-top: 0;
+              `;
             }
-            viewMode.value = originalView;
+            
+            const signatureLabel = box.querySelector('.signature-label');
+            if (signatureLabel) {
+              signatureLabel.style.cssText = `
+                font-size: 10pt;
+                font-weight: bold;
+                margin-bottom: 5px;
+                color: #000;
+              `;
+            }
+            
+            const signatureName = box.querySelector('.signature-name');
+            if (signatureName) {
+              signatureName.style.cssText = `
+                font-size: 11pt;
+                font-weight: 600;
+                margin-bottom: 5px;
+                color: #000;
+                min-height: 20px;
+              `;
+            }
+            
+            const signatureRole = box.querySelector('.signature-role');
+            if (signatureRole) {
+              signatureRole.style.cssText = `
+                font-size: 9pt;
+                color: #000;
+                font-style: italic;
+              `;
+            }
           });
+        }
+        
+        document.body.appendChild(element);
+        
+        // Wait a bit for styles to apply and calculate dimensions
+        setTimeout(() => {
+          const elementWidth = a4LandscapeWidth;
+          const elementHeight = element.scrollHeight || element.offsetHeight;
+      
+          // Setup PDF options for landscape with better margins
+          const options = {
+            margin: [8, 8, 12, 8], // [top, left, bottom, right] - optimized margins
+            filename: `MPS_Report_${mpsData.value.exam.testCode}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+              scale: 0.95, // Slightly reduced to ensure fit
+              useCORS: true, 
+              logging: false,
+              backgroundColor: '#ffffff',
+              width: elementWidth,
+              height: elementHeight,
+              windowWidth: elementWidth,
+              windowHeight: elementHeight,
+              x: 0,
+              y: 0
+            },
+            jsPDF: { 
+              unit: 'mm', 
+              format: 'a4', 
+              orientation: 'landscape',
+              compress: true
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          };
+          
+          // Generate PDF
+          html2pdf()
+            .set(options)
+            .from(element)
+            .save()
+            .then(() => {
+              // Cleanup - remove the cloned element
+              document.body.removeChild(element);
+              // Reset view mode
+              viewMode.value = originalView;
+            })
+            .catch(error => {
+              console.error('PDF generation failed:', error);
+              // Cleanup even on error
+              if (document.body.contains(element)) {
+                document.body.removeChild(element);
+              }
+              viewMode.value = originalView;
+            });
+        }, 200);
       } catch (error) {
         console.error('Error preparing PDF:', error);
         viewMode.value = originalView;
       }
     }, 100);
   });
+};
+
+// Toggle Data Analysis panel (Non-AI)
+const toggleDataAnalysis = () => {
+  showDataAnalysis.value = !showDataAnalysis.value;
+  
+  // If showing panel and no analysis data, generate it
+  if (showDataAnalysis.value && !dataAnalysis.value && mpsData.value) {
+    generateDataAnalysis();
+  }
+};
+
+// Generate Data Analysis (Non-AI)
+const generateDataAnalysis = () => {
+  if (!mpsData.value) return;
+  
+  const analysis = {
+    summary: '',
+    insights: [],
+    sectionComparison: null,
+    distributionAnalysis: '',
+    recommendations: [],
+    statistics: {}
+  };
+  
+  const overallMPS = mpsData.value.overallMPS;
+  const totalStudents = mpsData.value.totalStudents;
+  const sections = mpsData.value.sectionMPS || [];
+  const distribution = mpsData.value.overallStats?.scoreDistribution || {};
+  
+  // Generate Summary
+  let summaryText = `The overall Mean Percentage Score (MPS) for this examination is ${overallMPS.toFixed(1)}%. `;
+  
+  if (overallMPS >= 90) {
+    summaryText += 'This indicates excellent overall performance across all sections. ';
+  } else if (overallMPS >= 80) {
+    summaryText += 'This indicates good overall performance with room for improvement. ';
+  } else if (overallMPS >= 75) {
+    summaryText += 'This indicates satisfactory performance, meeting the minimum passing standard. ';
+  } else if (overallMPS >= 60) {
+    summaryText += 'This indicates fair performance, but below the desired passing standard. ';
+  } else {
+    summaryText += 'This indicates poor performance requiring immediate attention and intervention. ';
+  }
+  
+  summaryText += `A total of ${totalStudents} students took this examination.`;
+  analysis.summary = summaryText;
+  
+  // Generate Insights
+  const insights = [];
+  
+  // Overall MPS insight
+  if (overallMPS < 75) {
+    insights.push(`The overall MPS of ${overallMPS.toFixed(1)}% is below the 75% passing standard, indicating a need for instructional intervention.`);
+  } else if (overallMPS >= 75 && overallMPS < 80) {
+    insights.push(`The overall MPS of ${overallMPS.toFixed(1)}% meets the passing standard but could be improved to reach the good performance level (80%+).`);
+  } else {
+    insights.push(`The overall MPS of ${overallMPS.toFixed(1)}% demonstrates strong performance across the examination.`);
+  }
+  
+  // Distribution insights
+  const excellentCount = distribution.excellent || 0;
+  const poorCount = distribution.poor || 0;
+  const excellentPercent = ((excellentCount / totalStudents) * 100).toFixed(1);
+  const poorPercent = ((poorCount / totalStudents) * 100).toFixed(1);
+  
+  if (excellentPercent > 50) {
+    insights.push(`More than half of the students (${excellentPercent}%) achieved excellent scores (90-100%), indicating strong mastery of the material.`);
+  }
+  
+  if (poorPercent > 20) {
+    insights.push(`${poorPercent}% of students scored below 60%, requiring additional support and remediation.`);
+  }
+  
+  // Section variation insight
+  if (sections.length > 1) {
+    const mpsValues = sections.map(s => s.mps);
+    const maxMPS = Math.max(...mpsValues);
+    const minMPS = Math.min(...mpsValues);
+    const variation = maxMPS - minMPS;
+    
+    if (variation > 15) {
+      insights.push(`Significant performance variation exists between sections (${variation.toFixed(1)}% gap), suggesting inconsistent instruction or student preparation across sections.`);
+    } else if (variation < 5) {
+      insights.push(`Performance is relatively consistent across all sections (${variation.toFixed(1)}% variation), indicating uniform instruction quality.`);
+    }
+  }
+  
+  analysis.insights = insights;
+  
+  // Section Comparison
+  if (sections.length > 0) {
+    const sortedSections = [...sections].sort((a, b) => b.mps - a.mps);
+    const topSection = sortedSections[0];
+    const bottomSection = sortedSections[sortedSections.length - 1];
+    const gap = topSection.mps - bottomSection.mps;
+    
+    analysis.sectionComparison = {
+      topSection: {
+        name: topSection.section,
+        mps: topSection.mps
+      },
+      bottomSection: {
+        name: bottomSection.section,
+        mps: bottomSection.mps
+      },
+      gap: gap
+    };
+  }
+  
+  // Distribution Analysis
+  const excellent = distribution.excellent || 0;
+  const good = distribution.good || 0;
+  const satisfactory = distribution.satisfactory || 0;
+  const fair = distribution.fair || 0;
+  const poor = distribution.poor || 0;
+  
+  let distText = `Score distribution shows: ${excellent} students (${((excellent/totalStudents)*100).toFixed(1)}%) in Excellent range, `;
+  distText += `${good} students (${((good/totalStudents)*100).toFixed(1)}%) in Good range, `;
+  distText += `${satisfactory} students (${((satisfactory/totalStudents)*100).toFixed(1)}%) in Satisfactory range, `;
+  distText += `${fair} students (${((fair/totalStudents)*100).toFixed(1)}%) in Fair range, `;
+  distText += `and ${poor} students (${((poor/totalStudents)*100).toFixed(1)}%) in Poor range.`;
+  
+  const passingCount = excellent + good + satisfactory;
+  const passingPercent = ((passingCount / totalStudents) * 100).toFixed(1);
+  distText += ` Overall, ${passingPercent}% of students achieved a passing score (≥75%).`;
+  
+  analysis.distributionAnalysis = distText;
+  
+  // Generate Recommendations
+  const recommendations = [];
+  
+  if (overallMPS < 75) {
+    recommendations.push('Implement immediate remediation programs for students scoring below 60%.');
+    recommendations.push('Review and adjust instructional strategies to address identified learning gaps.');
+    recommendations.push('Consider providing additional practice materials and review sessions.');
+  }
+  
+  if (analysis.sectionComparison && analysis.sectionComparison.gap > 15) {
+    recommendations.push(`Address performance gap between sections by sharing best practices from top-performing section (${analysis.sectionComparison.topSection.name}).`);
+    recommendations.push('Conduct section-level analysis to identify specific areas of weakness.');
+  }
+  
+  if (poorPercent > 20) {
+    recommendations.push('Develop targeted intervention programs for struggling students.');
+    recommendations.push('Consider differentiated instruction to meet diverse learning needs.');
+  }
+  
+  if (overallMPS >= 75 && overallMPS < 80) {
+    recommendations.push('Focus on moving students from satisfactory to good performance levels.');
+    recommendations.push('Implement enrichment activities for high-performing students.');
+  }
+  
+  if (sections.length > 0) {
+    const lowPerformingSections = sections.filter(s => s.mps < 75);
+    if (lowPerformingSections.length > 0) {
+      recommendations.push(`Provide additional support and resources to sections with MPS below 75%: ${lowPerformingSections.map(s => s.section).join(', ')}.`);
+    }
+  }
+  
+  recommendations.push('Regularly monitor student progress and adjust teaching strategies based on assessment results.');
+  recommendations.push('Encourage peer learning and collaborative study groups.');
+  
+  analysis.recommendations = recommendations;
+  
+  // Calculate Statistics
+  if (sections.length > 0) {
+    const mpsValues = sections.map(s => s.mps);
+    const sum = mpsValues.reduce((a, b) => a + b, 0);
+    const average = sum / mpsValues.length;
+    
+    // Calculate median
+    const sorted = [...mpsValues].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    const median = sorted.length % 2 === 0 
+      ? (sorted[mid - 1] + sorted[mid]) / 2 
+      : sorted[mid];
+    
+    // Calculate standard deviation
+    const variance = mpsValues.reduce((acc, val) => acc + Math.pow(val - average, 2), 0) / mpsValues.length;
+    const stdDev = Math.sqrt(variance);
+    
+    // Calculate passing rate (students with ≥75%)
+    const passingStudents = (distribution.excellent || 0) + (distribution.good || 0) + (distribution.satisfactory || 0);
+    const passingRate = (passingStudents / totalStudents) * 100;
+    
+    analysis.statistics = {
+      averageMPS: average,
+      medianMPS: median,
+      standardDeviation: stdDev,
+      passingRate: passingRate
+    };
+  }
+  
+  dataAnalysis.value = analysis;
 };
 
 // Toggle AI Analysis panel
@@ -2470,25 +3138,77 @@ th {
   .header-container, .header-actions, .view-controls, 
   .settings-card, .chart-container, .table-view,
   .exam-info-card, .distribution-card, .back-btn,
-  .ai-analysis-panel {
+  .ai-analysis-panel, .data-analysis-panel {
     display: none !important;
   }
   
   /* Show print-only elements */
   .print-only {
     display: block !important;
-    width: 100%;
-    max-width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* Remove all default spacing from print-only children */
+  .print-only > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .print-only > *:first-child {
+    margin-top: 0 !important;
+  }
+  
+  .print-only > *:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  * {
+    box-sizing: border-box;
   }
   
   body {
-    margin: 0;
-    padding: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     font-family: 'Arial', 'Helvetica', sans-serif;
     background: white;
     color: #000;
-    font-size: 10pt;
+    font-size: 8pt;
     line-height: 1.2;
+  }
+  
+  /* Remove ALL default margins and padding from print elements */
+  .print-only * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* Remove spacing from div containers */
+  .print-summary,
+  .print-distribution,
+  .print-details {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Only add minimal spacing between major sections */
+  .print-distribution {
+    margin-top: 2px !important;
+  }
+  
+  .print-details {
+    margin-top: 2px !important;
+  }
+  
+  .print-signatures {
+    margin-top: 4px !important;
+  }
+  
+  .print-footer {
+    margin-top: 4px !important;
   }
   
   /* Page setup for landscape */
@@ -2499,44 +3219,72 @@ th {
   
   .print-header {
     text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
+    margin: 0 0 4px 0 !important;
+    padding: 0 0 4px 0 !important;
     border-bottom: 2px solid #000;
+    page-break-after: avoid;
+  }
+  
+  .print-title {
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   .print-title h1 {
-    font-size: 16pt;
+    font-size: 14pt;
     font-weight: bold;
-    margin: 0 0 5px 0;
-    color: #000;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  
-  .print-title h2 {
-    font-size: 12pt;
-    font-weight: normal;
-    margin: 0 0 15px 0;
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
     color: #000;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
   
+  .print-title h2 {
+    font-size: 11pt;
+    font-weight: normal;
+    margin: 0 0 3px 0 !important;
+    padding: 0 !important;
+    color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  
   .print-exam-info {
     display: flex;
     justify-content: center;
-    font-size: 11pt;
-    gap: 30px;
-    margin-top: 10px;
+    font-size: 9pt;
+    gap: 20px;
+    margin: 2px 0 0 0 !important;
+    padding: 0 !important;
+    flex-wrap: wrap;
   }
   
   .print-exam-info p {
-    margin: 0;
+    margin: 0 !important;
+    padding: 0 !important;
     color: #000;
   }
   
-  .print-summary, .print-distribution, .print-details {
-    margin-bottom: 15px;
+  .print-summary, .print-distribution {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid;
+  }
+  
+  .print-details {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: auto; /* Allow table to break if needed */
+  }
+  
+  /* Prevent page break between summary and distribution */
+  .print-summary {
+    page-break-after: avoid;
+  }
+  
+  .print-distribution {
+    page-break-after: avoid;
   }
   
   /* Professional table styling */
@@ -2544,8 +3292,9 @@ th {
     width: 100%;
     max-width: 100%;
     border-collapse: collapse;
-    font-size: 10pt;
-    margin-bottom: 15px;
+    font-size: 7.5pt;
+    margin: 0 !important;
+    padding: 0 !important;
     border: 2px solid #000;
     table-layout: fixed;
   }
@@ -2554,17 +3303,31 @@ th {
   .distribution-table th, .distribution-table td,
   .details-table th, .details-table td {
     border: 1px solid #000;
-    padding: 6px 4px;
+    padding: 4px 2px;
     text-align: center;
     vertical-align: middle;
     word-wrap: break-word;
     overflow: hidden;
+    white-space: normal;
+    font-size: 7.5pt;
   }
+  
+  /* Set column widths for details table */
+  .details-table th:nth-child(1) { width: 12%; } /* Section */
+  .details-table th:nth-child(2) { width: 8%; }  /* MPS */
+  .details-table th:nth-child(3) { width: 7%; }   /* Students */
+  .details-table th:nth-child(4) { width: 10%; } /* Highest */
+  .details-table th:nth-child(5) { width: 10%; }  /* Lowest */
+  .details-table th:nth-child(6),
+  .details-table th:nth-child(7),
+  .details-table th:nth-child(8),
+  .details-table th:nth-child(9),
+  .details-table th:nth-child(10) { width: 10.6%; } /* Distribution columns */
   
   .summary-table th, .distribution-table th, .details-table th {
     background-color: #f0f0f0 !important;
     font-weight: bold;
-    font-size: 10pt;
+    font-size: 7.5pt !important;
     color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -2582,6 +3345,7 @@ th {
     text-align: left !important;
     font-weight: bold;
     background-color: #f8f8f8 !important;
+    font-size: 7.5pt !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -2602,26 +3366,315 @@ th {
   /* Prevent row breaks */
   tr {
     page-break-inside: avoid;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Remove spacing between table sections */
+  thead, tbody, tfoot {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-spacing: 0 !important;
+  }
+  
+  /* Ensure no extra spacing in table cells */
+  th, td {
+    margin: 0 !important;
+    padding: 4px 2px !important;
+  }
+  
+  /* Remove any spacing between table rows */
+  tr {
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.1 !important;
+  }
+  
+  /* Ensure tables are directly adjacent with minimal spacing */
+  .print-summary + .print-distribution {
+    margin-top: 1px !important;
+  }
+  
+  .print-distribution + .print-details {
+    margin-top: 1px !important;
+  }
+  
+  /* Force remove any spacing from table containers */
+  .print-summary table,
+  .print-distribution table,
+  .print-details table {
+    margin: 0 !important;
+  }
+  
+  /* Signature section styling */
+  .print-signatures {
+    margin: 0 !important;
+    padding: 0 !important;
+    margin-top: 3px !important;
+    page-break-inside: avoid;
+  }
+  
+  .signature-section {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-start;
+    margin: 0 !important;
+    padding: 0 20px;
+  }
+  
+  .signature-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 180px;
+    text-align: center;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .signature-line {
+    width: 180px;
+    height: 0;
+    border-top: 2px solid #000;
+    margin: 0 0 20px 0 !important;
+  }
+  
+  .signature-label {
+    font-size: 9pt;
+    font-weight: bold;
+    margin: 0 0 1px 0 !important;
+    padding: 0 !important;
+    color: #000;
+  }
+  
+  .signature-name {
+    font-size: 10pt;
+    font-weight: 600;
+    margin: 0 0 1px 0 !important;
+    padding: 0 !important;
+    color: #000;
+    min-height: 14px;
+  }
+  
+  .signature-role {
+    font-size: 8pt;
+    color: #000;
+    font-style: italic;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   /* Footer styling */
   .print-footer {
-    margin-top: 20px;
-    padding-top: 10px;
+    margin: 0 !important;
+    padding: 2px 0 0 0 !important;
     border-top: 1px solid #000;
-    font-size: 10pt;
+    font-size: 8pt;
     color: #000;
     text-align: center;
+    page-break-inside: avoid;
   }
   
   .print-footer p {
-    margin: 2px 0;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* Print Analysis Section */
+  .print-analysis {
+    margin: 0 !important;
+    padding: 0 !important;
+    margin-top: 4px !important;
+    page-break-inside: avoid;
+  }
+  
+  .print-analysis-header {
+    margin: 0 0 4px 0 !important;
+    padding: 0 0 2px 0 !important;
+    border-bottom: 2px solid #000;
+  }
+  
+  .print-analysis-header h2 {
+    font-size: 11pt;
+    font-weight: bold;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #000;
+    text-transform: uppercase;
+  }
+  
+  .print-analysis-content {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .print-analysis-section {
+    margin: 0 0 8px 0 !important;
+    padding: 4px 0 !important;
+    page-break-inside: avoid;
+  }
+  
+  .print-analysis-section h3 {
+    font-size: 9pt;
+    font-weight: bold;
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    color: #000;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px !important;
+  }
+  
+  .print-analysis-section p {
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    font-size: 8pt;
+    line-height: 1.3;
+    color: #000;
+    text-align: justify;
+  }
+  
+  .print-analysis-section ul,
+  .print-analysis-section ol {
+    margin: 0 0 4px 0 !important;
+    padding-left: 20px !important;
+    font-size: 8pt;
+    line-height: 1.3;
+  }
+  
+  .print-analysis-section li {
+    margin: 0 0 2px 0 !important;
+    padding: 0 !important;
+    color: #000;
+  }
+  
+  .print-analysis-section div {
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    font-size: 8pt;
+    line-height: 1.3;
+    color: #000;
+  }
+  
+  .stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 !important;
+    font-size: 8pt;
+  }
+  
+  .stats-table tr {
+    border-bottom: 1px solid #ddd;
+  }
+  
+  .stats-table td {
+    padding: 2px 4px !important;
+    text-align: left;
+    color: #000;
+  }
+  
+  .stats-table td:first-child {
+    width: 60%;
+  }
+  
+  .print-analysis-section h4 {
+    font-size: 8.5pt;
+    font-weight: bold;
+    margin: 4px 0 2px 0 !important;
+    padding: 0 !important;
+    color: #000;
+  }
+  
+  .performers-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 4px 0 !important;
+    font-size: 7.5pt;
+    border: 1px solid #000;
+  }
+  
+  .performers-table thead {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .performers-table th {
+    border: 1px solid #000;
+    padding: 3px 2px !important;
+    text-align: center;
+    font-weight: bold;
+    font-size: 7.5pt;
+    color: #000;
+  }
+  
+  .performers-table td {
+    border: 1px solid #000;
+    padding: 3px 2px !important;
+    text-align: left;
+    font-size: 7.5pt;
+    color: #000;
+  }
+  
+  .performers-table td.center {
+    text-align: center;
   }
 }
 
 .print-only {
   display: none;
   padding: 20px;
+}
+
+/* Signature section styles for print-only */
+.print-only .print-signatures {
+  margin-top: 30px;
+  margin-bottom: 20px;
+  page-break-inside: avoid;
+}
+
+.print-only .signature-section {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-start;
+  margin-top: 40px;
+  padding: 0 20px;
+}
+
+.print-only .signature-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 200px;
+  text-align: center;
+}
+
+.print-only .signature-line {
+  width: 200px;
+  height: 0;
+  border-top: 2px solid #000;
+  margin-bottom: 50px;
+  margin-top: 0;
+}
+
+.print-only .signature-label {
+  font-size: 10pt;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #000;
+}
+
+.print-only .signature-name {
+  font-size: 11pt;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #000;
+  min-height: 20px;
+}
+
+.print-only .signature-role {
+  font-size: 9pt;
+  color: #000;
+  font-style: italic;
 }
 
 /* High DPI and Zoom levels (125%, 150%) for laptops */
@@ -2763,6 +3816,24 @@ th {
   
   .settings-content {
     padding: 16px 20px;
+  }
+  
+  .data-analysis-panel {
+    margin: 20px 0;
+    border-radius: 14px;
+  }
+  
+  .data-analysis-panel .card-header {
+    padding: 14px 20px;
+  }
+  
+  .data-analysis-panel .card-header h2 {
+    font-size: 1.1rem;
+  }
+  
+  .analysis-content {
+    padding: 20px;
+    min-height: 350px;
   }
   
   .ai-analysis-panel {
@@ -2947,6 +4018,37 @@ th {
   
   .chart-type-btn {
     padding: 8px;
+  }
+  
+  .data-analysis-panel {
+    margin: 18px 0;
+    border-radius: 12px;
+  }
+  
+  .data-analysis-panel .card-header {
+    padding: 12px 18px;
+  }
+  
+  .data-analysis-panel .card-header h2 {
+    font-size: 1rem;
+  }
+  
+  .analysis-content {
+    padding: 18px;
+    min-height: 320px;
+  }
+  
+  .analysis-section {
+    padding: 16px;
+  }
+  
+  .analysis-section h3 {
+    font-size: 1rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
   }
   
   .ai-analysis-panel {
@@ -3193,6 +4295,77 @@ th {
     font-size: 0.85rem;
   }
   
+  .data-analysis-panel {
+    margin: 16px 0;
+    border-radius: 10px;
+  }
+  
+  .data-analysis-panel .card-header {
+    padding: 10px 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .data-analysis-panel .card-header h2 {
+    font-size: 0.9rem;
+  }
+  
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .analysis-content {
+    padding: 16px;
+    min-height: 280px;
+  }
+  
+  .analysis-section {
+    padding: 12px;
+  }
+  
+  .analysis-section h3 {
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+  }
+  
+  .summary-text {
+    font-size: 0.9rem;
+  }
+  
+  .insights-list li {
+    font-size: 0.85rem;
+    padding: 10px 0;
+    padding-left: 20px;
+  }
+  
+  .recommendations-list {
+    padding-left: 20px;
+  }
+  
+  .recommendations-list li {
+    font-size: 0.85rem;
+    padding: 10px 0;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .stat-highlight {
+    padding: 12px;
+  }
+  
+  .stat-highlight .stat-label {
+    font-size: 0.8rem;
+  }
+  
+  .stat-highlight .stat-value {
+    font-size: 1.3rem;
+  }
+  
   .ai-analysis-panel {
     margin: 16px 0;
     border-radius: 10px;
@@ -3383,6 +4556,30 @@ th {
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .data-analysis-panel .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .analysis-content {
+    padding: 16px;
+    min-height: auto;
+  }
+  
+  .analysis-section {
+    padding: 16px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -3581,6 +4778,18 @@ th {
   background-color: white;
 }
 
+/* Data Analysis Button */
+.analysis-btn {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.analysis-btn:hover {
+  background-color: #ffe0b2;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
 /* AI Analysis Button */
 .ai-btn {
   background-color: #e8f0fe;
@@ -3591,6 +4800,232 @@ th {
   background-color: #d2e3fc;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Data Analysis Panel (Non-AI) */
+.data-analysis-panel {
+  background: white;
+  border-radius: 16px;
+  margin: 24px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.data-analysis-panel .card-header {
+  padding: 16px 24px;
+  background-color: #f9f9f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.data-analysis-panel .card-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  color: #333;
+  margin: 0;
+}
+
+.data-analysis-panel .card-header .material-icons {
+  color: #757575;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.include-print-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: #666;
+  cursor: pointer;
+}
+
+.include-print-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e65100;
+  cursor: pointer;
+}
+
+.analysis-content {
+  padding: 24px;
+  min-height: 400px;
+}
+
+.analysis-result {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.analysis-section {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 20px;
+  border-left: 4px solid #757575;
+}
+
+.analysis-section.performers-section {
+  padding: 20px;
+}
+
+.analysis-section .performers-section {
+  background-color: transparent;
+  border-left: none;
+  padding: 0;
+  margin-top: 16px;
+}
+
+.analysis-section .performers-section:first-of-type {
+  margin-top: 0;
+}
+
+.analysis-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.analysis-section h3 .material-icons {
+  color: #757575;
+  font-size: 1.2rem;
+}
+
+.summary-text {
+  line-height: 1.6;
+  color: #444;
+  font-size: 1rem;
+}
+
+.insights-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.insights-list li {
+  padding: 12px 0;
+  padding-left: 24px;
+  position: relative;
+  line-height: 1.6;
+  color: #444;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.insights-list li:last-child {
+  border-bottom: none;
+}
+
+.insights-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #757575;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.comparison-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comparison-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  line-height: 1.6;
+  border-left: 3px solid #e0e0e0;
+}
+
+.comparison-item .material-icons {
+  font-size: 20px;
+}
+
+.comparison-item .material-icons.trending-up {
+  color: #1976D2;
+}
+
+.comparison-item.comparison-top {
+  border-left-color: #1976D2;
+}
+
+.comparison-item .material-icons.trending-down {
+  color: #F57C00;
+}
+
+.comparison-item.comparison-bottom {
+  border-left-color: #F57C00;
+}
+
+.comparison-gap {
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  margin-top: 8px;
+  line-height: 1.6;
+  color: #444;
+  border-left: 3px solid #757575;
+}
+
+.distribution-analysis {
+  line-height: 1.6;
+  color: #444;
+}
+
+.recommendations-list {
+  padding-left: 24px;
+  margin: 0;
+}
+
+.recommendations-list li {
+  padding: 12px 0;
+  line-height: 1.6;
+  color: #444;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.stat-highlight {
+  background-color: white;
+  padding: 16px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.stat-highlight .stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.stat-highlight .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #424242;
 }
 
 /* AI Analysis Panel */
@@ -3879,19 +5314,19 @@ th {
 }
 
 .top-section .section-header {
-  color: #2E7D32;
+  color: #1976D2;
 }
 
 .top-section .section-header .material-icons {
-  color: #2E7D32;
+  color: #1976D2;
 }
 
 .bottom-section .section-header {
-  color: #C62828;
+  color: #F57C00;
 }
 
 .bottom-section .section-header .material-icons {
-  color: #C62828;
+  color: #F57C00;
 }
 
 .section-analysis-text {
