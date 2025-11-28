@@ -327,6 +327,7 @@
                   <th class="hide-on-mobile">Type</th>
                   <th class="hide-on-mobile">Subject</th>
                   <th v-if="actionButtonsEnabled">Attendance</th>
+                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -353,6 +354,12 @@
                       </span>
                     </button>
                   </td>
+                   <td>
+                     <button class="view-btn" @click="viewStudentPerformance(student.id)">
+                       <span class="material-icons">insights</span>
+                       View Performance
+                     </button>
+                   </td>
                 </tr>
               </tbody>
             </table>
@@ -516,6 +523,10 @@ const selectedGrade = ref('');
 const selectedSection = ref('');
 const actionButtonsEnabled = ref(false); // Toggle for showing action buttons
 const attendanceMarked = ref({});  // Track which students are marked present
+// Navigation to student performance view
+function viewStudentPerformance(studentId) {
+  router.push({ name: 'StudentPerformance', params: { studentId } });
+}
 const todaySessions = ref({}); // Track today's sessions by subjectId
 
 // Pagination state
@@ -2138,13 +2149,28 @@ onMounted(() => {
 }
 
 .view-btn {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .view-btn:hover {
-  background-color: #c8e6c9;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+}
+
+.view-btn .material-icons {
+  font-size: 18px;
 }
 
 .no-students-message {

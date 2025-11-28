@@ -1,7 +1,7 @@
-export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
-export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
-// export const BASE_URL = 'http://localhost:3300/auth';
-// export const SOCKET_URL = 'http://localhost:3300/';
+// export const BASE_URL = 'https://ncnhs.appgradesolutions.online/auth';
+// export const SOCKET_URL = 'https://ncnhs.appgradesolutions.online/';
+export const BASE_URL = 'http://localhost:3300/auth';
+export const SOCKET_URL = 'http://localhost:3300/';
 // export const BASE_URL = 'https://emnmtv.shop/auth';
 // export const SOCKET_URL = 'https://emnmtv.shop/';
 // export const BASE_URL = 'https://ncnhs.online/auth';
@@ -98,6 +98,40 @@ export const loginUser = async (email, lrn, password) => {
     throw error;
   }
 };
+
+/**
+ * Fetch a specific student's exam performance analytics for a teacher
+ * @param {number} teacherId - The teacher's user ID
+ * @param {number} studentId - The student's user ID
+ * @returns {Promise<Object>} Exam results and analytics
+ */
+export const fetchStudentExamPerformanceAnalytics = async (teacherId, studentId) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) throw new Error('No token found');
+
+    const response = await fetch(`${BASE_URL}/student-exam-performance-analytics?teacherId=${teacherId}&studentId=${studentId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch student exam performance analytics');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('AuthService: Student exam performance analytics fetch error:', error);
+    throw error;
+  }
+};
+
+  
+
 
 export const registerStudent = async (studentData) => {
   const token = localStorage.getItem("jwtToken");
@@ -5102,6 +5136,40 @@ export const getQuestionReviewDetails = async (questionId) => {
     return data;
   } catch (error) {
     console.error("AuthService: Get question review details error:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch a specific student's exam performance for a teacher
+ * @param {number} studentId - The student's user ID
+ * @returns {Promise<Object>} Exam results with scores and details
+ */
+export const getStudentExamPerformance = async (studentId) => {
+  try {
+    const token = localStorage.getItem('jwtToken');
+    if (!token) throw new Error('No token found');
+
+    console.log('AuthService: Fetching student exam performance', { studentId });
+
+    const response = await fetch(`${BASE_URL}/teacher/student/${studentId}/exam-performance`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to fetch student exam performance');
+    }
+
+    const data = await response.json();
+    console.log('AuthService: Student exam performance fetched successfully', data);
+    return data;
+  } catch (error) {
+    console.error('AuthService: Get student exam performance error:', error);
     throw error;
   }
 };

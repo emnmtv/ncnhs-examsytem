@@ -363,8 +363,14 @@ const routes = [
     name: 'QuestionReviewDetails',
     component: () => import('@/components/teacher/QuestionReviewDetails.vue'),
     meta: { requiresAuth: true, roles: ['teacher'] }
-  }
+  },
   
+    {
+    path: '/studentperformance/:studentId',
+    name: 'StudentPerformance',
+    component: () => import('@/components/teacher/StudentPerformance.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
  
 
   
