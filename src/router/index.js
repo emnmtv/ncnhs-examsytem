@@ -76,6 +76,24 @@ const routes = [
     component: TeacherDashboard,
     meta: { requiresAuth: true, roles: ['teacher'] }
   },
+  {
+    path: '/top-performers',
+    name: 'TopPerformers',
+    component: () => import('@/components/teacher/TopPerformers.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/students-needing-attention',
+    name: 'StudentsNeedingAttention',
+    component: () => import('@/components/teacher/StudentsNeedingAttention.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
+  {
+    path: '/questions-needing-review',
+    name: 'QuestionsNeedingReview',
+    component: () => import('@/components/teacher/QuestionsNeedingReview.vue'),
+    meta: { requiresAuth: true, roles: ['teacher'] }
+  },
   { 
     path: '/teacher-profile', 
     component: TeacherProfile,

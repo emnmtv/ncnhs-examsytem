@@ -81,15 +81,35 @@
           </div>
         </div>
         
-        <!-- <div class="stat-card grading">
+        <div class="stat-card top-performers clickable-stat" @click="scrollToSection('top-performers')">
           <div class="stat-icon">
-            <span class="material-icons">grading</span>
+            <span class="material-icons">trending_up</span>
           </div>
           <div class="stat-content">
-            <h3>{{ analytics?.overview?.gradingProgress || 0 }}%</h3>
-            <p>Grading Progress</p>
+            <h3>{{ totalTopPerformersCount }}</h3>
+            <p>Top Performers</p>
           </div>
-        </div> -->
+        </div>
+        
+        <div class="stat-card low-performers clickable-stat" @click="scrollToSection('students-needing-attention')">
+          <div class="stat-icon">
+            <span class="material-icons">trending_down</span>
+          </div>
+          <div class="stat-content">
+            <h3>{{ totalLowPerformersCount }}</h3>
+            <p>Low Performers</p>
+          </div>
+        </div>
+        
+        <div class="stat-card questions-review clickable-stat" @click="scrollToSection('questions-needing-review')">
+          <div class="stat-icon">
+            <span class="material-icons">help_outline</span>
+          </div>
+          <div class="stat-content">
+            <h3>{{ totalQuestionsNeedingReview }}</h3>
+            <p>Questions Need Review</p>
+          </div>
+        </div>
       </div>
 
       <!-- Charts Section -->
@@ -136,10 +156,10 @@
       <!-- Analytics Tables -->
       <div class="analytics-tables">
         <!-- Top Performers -->
-        <div class="table-card">
+        <div id="top-performers" class="table-card">
           <div class="table-header">
             <h3>Top Performers</h3>
-            <span class="badge success">{{ analytics?.studentPerformance?.topPerformers?.length || 0 }}</span>
+            <router-link to="/top-performers" class="view-all-btn">View All</router-link>
           </div>
           <div class="table-content">
             <div v-if="analytics?.studentPerformance?.topPerformers?.length === 0" class="empty-state">
@@ -213,10 +233,10 @@
         </div>
         
         <!-- Students Needing Attention -->
-        <div class="table-card">
+        <div id="students-needing-attention" class="table-card">
           <div class="table-header">
             <h3>Students Needing Attention</h3>
-            <span class="badge warning">{{ analytics?.studentPerformance?.studentsNeedingAttention?.length || 0 }}</span>
+            <router-link to="/students-needing-attention" class="view-all-btn">View All</router-link>
           </div>
           <div class="table-content">
             <div v-if="analytics?.studentPerformance?.studentsNeedingAttention?.length === 0" class="empty-state">
@@ -293,99 +313,15 @@
         </div>
       </div>
 
-      <!-- Student Performance by Subject -->
-      <div class="subject-performance-section">
-        <div class="section-header">
-          <h3>Student Performance by Subject</h3>
-          <p>Detailed breakdown of student performance across all subjects</p>
-        </div>
-        
-        <div v-if="!analytics?.subjectPerformance || analytics?.subjectPerformance.length === 0" class="empty-state">
-          <span class="material-icons">menu_book</span>
-          <p>No subject performance data available</p>
-        </div>
-        
-        <div v-else class="subject-performance-grid">
-          <div 
-            v-for="subject in analytics.subjectPerformance" 
-            :key="subject.subjectId || subject.subjectName"
-            class="subject-performance-card"
-          >
-            <div class="subject-card-header">
-              <div class="subject-title">
-                <span class="material-icons">menu_book</span>
-                <h4>{{ subject.subjectName || 'Unknown Subject' }}</h4>
-              </div>
-              <div class="subject-stats">
-                <span class="subject-avg-score" :class="getPerformanceClass(subject.averageScore)">
-                  {{ Math.round(subject.averageScore || 0) }}%
-                </span>
-                <span class="subject-students">{{ subject.studentCount || 0 }} students</span>
-              </div>
-            </div>
-            
-            <div class="subject-performance-breakdown">
-              <div class="performance-distribution">
-                <div class="dist-item">
-                  <span class="dist-label">Excellent (85%+)</span>
-                  <span class="dist-count excellent">{{ subject.excellentCount || 0 }}</span>
-                </div>
-                <div class="dist-item">
-                  <span class="dist-label">Good (75-84%)</span>
-                  <span class="dist-count good">{{ subject.goodCount || 0 }}</span>
-                </div>
-                <div class="dist-item">
-                  <span class="dist-label">Fair (60-74%)</span>
-                  <span class="dist-count fair">{{ subject.fairCount || 0 }}</span>
-                </div>
-                <div class="dist-item">
-                  <span class="dist-label">Needs Improvement (&lt;60%)</span>
-                  <span class="dist-count needs-improvement">{{ subject.needsImprovementCount || 0 }}</span>
-                </div>
-              </div>
-              
-              <div class="subject-top-students" v-if="subject.topStudents && subject.topStudents.length > 0">
-                <h5>Top Performers in this Subject</h5>
-                <div class="top-students-list">
-                  <div 
-                    v-for="(student, idx) in subject.topStudents.slice(0, 3)" 
-                    :key="student.id || idx"
-                    class="top-student-item clickable"
-                    @click.stop="viewStudentPerformance(student.id)"
-                  >
-                    <span class="student-rank-small">{{ idx + 1 }}</span>
-                    <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
-                    <span class="student-score-small">{{ Math.round(student.score || 0) }}%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="subject-struggling-students" v-if="subject.strugglingStudents && subject.strugglingStudents.length > 0">
-                <h5>Students Needing Support</h5>
-                <div class="struggling-students-list">
-                  <div 
-                    v-for="(student, idx) in subject.strugglingStudents.slice(0, 3)" 
-                    :key="student.id || idx"
-                    class="struggling-student-item clickable"
-                    @click.stop="viewStudentPerformance(student.id)"
-                  >
-                    <span class="material-icons">warning</span>
-                    <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
-                    <span class="student-score-small">{{ Math.round(student.score || 0) }}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-        
       <!-- Question Analysis -->
-      <div class="question-analysis">
+      <div id="questions-needing-review" class="question-analysis">
         <div class="analysis-card">
           <div class="analysis-header">
-            <h3>Question Analysis</h3>
-            <p>Questions that may need review</p>
+            <div>
+              <h3>Question Analysis</h3>
+              <p>Questions that may need review</p>
+            </div>
+            <router-link to="/questions-needing-review" class="view-all-btn">View All</router-link>
           </div>
           <div class="analysis-content">
             <div v-if="analytics?.examItemAnalysis?.questionsNeedingReview?.length === 0" class="empty-state">
@@ -452,7 +388,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { getTeacherAnalytics, getTeacherAssignedSubjects } from '@/services/authService'
 import Chart from 'chart.js/auto'
@@ -468,6 +404,19 @@ const selectedSubject = ref('')
 const dateRange = ref({
   start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
   end: new Date().toISOString().split('T')[0]
+})
+
+// Computed properties for total counts (all items)
+const totalTopPerformersCount = computed(() => {
+  return analytics.value?.studentPerformance?.topPerformers?.length || 0
+})
+
+const totalLowPerformersCount = computed(() => {
+  return analytics.value?.studentPerformance?.studentsNeedingAttention?.length || 0
+})
+
+const totalQuestionsNeedingReview = computed(() => {
+  return analytics.value?.examItemAnalysis?.questionsNeedingReview?.length || 0
 })
 
 // Chart references
@@ -732,6 +681,21 @@ const viewStudentPerformance = (studentId) => {
   router.push({ name: 'StudentPerformance', params: { studentId } })
 }
 
+// Scroll to section function
+const scrollToSection = (sectionId) => {
+  const element = document.getElementById(sectionId)
+  if (element) {
+    const offset = 100 // Offset for header/navigation
+    const elementPosition = element.getBoundingClientRect().top
+    const offsetPosition = elementPosition + window.pageYOffset - offset
+
+    window.scrollTo({
+      top: offsetPosition,
+      behavior: 'smooth'
+    })
+  }
+}
+
 // Initialize dashboard
 onMounted(async () => {
   await loadSubjects()
@@ -739,12 +703,7 @@ onMounted(async () => {
 })
 
 // Get performance class based on score
-const getPerformanceClass = (score) => {
-  if (score >= 85) return 'excellent'
-  if (score >= 75) return 'good'
-  if (score >= 60) return 'fair'
-  return 'needs-improvement'
-}
+
 
 // Cleanup charts on unmount
 onUnmounted(() => {
@@ -903,6 +862,20 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
+.stat-card.clickable-stat {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stat-card.clickable-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.clickable-stat:active {
+  transform: translateY(-1px);
+}
+
 .stat-icon {
   width: 60px;
   height: 60px;
@@ -933,6 +906,9 @@ onUnmounted(() => {
 .students .stat-icon { background: linear-gradient(135deg, #2196f3, #03a9f4); }
 .exams .stat-icon { background: linear-gradient(135deg, #ff9800, #ff5722); }
 .tasks .stat-icon { background: linear-gradient(135deg, #4caf50, #8bc34a); }
+.top-performers .stat-icon { background: linear-gradient(135deg, #4CAF50, #45a049); }
+.low-performers .stat-icon { background: linear-gradient(135deg, #ff9800, #f57c00); }
+.questions-review .stat-icon { background: linear-gradient(135deg, #9c27b0, #673ab7); }
 .grading .stat-icon { background: linear-gradient(135deg, #9c27b0, #673ab7); }
 
 /* Charts Section */
@@ -1011,6 +987,8 @@ onUnmounted(() => {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  position: relative;
+  scroll-margin-top: 100px; /* Offset for smooth scroll */
 }
 
 .table-header {
@@ -1026,6 +1004,24 @@ onUnmounted(() => {
   margin: 0;
   color: #333;
   font-size: 1.1rem;
+}
+
+.view-all-btn {
+  padding: 6px 16px;
+  background: #159750;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+  display: inline-block;
+}
+
+.view-all-btn:hover {
+  background: #0bcc4e;
 }
 
 .badge {
@@ -1523,6 +1519,7 @@ onUnmounted(() => {
 /* Question Analysis */
 .question-analysis {
   margin-bottom: 30px;
+  scroll-margin-top: 100px; /* Offset for smooth scroll */
 }
 
 .analysis-card {
@@ -1536,6 +1533,9 @@ onUnmounted(() => {
   padding: 20px;
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .analysis-header h3 {

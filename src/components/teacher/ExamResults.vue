@@ -1739,11 +1739,20 @@ const allAttempts = ref({}); // userId -> array of attempts
     window.addEventListener('resize', handleResize);
 
     const viewStudentAnswers = (result) => {
+      // Extract student IDs from results for navigation
+      const studentList = results.value
+        .map(r => r.user?.id || r.userId)
+        .filter(Boolean)
+        .map(id => parseInt(id));
+      
       router.push({
         name: 'StudentAnswerDetails',
         params: {
           examId: route.params.examId,
           studentId: result.user.id
+        },
+        state: {
+          studentList: studentList
         }
       });
     };

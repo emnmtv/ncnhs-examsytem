@@ -5173,3 +5173,126 @@ export const getStudentExamPerformance = async (studentId) => {
     throw error;
   }
 };
+
+/**
+ * Get all top performers for a teacher
+ * @param {Object} filters - Optional filters for analytics
+ * @param {string} filters.startDate - Start date for filtering (YYYY-MM-DD)
+ * @param {string} filters.endDate - End date for filtering (YYYY-MM-DD)
+ * @param {number} filters.subjectId - Filter by subject ID
+ * @returns {Promise<Array>} Array of top performing students
+ */
+export const getAllTopPerformers = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/teacher/top-performers${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch top performers");
+    }
+
+    const data = await response.json();
+    return data.topPerformers || data.data || data;
+  } catch (error) {
+    console.error("Error fetching top performers:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all students needing attention (low performers) for a teacher
+ * @param {Object} filters - Optional filters for analytics
+ * @param {string} filters.startDate - Start date for filtering (YYYY-MM-DD)
+ * @param {string} filters.endDate - End date for filtering (YYYY-MM-DD)
+ * @param {number} filters.subjectId - Filter by subject ID
+ * @returns {Promise<Array>} Array of students needing attention
+ */
+export const getAllStudentsNeedingAttention = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/teacher/students-needing-attention${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch students needing attention");
+    }
+
+    const data = await response.json();
+    return data.studentsNeedingAttention || data.data || data;
+  } catch (error) {
+    console.error("Error fetching students needing attention:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all questions needing review for a teacher
+ * @param {Object} filters - Optional filters for analytics
+ * @param {string} filters.startDate - Start date for filtering (YYYY-MM-DD)
+ * @param {string} filters.endDate - End date for filtering (YYYY-MM-DD)
+ * @param {number} filters.subjectId - Filter by subject ID
+ * @returns {Promise<Array>} Array of questions needing review
+ */
+export const getAllQuestionsNeedingReview = async (filters = {}) => {
+  try {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) throw new Error("No token found");
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (filters.startDate) queryParams.append('startDate', filters.startDate);
+    if (filters.endDate) queryParams.append('endDate', filters.endDate);
+    if (filters.subjectId) queryParams.append('subjectId', filters.subjectId);
+
+    const queryString = queryParams.toString();
+    const url = `${BASE_URL}/teacher/questions-needing-review${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      headers: {
+        "Authorization": `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to fetch questions needing review");
+    }
+
+    const data = await response.json();
+    return data.questionsNeedingReview || data.data || data;
+  } catch (error) {
+    console.error("Error fetching questions needing review:", error);
+    throw error;
+  }
+};

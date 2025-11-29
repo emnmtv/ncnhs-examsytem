@@ -481,7 +481,7 @@
 <script>
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore, getFullImageUrl, restoreAttemptScore, scoreEssayQuestion, getEssayScores } from '../../services/authService';
+import { getStudentExamAnswers, updateStudentExamAnswer, updateStudentExamScore, getFullImageUrl, restoreAttemptScore, scoreEssayQuestion, getEssayScores, fetchStudentScores } from '../../services/authService';
 
 export default {
   name: 'StudentAnswerDetails',
@@ -983,27 +983,31 @@ export default {
       showEssayOnly.value = !showEssayOnly.value;
     };
 
-    const navigateStudent = (direction) => {
+    const navigateStudent = async (direction) => {
       if (direction === 'prev' && canNavigatePrev.value) {
-        const prevStudentId = studentList.value[currentStudentIndex.value - 1];
-        currentStudentIndex.value--;
-        router.push({
-          name: 'StudentAnswerDetails',
-          params: {
-            examId: route.params.examId,
-            studentId: prevStudentId
-          }
-        });
+        const prevIndex = currentStudentIndex.value - 1;
+        const prevStudentId = studentList.value[prevIndex];
+        if (prevStudentId) {
+          router.push({
+            name: 'StudentAnswerDetails',
+            params: {
+              examId: route.params.examId,
+              studentId: prevStudentId
+            }
+          });
+        }
       } else if (direction === 'next' && canNavigateNext.value) {
-        const nextStudentId = studentList.value[currentStudentIndex.value + 1];
-        currentStudentIndex.value++;
-        router.push({
-          name: 'StudentAnswerDetails',
-          params: {
-            examId: route.params.examId,
-            studentId: nextStudentId
-          }
-        });
+        const nextIndex = currentStudentIndex.value + 1;
+        const nextStudentId = studentList.value[nextIndex];
+        if (nextStudentId) {
+          router.push({
+            name: 'StudentAnswerDetails',
+            params: {
+              examId: route.params.examId,
+              studentId: nextStudentId
+            }
+          });
+        }
       }
     };
 
@@ -1162,27 +1166,103 @@ export default {
       return index >= 0 ? index + 1 : answer.questionId;
     };
 
-    const initializeNavigation = () => {
-      // Get student list from route state or localStorage
-      const state = router.currentRoute.value.state;
-      if (state && state.studentList) {
-        studentList.value = state.studentList;
-        totalStudents.value = state.studentList.length;
+    const initializeNavigation = async () => {
+      try {
+        const examId = parseInt(route.params.examId);
         const currentStudentId = parseInt(route.params.studentId);
-        currentStudentIndex.value = state.studentList.findIndex(id => id === currentStudentId);
-      } else {
-        // Fallback: try to get from localStorage or set defaults
-        const savedStudentList = localStorage.getItem('examStudentList');
+        
+        // First try to get from route state or localStorage
+        const state = router.currentRoute.value.state;
+        if (state && state.studentList && Array.isArray(state.studentList)) {
+          studentList.value = state.studentList;
+          totalStudents.value = state.studentList.length;
+          currentStudentIndex.value = state.studentList.findIndex(id => parseInt(id) === currentStudentId);
+          if (currentStudentIndex.value === -1) {
+            currentStudentIndex.value = 0;
+          }
+          return;
+        }
+        
+        // Try localStorage
+        const savedStudentList = localStorage.getItem(`examStudentList_${examId}`);
         if (savedStudentList) {
           try {
-            studentList.value = JSON.parse(savedStudentList);
-            totalStudents.value = studentList.value.length;
-            const currentStudentId = parseInt(route.params.studentId);
-            currentStudentIndex.value = studentList.value.findIndex(id => id === currentStudentId);
+            const parsed = JSON.parse(savedStudentList);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              studentList.value = parsed;
+              totalStudents.value = parsed.length;
+              currentStudentIndex.value = parsed.findIndex(id => parseInt(id) === currentStudentId);
+              if (currentStudentIndex.value === -1) {
+                currentStudentIndex.value = 0;
+              }
+              return;
+            }
           } catch (e) {
             console.error('Error parsing saved student list:', e);
           }
         }
+        
+        // Fetch student list from API by getting all scores for this exam
+        console.log('Fetching student list for exam:', examId);
+        const scores = await fetchStudentScores(null, examId);
+        
+        if (scores && Array.isArray(scores) && scores.length > 0) {
+          // Extract unique student IDs from scores
+          // Handle different possible response structures
+          const studentIds = scores
+            .map(score => {
+              // Try different possible properties
+              if (score.userId) return score.userId;
+              if (score.user && score.user.id) return score.user.id;
+              if (score.studentId) return score.studentId;
+              return null;
+            })
+            .filter(Boolean)
+            .map(id => parseInt(id));
+          
+          const uniqueStudentIds = [...new Set(studentIds)];
+          
+          if (uniqueStudentIds.length > 0) {
+            studentList.value = uniqueStudentIds;
+            totalStudents.value = uniqueStudentIds.length;
+            
+            // Find current student index
+            currentStudentIndex.value = uniqueStudentIds.findIndex(id => id === currentStudentId);
+            if (currentStudentIndex.value === -1) {
+              // If current student not in list, add them and set as current
+              studentList.value.push(currentStudentId);
+              totalStudents.value = studentList.value.length;
+              currentStudentIndex.value = studentList.value.length - 1;
+            }
+            
+            // Save to localStorage for future use
+            localStorage.setItem(`examStudentList_${examId}`, JSON.stringify(studentList.value));
+            
+            console.log('Student list initialized:', {
+              total: totalStudents.value,
+              currentIndex: currentStudentIndex.value,
+              currentStudentId,
+              studentList: studentList.value
+            });
+          } else {
+            console.warn('No valid student IDs found in scores');
+            studentList.value = [currentStudentId];
+            totalStudents.value = 1;
+            currentStudentIndex.value = 0;
+          }
+        } else {
+          console.warn('No students found for this exam');
+          studentList.value = [currentStudentId];
+          totalStudents.value = 1;
+          currentStudentIndex.value = 0;
+        }
+      } catch (err) {
+        console.error('Error initializing navigation:', err);
+        // Fallback: at least set the current student
+        const currentStudentId = parseInt(route.params.studentId);
+        studentList.value = [currentStudentId];
+        totalStudents.value = 1;
+        currentStudentIndex.value = 0;
       }
     };
 
@@ -1195,10 +1275,26 @@ export default {
       });
     });
 
-    onMounted(() => {
+    // Watch for route parameter changes (when navigating between students)
+    watch(() => route.params.studentId, async (newStudentId, oldStudentId) => {
+      if (newStudentId && newStudentId !== oldStudentId) {
+        console.log('Student ID changed, reloading data:', { newStudentId, oldStudentId });
+        // Update current index
+        const studentId = parseInt(newStudentId);
+        currentStudentIndex.value = studentList.value.findIndex(id => parseInt(id) === studentId);
+        if (currentStudentIndex.value === -1) {
+          // If not found, reinitialize navigation
+          await initializeNavigation();
+        }
+        // Reload answers for the new student
+        await loadAnswers();
+      }
+    });
+
+    onMounted(async () => {
       console.log('Component mounted, loading initial answers');
-      initializeNavigation();
-      loadAnswers();
+      await initializeNavigation();
+      await loadAnswers();
     });
 
     return {
