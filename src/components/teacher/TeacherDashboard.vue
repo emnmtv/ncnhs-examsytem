@@ -150,7 +150,8 @@
               <div 
                 v-for="(student, index) in analytics?.studentPerformance?.topPerformers?.slice(0, 5)" 
                 :key="student.id" 
-                class="student-item"
+                class="student-item clickable"
+                @click="viewStudentPerformance(student.id)"
               >
                 <div class="student-rank">{{ index + 1 }}</div>
                 <div class="student-info">
@@ -226,7 +227,8 @@
               <div 
                 v-for="student in analytics?.studentPerformance?.studentsNeedingAttention?.slice(0, 5)" 
                 :key="student.id" 
-                class="student-item attention"
+                class="student-item attention clickable"
+                @click="viewStudentPerformance(student.id)"
               >
                 <div class="student-info">
                   <h4>{{ student.firstName }} {{ student.lastName }}</h4>
@@ -348,7 +350,8 @@
                   <div 
                     v-for="(student, idx) in subject.topStudents.slice(0, 3)" 
                     :key="student.id || idx"
-                    class="top-student-item"
+                    class="top-student-item clickable"
+                    @click.stop="viewStudentPerformance(student.id)"
                   >
                     <span class="student-rank-small">{{ idx + 1 }}</span>
                     <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
@@ -363,7 +366,8 @@
                   <div 
                     v-for="(student, idx) in subject.strugglingStudents.slice(0, 3)" 
                     :key="student.id || idx"
-                    class="struggling-student-item"
+                    class="struggling-student-item clickable"
+                    @click.stop="viewStudentPerformance(student.id)"
                   >
                     <span class="material-icons">warning</span>
                     <span class="student-name">{{ student.firstName }} {{ student.lastName }}</span>
@@ -723,6 +727,11 @@ const viewQuestionReview = (questionId) => {
   router.push(`/question-review/${questionId}`)
 }
 
+// Navigate to student performance view
+const viewStudentPerformance = (studentId) => {
+  router.push({ name: 'StudentPerformance', params: { studentId } })
+}
+
 // Initialize dashboard
 onMounted(async () => {
   await loadSubjects()
@@ -1070,6 +1079,16 @@ onUnmounted(() => {
 
 .student-item:hover {
   background: #e9ecef;
+}
+
+.student-item.clickable {
+  cursor: pointer;
+}
+
+.student-item.clickable:hover {
+  background: #e9ecef;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .student-item.attention {
@@ -1447,6 +1466,22 @@ onUnmounted(() => {
 
 .struggling-student-item {
   background: #fff3cd;
+}
+
+.top-student-item.clickable,
+.struggling-student-item.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.top-student-item.clickable:hover {
+  background: #e9ecef;
+  transform: translateX(4px);
+}
+
+.struggling-student-item.clickable:hover {
+  background: #ffe082;
+  transform: translateX(4px);
 }
 
 .student-rank-small {

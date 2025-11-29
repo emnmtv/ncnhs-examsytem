@@ -2,19 +2,20 @@
   <div class="student-performance">
     <!-- Header Container -->
     <div class="header-container">
-      <div class="header-background">Performance</div>
       <div class="header-content">
         <div class="title-row">
-          <router-link to="/teacher-classlist" class="back-btn">
+          <router-link :to="{ name: 'TeacherClassList' }" class="back-btn">
             <span class="material-icons">arrow_back</span>
           </router-link>
-          <h1>{{ studentName }}<span class="material-icons">person</span></h1>
-          <div class="student-details">
-            <p v-if="studentLRN" class="student-lrn">LRN: {{ studentLRN }}</p>
-            <p v-if="studentGrade || studentSection" class="student-grade-section">
-              <span v-if="studentGrade">Grade {{ studentGrade }}</span>
-              <span v-if="studentSection"> • Section {{ studentSection }}</span>
-            </p>
+          <div class="title-content">
+            <h1>{{ studentName || 'Student Performance' }}<span class="material-icons">person</span></h1>
+            <div class="student-details">
+              <p v-if="studentLRN" class="student-lrn">LRN: {{ studentLRN }}</p>
+              <p v-if="studentGrade || studentSection" class="student-grade-section">
+                <span v-if="studentGrade">Grade {{ studentGrade }}</span>
+                <span v-if="studentSection"> • Section {{ studentSection }}</span>
+              </p>
+            </div>
           </div>
         </div>
         <div class="divider"></div>
@@ -22,11 +23,12 @@
           <p class="subtitle">View exam performance and analytics</p>
         </div>
       </div>
+      <div class="header-background">PERFORMANCE</div>
     </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="loading-state">
-      <span class="material-icons rotating">sync</span>
+      <div class="spinner"></div>
       <p>Loading exam performance...</p>
     </div>
 
@@ -34,10 +36,7 @@
     <div v-else-if="error" class="error-state">
       <span class="material-icons">error_outline</span>
       <p>{{ error }}</p>
-      <button @click="loadStudentPerformance" class="retry-btn">
-        <span class="material-icons">refresh</span>
-        Retry
-      </button>
+      <button @click="loadStudentPerformance" class="retry-btn">Retry</button>
     </div>
 
     <!-- Empty State -->
@@ -49,6 +48,17 @@
 
     <!-- Performance Analytics -->
     <div v-else class="performance-container">
+      <!-- Performance Status Banner -->
+      <div v-if="averageScore > 0" class="performance-status-banner" :class="getPerformanceStatusClass()">
+        <div class="status-content">
+          <span class="material-icons status-icon">{{ getPerformanceStatusIcon() }}</span>
+          <div class="status-text">
+            <h3>{{ getPerformanceStatusTitle() }}</h3>
+            <p>{{ getPerformanceStatusMessage() }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Analytics Cards -->
       <div class="analytics-cards">
         <div class="analytics-card">
@@ -94,7 +104,12 @@
 
       <!-- Exam Results Table -->
       <div class="results-section">
-        <h2>Exam Results</h2>
+        <div class="section-header-bar">
+          <h2>
+            <span class="material-icons">assessment</span>
+            Exam Results
+          </h2>
+        </div>
         <div class="table-container">
           <table class="results-table">
             <thead>
@@ -134,7 +149,12 @@
 
       <!-- Performance Chart -->
       <div class="chart-section">
-        <h2>Score Trend</h2>
+        <div class="section-header-bar">
+          <h2>
+            <span class="material-icons">show_chart</span>
+            Score Trend
+          </h2>
+        </div>
         <div class="chart-container">
           <canvas id="performanceChart"></canvas>
         </div>
@@ -195,6 +215,41 @@ function getScoreClass(percentage) {
   if (percentage >= 70) return 'good';
   if (percentage >= 60) return 'fair';
   return 'poor';
+}
+
+// Helper function to determine performance status class
+function getPerformanceStatusClass() {
+  const avg = averageScore.value;
+  if (avg >= 85) return 'excellent';
+  if (avg >= 75) return 'good';
+  if (avg >= 60) return 'fair';
+  return 'needs-attention';
+}
+
+// Helper function to get performance status icon
+function getPerformanceStatusIcon() {
+  const avg = averageScore.value;
+  if (avg >= 75) return 'check_circle';
+  if (avg >= 60) return 'info';
+  return 'warning';
+}
+
+// Helper function to get performance status title
+function getPerformanceStatusTitle() {
+  const avg = averageScore.value;
+  if (avg >= 85) return 'Excellent Performance!';
+  if (avg >= 75) return 'Good Performance';
+  if (avg >= 60) return 'Fair Performance';
+  return 'Needs Attention';
+}
+
+// Helper function to get performance status message
+function getPerformanceStatusMessage() {
+  const avg = averageScore.value;
+  if (avg >= 85) return `This student is performing excellently with an average score of ${avg.toFixed(2)}%. Keep up the great work!`;
+  if (avg >= 75) return `This student is performing well with an average score of ${avg.toFixed(2)}%. Continue to monitor progress.`;
+  if (avg >= 60) return `This student has a fair performance with an average score of ${avg.toFixed(2)}%. Consider providing additional support.`;
+  return `This student needs attention with an average score of ${avg.toFixed(2)}%. Consider intervention strategies to improve performance.`;
 }
 
 // Fetch student exam performance from API
@@ -305,7 +360,7 @@ onMounted(() => {
 <style scoped>
 .student-performance {
   min-height: 100vh;
-  background-color: #f5f5f5;
+ 
   padding-bottom: 40px;
   max-width: auto;
   margin: 0 auto;
@@ -328,7 +383,7 @@ onMounted(() => {
   color: #159750;
   font-size: 2.5rem;
   font-weight: 700;
-  margin-bottom: 1rem;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -357,12 +412,17 @@ onMounted(() => {
 
 .title-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 15px;
+  margin-bottom: 1rem;
+}
+
+.title-content {
+  flex: 1;
 }
 
 .student-details {
-  margin-left: auto;
+  margin-top: 8px;
 }
 
 .back-btn {
@@ -371,18 +431,21 @@ onMounted(() => {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
+  padding: 0;
   background: #e8f5e9;
+  border: 1px solid #159750;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
   color: #159750;
   text-decoration: none;
-  transition: all 0.3s;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .back-btn:hover {
-  background: #c8e6c9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  background: #159750;
+  border-color: #159750;
+  color: white;
+  transform: translateX(-2px);
 }
 
 .back-btn .material-icons {
@@ -429,15 +492,28 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
-  color: #159750;
+  padding: 60px 20px;
   text-align: center;
 }
 
-.loading-state .material-icons,
-.error-state .material-icons,
-.empty-state .material-icons {
-  font-size: 64px;
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #159750;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-state .material-icons {
+  font-size: 4rem;
+  color: #f44336;
   margin-bottom: 20px;
 }
 
@@ -463,6 +539,12 @@ onMounted(() => {
   padding: 40px;
 }
 
+.empty-state .material-icons {
+  font-size: 64px;
+  margin-bottom: 20px;
+  color: #ddd;
+}
+
 .empty-state .subtitle {
   font-size: 14px;
   opacity: 0.8;
@@ -470,49 +552,116 @@ onMounted(() => {
   color: #666;
 }
 
-.retry-btn {
-  display: inline-flex;
+/* Performance Status Banner */
+.performance-status-banner {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-left: 5px solid;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.performance-status-banner.excellent {
+  border-left-color: #4caf50;
+  background: linear-gradient(135deg, #e8f5e9 0%, #ffffff 100%);
+}
+
+.performance-status-banner.good {
+  border-left-color: #8bc34a;
+  background: linear-gradient(135deg, #f1f8e9 0%, #ffffff 100%);
+}
+
+.performance-status-banner.fair {
+  border-left-color: #ffc107;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+}
+
+.performance-status-banner.needs-attention {
+  border-left-color: #f44336;
+  background: linear-gradient(135deg, #ffebee 0%, #ffffff 100%);
+}
+
+.status-content {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  background: #159750;
-  border: none;
-  color: white;
+  gap: 15px;
+}
+
+.status-icon {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.performance-status-banner.excellent .status-icon {
+  color: #4caf50;
+}
+
+.performance-status-banner.good .status-icon {
+  color: #8bc34a;
+}
+
+.performance-status-banner.fair .status-icon {
+  color: #ffc107;
+}
+
+.performance-status-banner.needs-attention .status-icon {
+  color: #f44336;
+}
+
+.status-text {
+  flex: 1;
+}
+
+.status-text h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.status-text p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #666;
+  line-height: 1.5;
+}
+
+.retry-btn {
   padding: 10px 20px;
+  background: #f44336;
+  color: white;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 0.9rem;
   margin-top: 20px;
   transition: all 0.3s ease;
 }
 
 .retry-btn:hover {
-  background: #117a3f;
-  transform: scale(1.05);
-}
-
-.retry-btn .material-icons {
-  font-size: 18px;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.rotating {
-  animation: rotate 2s linear infinite;
+  background: #d32f2f;
 }
 
 /* Performance Container */
 .performance-container {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
 }
 
 /* Analytics Cards */
@@ -520,7 +669,6 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  margin: 40px 0;
 }
 
 .analytics-card {
@@ -529,15 +677,15 @@ onMounted(() => {
   gap: 20px;
   background: white;
   padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
   border-left: 4px solid #159750;
 }
 
 .analytics-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .card-icon {
@@ -579,20 +727,33 @@ onMounted(() => {
 /* Results Section */
 .results-section {
   background: white;
-  padding: 32px;
-  border-radius: 8px;
-  margin: 40px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.results-section h2 {
-  margin: 0 0 24px 0;
-  font-size: 24px;
-  font-weight: bold;
-  color: #159750;
+.section-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.section-header-bar h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.section-header-bar h2 .material-icons {
+  color: #159750;
+  font-size: 1.5rem;
 }
 
 .table-container {
@@ -731,21 +892,11 @@ onMounted(() => {
 /* Chart Section */
 .chart-section {
   background: white;
-  padding: 32px;
-  border-radius: 8px;
-  margin: 40px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.chart-section h2 {
-  margin: 0 0 24px 0;
-  font-size: 24px;
-  font-weight: bold;
-  color: #159750;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
 
 .chart-container {
   position: relative;
@@ -807,7 +958,6 @@ onMounted(() => {
 
   .analytics-cards {
     gap: 15px;
-    margin: 20px 0;
   }
 
   .analytics-card {
@@ -830,7 +980,6 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 24px;
-    margin: 30px 0;
   }
 
   .results-table th,
@@ -890,7 +1039,6 @@ onMounted(() => {
 
   .analytics-cards {
     gap: 15px;
-    margin: 20px 0;
   }
 
   .analytics-card {
@@ -913,7 +1061,6 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 22px;
-    margin: 25px 0;
   }
 
   .results-table th,
@@ -973,7 +1120,6 @@ onMounted(() => {
 
   .analytics-cards {
     gap: 12px;
-    margin: 15px 0;
   }
 
   .analytics-card {
@@ -996,7 +1142,6 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 20px;
-    margin: 20px 0;
   }
 
   .results-table th,
@@ -1065,7 +1210,6 @@ onMounted(() => {
   .analytics-cards {
     grid-template-columns: repeat(2, 1fr);
     gap: 15px;
-    margin: 20px 0;
   }
 
   .analytics-card {
@@ -1088,11 +1232,9 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 20px;
-    margin: 20px 0;
   }
 
-  .results-section h2,
-  .chart-section h2 {
+  .section-header-bar h2 {
     font-size: 1.3rem;
   }
 
@@ -1111,6 +1253,29 @@ onMounted(() => {
 @media (max-width: 768px) {
   .student-performance {
     padding: 12px;
+  }
+
+  .performance-status-banner {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+
+  .status-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .status-icon {
+    font-size: 2.5rem;
+  }
+
+  .status-text h3 {
+    font-size: 1.1rem;
+  }
+
+  .status-text p {
+    font-size: 0.85rem;
   }
 
   .header-background {
@@ -1165,7 +1330,6 @@ onMounted(() => {
   .analytics-cards {
     grid-template-columns: 1fr;
     gap: 12px;
-    margin: 15px 0;
   }
 
   .analytics-card {
@@ -1192,11 +1356,9 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 15px;
-    margin: 15px 0;
   }
 
-  .results-section h2,
-  .chart-section h2 {
+  .section-header-bar h2 {
     font-size: 1.1rem;
   }
 
@@ -1223,6 +1385,23 @@ onMounted(() => {
 @media (max-width: 480px) {
   .student-performance {
     padding: 10px;
+  }
+
+  .performance-status-banner {
+    padding: 12px;
+    margin-bottom: 15px;
+  }
+
+  .status-icon {
+    font-size: 2rem;
+  }
+
+  .status-text h3 {
+    font-size: 1rem;
+  }
+
+  .status-text p {
+    font-size: 0.8rem;
   }
 
   .header-background {
@@ -1277,7 +1456,6 @@ onMounted(() => {
   .analytics-cards {
     grid-template-columns: 1fr;
     gap: 10px;
-    margin: 12px 0;
   }
 
   .analytics-card {
@@ -1305,11 +1483,9 @@ onMounted(() => {
   .results-section,
   .chart-section {
     padding: 12px;
-    margin: 12px 0;
   }
 
-  .results-section h2,
-  .chart-section h2 {
+  .section-header-bar h2 {
     font-size: 1rem;
   }
 

@@ -77,36 +77,60 @@
       <!-- Scoring Legend -->
       <div v-if="showLegend" class="legend-container">
         <div class="legend-section">
-          <h3><span class="material-icons">palette</span> Score Legend</h3>
+          <div class="legend-header-with-filter">
+            <h3><span class="material-icons">palette</span> Score Legend</h3>
+            <button @click="clearPerformanceFilters" class="clear-filter-btn" v-if="hasPerformanceFilters">
+              <span class="material-icons">clear</span>
+              Clear Filters
+            </button>
+          </div>
           <div class="legend-items">
-            <div class="legend-item">
+            <label class="legend-item clickable-filter" :class="{ 'filter-active': performanceFilters.excellent }">
+              <input type="checkbox" v-model="performanceFilters.excellent" @change="applyLegendFilters">
               <span class="legend-color score-excellent"></span>
               <span class="legend-label">Excellent (90-100%)</span>
-            </div>
-            <div class="legend-item">
+            </label>
+            <label class="legend-item clickable-filter" :class="{ 'filter-active': performanceFilters.good }">
+              <input type="checkbox" v-model="performanceFilters.good" @change="applyLegendFilters">
               <span class="legend-color score-good"></span>
               <span class="legend-label">Good (80-89%)</span>
-            </div>
-            <div class="legend-item">
+            </label>
+            <label class="legend-item clickable-filter" :class="{ 'filter-active': performanceFilters.passing }">
+              <input type="checkbox" v-model="performanceFilters.passing" @change="applyLegendFilters">
               <span class="legend-color score-passing"></span>
               <span class="legend-label">Passing (75-79%)</span>
-            </div>
-            <div class="legend-item">
+            </label>
+            <label class="legend-item clickable-filter" :class="{ 'filter-active': performanceFilters.failing }">
+              <input type="checkbox" v-model="performanceFilters.failing" @change="applyLegendFilters">
               <span class="legend-color score-failing"></span>
               <span class="legend-label">Failing (Below 75%)</span>
-            </div>
-            <div class="legend-item">
+            </label>
+            <label class="legend-item clickable-filter" :class="{ 'filter-active': performanceFilters.zero }">
+              <input type="checkbox" v-model="performanceFilters.zero" @change="applyLegendFilters">
               <span class="legend-color score-zero"></span>
               <span class="legend-label">No Score (0)</span>
-            </div>
+            </label>
           </div>
         </div>
 
         <!-- Part Difficulty Analysis -->
         <div class="legend-section" v-if="partDifficultyAnalysis.length > 0">
-          <h3><span class="material-icons">trending_up</span> Part Difficulty Analysis</h3>
+          <div class="legend-header-with-filter">
+            <h3><span class="material-icons">trending_up</span> Part Difficulty Analysis</h3>
+            <button @click="clearDifficultyFilters" class="clear-filter-btn" v-if="hasDifficultyFilters">
+              <span class="material-icons">clear</span>
+              Clear Filters
+            </button>
+          </div>
           <div class="difficulty-items">
-            <div v-for="part in partDifficultyAnalysis" :key="part.id" class="difficulty-item" :class="part.difficulty">
+            <label v-for="part in partDifficultyAnalysis" :key="part.id" 
+                   class="difficulty-item clickable-filter" 
+                   :class="[part.difficulty, { 'filter-active': difficultyFilters[part.difficulty] }]">
+              <input type="checkbox" 
+                     :value="part.difficulty" 
+                     v-model="difficultyFilters[part.difficulty]" 
+                     @change="applyLegendFilters"
+                     style="display: none;">
               <div class="difficulty-indicator">
                 <span class="material-icons">{{ getDifficultyIcon(part.difficulty) }}</span>
               </div>
@@ -117,7 +141,7 @@
                   <span class="difficulty-label">{{ part.difficultyText }}</span>
                 </div>
               </div>
-            </div>
+            </label>
           </div>
         </div>
       </div>
@@ -260,6 +284,22 @@ export default {
     const maxTotalScore = ref(0);
     const showLegend = ref(false); // Toggle for legend display
     
+    // Legend filters
+    const performanceFilters = ref({
+      excellent: false,
+      good: false,
+      passing: false,
+      failing: false,
+      zero: false
+    });
+    
+    const difficultyFilters = ref({
+      easy: false,
+      medium: false,
+      hard: false,
+      unknown: false
+    });
+    
     // Pagination
     const resultsPage = ref(1);
     const resultsPageSize = ref(10);
@@ -386,7 +426,46 @@ export default {
           (result.lrn?.toString() || '').toLowerCase().includes(searchLower) ||
           (result.section || '').toLowerCase().includes(searchLower);
         
-        return matchesGrade && matchesSection && matchesSearch;
+        // Performance filter
+        const percentage = result.percentage || 0;
+        let matchesPerformance = true;
+        
+        // Check if any performance filters are active
+        const hasActivePerformanceFilters = Object.values(performanceFilters.value).some(v => v);
+        if (hasActivePerformanceFilters) {
+          matchesPerformance = false;
+          
+          if (performanceFilters.value.excellent && percentage >= 90) matchesPerformance = true;
+          if (performanceFilters.value.good && percentage >= 80 && percentage < 90) matchesPerformance = true;
+          if (performanceFilters.value.passing && percentage >= 75 && percentage < 80) matchesPerformance = true;
+          if (performanceFilters.value.failing && percentage < 75 && percentage > 0) matchesPerformance = true;
+          if (performanceFilters.value.zero && (percentage === 0 || result.totalScore === 0)) matchesPerformance = true;
+        }
+        
+        // Difficulty filter - show students who have parts matching selected difficulty levels
+        let matchesDifficulty = true;
+        const hasActiveDifficultyFilters = Object.values(difficultyFilters.value).some(v => v);
+        
+        if (hasActiveDifficultyFilters) {
+          matchesDifficulty = false;
+          
+          // Get all part difficulties that exist in the exam
+          const activeDifficulties = Object.keys(difficultyFilters.value).filter(
+            difficulty => difficultyFilters.value[difficulty]
+          );
+          
+          // Check if any of the exam parts match the selected difficulties
+          // This shows students who took exams with parts of the selected difficulty levels
+          for (const part of examParts.value) {
+            const difficultyInfo = partDifficultyAnalysis.value.find(p => p.id === part.id);
+            if (difficultyInfo && activeDifficulties.includes(difficultyInfo.difficulty)) {
+              matchesDifficulty = true;
+              break;
+            }
+          }
+        }
+        
+        return matchesGrade && matchesSection && matchesSearch && matchesPerformance && matchesDifficulty;
       });
       
       // Apply sorting if a sort option is selected
@@ -506,12 +585,47 @@ export default {
       }
     };
 
+    // Computed properties for filter states
+    const hasPerformanceFilters = computed(() => {
+      return Object.values(performanceFilters.value).some(v => v);
+    });
+    
+    const hasDifficultyFilters = computed(() => {
+      return Object.values(difficultyFilters.value).some(v => v);
+    });
+    
+    const clearPerformanceFilters = () => {
+      performanceFilters.value = {
+        excellent: false,
+        good: false,
+        passing: false,
+        failing: false,
+        zero: false
+      };
+      resultsPage.value = 1; // Reset to first page
+    };
+    
+    const clearDifficultyFilters = () => {
+      difficultyFilters.value = {
+        easy: false,
+        medium: false,
+        hard: false,
+        unknown: false
+      };
+      resultsPage.value = 1; // Reset to first page
+    };
+    
+    const applyLegendFilters = () => {
+      resultsPage.value = 1; // Reset to first page when filters change
+    };
+
     const clearSearch = () => {
       searchQuery.value = '';
     };
 
     const applyFilter = () => {
       // Filter is applied automatically through computed property
+      resultsPage.value = 1; // Reset to first page
     };
 
     const goBack = () => {
@@ -532,6 +646,10 @@ export default {
       filters,
       searchQuery,
       showLegend,
+      performanceFilters,
+      difficultyFilters,
+      hasPerformanceFilters,
+      hasDifficultyFilters,
       uniqueGrades,
       uniqueSections,
       filteredResults,
@@ -552,6 +670,9 @@ export default {
       getDifficultyIcon,
       getPerformanceLabel,
       clearSearch,
+      clearPerformanceFilters,
+      clearDifficultyFilters,
+      applyLegendFilters,
       applyFilter,
       goBack
     };
@@ -1032,10 +1153,40 @@ th {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 15px 0;
+  margin: 0;
   color: #333;
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.legend-header-with-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.clear-filter-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.clear-filter-btn:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+}
+
+.clear-filter-btn .material-icons {
+  font-size: 16px;
 }
 
 .legend-section .material-icons {
@@ -1053,6 +1204,30 @@ th {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.legend-item.clickable-filter {
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.legend-item.clickable-filter:hover {
+  background: #f5f5f5;
+}
+
+.legend-item.clickable-filter.filter-active {
+  background: #e3f2fd;
+  border: 1px solid #2196f3;
+}
+
+.legend-item.clickable-filter input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #673ab7;
 }
 
 .legend-color {
@@ -1082,6 +1257,19 @@ th {
   padding: 12px;
   border-radius: 8px;
   transition: all 0.2s;
+}
+
+.difficulty-item.clickable-filter {
+  cursor: pointer;
+}
+
+.difficulty-item.clickable-filter:hover {
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.difficulty-item.clickable-filter.filter-active {
+  box-shadow: 0 0 0 2px #673ab7;
 }
 
 .difficulty-item.easy {
@@ -1276,6 +1464,25 @@ th.part-unknown {
 
   .legend-section {
     min-width: auto;
+  }
+
+  .legend-header-with-filter {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .clear-filter-btn {
+    font-size: 0.8rem;
+    padding: 5px 10px;
+  }
+
+  .legend-item.clickable-filter {
+    padding: 6px;
+  }
+
+  .difficulty-item.clickable-filter {
+    padding: 10px;
   }
 
   .difficulty-stats {

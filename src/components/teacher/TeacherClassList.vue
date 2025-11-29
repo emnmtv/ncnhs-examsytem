@@ -2152,7 +2152,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0bcc4e 0%, #159750 100%);
   color: white;
   border: none;
   padding: 8px 16px;
@@ -2161,12 +2161,13 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(21, 151, 80, 0.3);
 }
 
 .view-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 4px 12px rgba(21, 151, 80, 0.5);
+  background: linear-gradient(135deg, #159750 0%, #117a3f 100%);
 }
 
 .view-btn .material-icons {
