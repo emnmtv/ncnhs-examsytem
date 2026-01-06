@@ -166,11 +166,11 @@
 
       <!-- Footer -->
       <div class="exam-footer">
-        <div class="prepared-by" v-if="showAnswers">
+        <div class="prepared-by">
           <div class="teacher-section">
             <div class="footer-label">Prepared by:</div>
             <div class="footer-line">____________________________</div>
-            <div class="footer-name">Teacher's Name</div>
+            <div class="footer-name">{{ teacherName }}</div>
             <div class="footer-position">Subject Teacher</div>
           </div>
           <div class="approved-section">
@@ -199,7 +199,7 @@
 <script>
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { fetchTeacherExams, fetchArchivedTeacherExams, getFullImageUrl } from '../../services/authService';
+import { fetchTeacherExams, fetchArchivedTeacherExams, getFullImageUrl, fetchUserProfile } from '../../services/authService';
 import html2pdf from 'html2pdf.js';
 import Swal from 'sweetalert2';
 
@@ -214,6 +214,7 @@ export default {
     const printArea = ref(null);
     const showAnswers = ref(false);
     const zoomLevel = ref(1);
+    const teacherName = ref('Subject Teacher');
 
     const loadExam = async () => {
       try {
@@ -243,6 +244,18 @@ export default {
         });
       } finally {
         loading.value = false;
+      }
+    };
+
+    const loadTeacherName = async () => {
+      try {
+        const userProfile = await fetchUserProfile();
+        if (userProfile && userProfile.firstName && userProfile.lastName) {
+          teacherName.value = `${userProfile.firstName} ${userProfile.lastName}`;
+        }
+      } catch (err) {
+        console.error('Error loading teacher name:', err);
+        // Keep default value 'Subject Teacher'
       }
     };
 
@@ -453,6 +466,7 @@ export default {
 
     onMounted(() => {
       loadExam();
+      loadTeacherName();
       
       // Load Material Icons if not already loaded
       if (!document.getElementById('material-icons')) {
@@ -464,13 +478,14 @@ export default {
       }
     });
 
-    return {
+      return {
       exam,
       loading,
       error,
       printArea,
       showAnswers,
       zoomLevel,
+      teacherName,
       formatQuestionType,
       parseOptions,
       formatAnswer,

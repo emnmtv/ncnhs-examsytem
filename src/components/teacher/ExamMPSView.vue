@@ -23,9 +23,15 @@
       <button class="action-btn export-btn" @click="exportData">
         <i class="fas fa-file-export"></i> Export Data
       </button>
-      <button class="action-btn pdf-btn" @click="downloadPDF">
-        <i class="fas fa-file-pdf"></i> Download PDF
-      </button>
+      <div class="pdf-options-group">
+        <button class="action-btn pdf-btn" @click="downloadPDF">
+          <i class="fas fa-file-pdf"></i> Download PDF
+        </button>
+        <label class="include-pdf-label" v-if="mpsData">
+          <input type="checkbox" v-model="includeAnalysisInPDF">
+          <span>Include Analysis</span>
+        </label>
+      </div>
       <button class="action-btn analysis-btn" @click="toggleDataAnalysis" :disabled="loading || !mpsData">
         <i class="fas fa-chart-line"></i> Data Analysis
       </button>
@@ -846,287 +852,299 @@
 
     <!-- Professional PDF Export Template -->
     <div v-if="mpsData" class="print-only">
-      <div class="print-header">
-        <div class="print-title">
-          <h1>NEW CABALAN NATIONAL HIGH SCHOOL</h1>
-          <h2>EXAM MEAN PERCENTAGE SCORE REPORT</h2>
-          <div class="print-exam-info">
-            <p><strong>Exam:</strong> {{ mpsData.exam.title }}</p>
-            <p><strong>Test Code:</strong> {{ mpsData.exam.testCode }}</p>
-            <p><strong>Teacher:</strong> {{ mpsData.exam.teacher ? mpsData.exam.teacher.name : 'N/A' }}</p>
-            <p><strong>Date Generated:</strong> {{ new Date().toLocaleDateString() }}</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="print-summary">
-        <table class="summary-table">
-          <thead>
-            <tr>
-              <th>Overall MPS (%)</th>
-              <th>Total Students</th>
-              <th>Highest Score</th>
-              <th>Lowest Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="center">{{ mpsData.overallMPS.toFixed(1) }}%</td>
-              <td class="center">{{ mpsData.totalStudents }}</td>
-              <td class="center">
-                {{ mpsData.overallStats.highestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
-                ({{ mpsData.overallStats.highestPercentage?.toFixed(1) || 0 }}%)
-              </td>
-              <td class="center">
-                {{ mpsData.overallStats.lowestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
-                ({{ mpsData.overallStats.lowestPercentage?.toFixed(1) || 0 }}%)
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="print-distribution">
-        <table class="distribution-table">
-          <thead>
-            <tr>
-              <th>Excellent<br>(90-100%)</th>
-              <th>Good<br>(80-89%)</th>
-              <th>Satisfactory<br>(70-79%)</th>
-              <th>Fair<br>(60-69%)</th>
-              <th>Poor<br>(Below 60%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td class="center">{{ mpsData.overallStats.scoreDistribution.excellent }}</td>
-              <td class="center">{{ mpsData.overallStats.scoreDistribution.good }}</td>
-              <td class="center">{{ mpsData.overallStats.scoreDistribution.satisfactory }}</td>
-              <td class="center">{{ mpsData.overallStats.scoreDistribution.fair }}</td>
-              <td class="center">{{ mpsData.overallStats.scoreDistribution.poor }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="print-details">
-        <table class="details-table">
-          <thead>
-            <tr>
-              <th>Section</th>
-              <th>MPS (%)</th>
-              <th>Students</th>
-              <th>Highest Score</th>
-              <th>Lowest Score</th>
-              <th>Excellent</th>
-              <th>Good</th>
-              <th>Satisfactory</th>
-              <th>Fair</th>
-              <th>Poor</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(section, index) in mpsData.sectionMPS" :key="index">
-              <td class="section-name">{{ section.section }}</td>
-              <td class="center">{{ section.mps.toFixed(1) }}%</td>
-              <td class="center">{{ section.studentCount }}</td>
-              <td class="center">
-                {{ section.highestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
-                ({{ section.highestPercentage?.toFixed(1) || 0 }}%)
-              </td>
-              <td class="center">
-                {{ section.lowestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
-                ({{ section.lowestPercentage?.toFixed(1) || 0 }}%)
-              </td>
-              <td class="center">{{ section.distribution.excellent }}</td>
-              <td class="center">{{ section.distribution.good }}</td>
-              <td class="center">{{ section.distribution.satisfactory }}</td>
-              <td class="center">{{ section.distribution.fair }}</td>
-              <td class="center">{{ section.distribution.poor }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="print-signatures">
-        <div class="signature-section">
-          <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-label">Prepared by:</div>
-            <div class="signature-name">{{ mpsData.exam.teacher ? mpsData.exam.teacher.name : '___________________' }}</div>
-            <div class="signature-role">Teacher</div>
-          </div>
-          <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-label">Noted by:</div>
-            <div class="signature-name">___________________</div>
-            <div class="signature-role">Principal</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Data Analysis Section (Print/PDF) -->
-      <div v-if="includeAnalysisInPrint && dataAnalysis" class="print-analysis">
-        <div class="print-analysis-header">
-          <h2>DATA ANALYSIS & INSIGHTS</h2>
-        </div>
-        
-        <div class="print-analysis-content">
-          <!-- Overall Performance Summary -->
-          <div class="print-analysis-section">
-            <h3>Overall Performance Summary</h3>
-            <p>{{ dataAnalysis.summary }}</p>
-          </div>
-
-          <!-- Key Insights -->
-          <div class="print-analysis-section" v-if="dataAnalysis.insights && dataAnalysis.insights.length > 0">
-            <h3>Key Insights</h3>
-            <ul>
-              <li v-for="(insight, idx) in dataAnalysis.insights" :key="'print-insight-'+idx">
-                {{ insight }}
-              </li>
-            </ul>
-          </div>
-
-          <!-- Section Comparison -->
-          <div class="print-analysis-section" v-if="dataAnalysis.sectionComparison">
-            <h3>Section Performance Comparison</h3>
-            <div v-if="dataAnalysis.sectionComparison.topSection">
-              <strong>Top Performing Section:</strong> {{ dataAnalysis.sectionComparison.topSection.name }} 
-              (MPS: {{ dataAnalysis.sectionComparison.topSection.mps.toFixed(1) }}%)
+      <div class="print-wrapper">
+        <!-- Header Section -->
+        <div class="print-header">
+          <div class="header-content">
+            <div class="logo-container">
+              <img :src="schoolLogoBase64 || NcnhsLogo" alt="NCNHS Logo" class="school-logo" />
             </div>
-            <div v-if="dataAnalysis.sectionComparison.bottomSection">
-              <strong>Needs Improvement:</strong> {{ dataAnalysis.sectionComparison.bottomSection.name }} 
-              (MPS: {{ dataAnalysis.sectionComparison.bottomSection.mps.toFixed(1) }}%)
-            </div>
-            <div v-if="dataAnalysis.sectionComparison.gap">
-              <strong>Performance Gap:</strong> {{ dataAnalysis.sectionComparison.gap.toFixed(1) }}% 
-              between highest and lowest performing sections
+            <div class="school-info">
+              <div class="republic">Republic of the Philippines</div>
+              <div class="department">Department of Education</div>
+              <div class="region">Region III - Central Luzon</div>
+              <div class="division">Schools Division of Olongapo City</div>
+              <h2 class="school-name">NEW CABALAN NATIONAL HIGH SCHOOL</h2>
+              <div class="report-title">EXAM MEAN PERCENTAGE SCORE REPORT</div>
             </div>
           </div>
-
-          <!-- Score Distribution Analysis -->
-          <div class="print-analysis-section" v-if="dataAnalysis.distributionAnalysis">
-            <h3>Score Distribution Analysis</h3>
-            <p>{{ dataAnalysis.distributionAnalysis }}</p>
+          <div class="line-break"></div>
+          <div class="header-exam-info">
+            <div class="exam-info-grid">
+              <div class="exam-info-item">
+                <span class="exam-label">Exam:</span>
+                <span class="exam-value">{{ mpsData.exam.title }}</span>
+              </div>
+              <div class="exam-info-item">
+                <span class="exam-label">Test Code:</span>
+                <span class="exam-value">{{ mpsData.exam.testCode }}</span>
+              </div>
+              <div class="exam-info-item">
+                <span class="exam-label">Teacher:</span>
+                <span class="exam-value">{{ mpsData.exam.teacher ? mpsData.exam.teacher.name : 'N/A' }}</span>
+              </div>
+              <div class="exam-info-item">
+                <span class="exam-label">Date Generated:</span>
+                <span class="exam-value">{{ new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) }}</span>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <!-- Recommendations -->
-          <div class="print-analysis-section" v-if="dataAnalysis.recommendations && dataAnalysis.recommendations.length > 0">
-            <h3>Recommendations</h3>
-            <ol>
-              <li v-for="(rec, idx) in dataAnalysis.recommendations" :key="'print-rec-'+idx">
-                {{ rec }}
-              </li>
-            </ol>
-          </div>
-
-          <!-- Statistical Highlights -->
-          <div class="print-analysis-section" v-if="dataAnalysis.statistics">
-            <h3>Statistical Highlights</h3>
-            <table class="stats-table">
+        <!-- Overall Summary Section -->
+        <div class="print-section">
+          <h3 class="section-title">Overall Summary</h3>
+          <div class="print-summary">
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th>Overall MPS (%)</th>
+                  <th>Total Students</th>
+                  <th>Highest Score</th>
+                  <th>Lowest Score</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr v-if="dataAnalysis.statistics.averageMPS">
-                  <td><strong>Average MPS:</strong></td>
-                  <td>{{ dataAnalysis.statistics.averageMPS.toFixed(1) }}%</td>
-                </tr>
-                <tr v-if="dataAnalysis.statistics.medianMPS">
-                  <td><strong>Median MPS:</strong></td>
-                  <td>{{ dataAnalysis.statistics.medianMPS.toFixed(1) }}%</td>
-                </tr>
-                <tr v-if="dataAnalysis.statistics.standardDeviation">
-                  <td><strong>Standard Deviation:</strong></td>
-                  <td>{{ dataAnalysis.statistics.standardDeviation.toFixed(2) }}</td>
-                </tr>
-                <tr v-if="dataAnalysis.statistics.passingRate">
-                  <td><strong>Passing Rate (≥75%):</strong></td>
-                  <td>{{ dataAnalysis.statistics.passingRate.toFixed(1) }}%</td>
+                <tr>
+                  <td class="center highlight">{{ mpsData.overallMPS.toFixed(1) }}%</td>
+                  <td class="center">{{ mpsData.totalStudents }}</td>
+                  <td class="center">
+                    {{ mpsData.overallStats.highestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+                    <br>
+                    <span class="score-percent">({{ mpsData.overallStats.highestPercentage?.toFixed(1) || 0 }}%)</span>
+                  </td>
+                  <td class="center">
+                    {{ mpsData.overallStats.lowestScoreRaw || 0 }}/{{ mpsData.overallStats.totalPossible || 0 }}
+                    <br>
+                    <span class="score-percent">({{ mpsData.overallStats.lowestPercentage?.toFixed(1) || 0 }}%)</span>
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
+        </div>
 
-          <!-- Top & Low Performers (Print) -->
-          <div class="print-analysis-section" v-if="mpsData && (mpsData.topPerformers || mpsData.lowPerformers)">
-            <h3>Student Performance Highlights</h3>
-            
-            <!-- Top Performers -->
-            <div v-if="mpsData.topPerformers && mpsData.topPerformers.length > 0">
-              <h4>Top Performers</h4>
-              <table class="performers-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Name</th>
-                    <th>Section</th>
-                    <th>Score</th>
-                    <th>Percentage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(student, idx) in mpsData.topPerformers" :key="'print-top-'+idx">
-                    <td class="center">{{ idx + 1 }}</td>
-                    <td>{{ student.name }}</td>
-                    <td class="center">{{ student.gradeLevel }}-{{ student.section }}</td>
-                    <td class="center">{{ student.score }}/{{ student.total }}</td>
-                    <td class="center">{{ student.percentage.toFixed(1) }}%</td>
-                  </tr>
-                </tbody>
-              </table>
+        <!-- Score Distribution Section -->
+        <div class="print-section">
+          <h3 class="section-title">Score Distribution</h3>
+          <div class="print-distribution">
+            <table class="distribution-table">
+              <thead>
+                <tr>
+                  <th>Excellent<br><span class="range">(90-100%)</span></th>
+                  <th>Good<br><span class="range">(80-89%)</span></th>
+                  <th>Satisfactory<br><span class="range">(70-79%)</span></th>
+                  <th>Fair<br><span class="range">(60-69%)</span></th>
+                  <th>Poor<br><span class="range">(Below 60%)</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="center excellent">{{ mpsData.overallStats.scoreDistribution.excellent }}</td>
+                  <td class="center good">{{ mpsData.overallStats.scoreDistribution.good }}</td>
+                  <td class="center satisfactory">{{ mpsData.overallStats.scoreDistribution.satisfactory }}</td>
+                  <td class="center fair">{{ mpsData.overallStats.scoreDistribution.fair }}</td>
+                  <td class="center poor">{{ mpsData.overallStats.scoreDistribution.poor }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Section Details Section - Split into chunks: first 6, then 15 per page -->
+        <div class="print-section section-details-wrapper">
+          <template v-for="(chunk, chunkIndex) in sectionChunks" :key="chunkIndex">
+            <div 
+              v-if="chunkIndex === 0"
+              class="print-details-page"
+            >
+              <h3 class="section-title">Section Performance Details</h3>
+              <div class="print-details">
+                <table class="details-table">
+                  <thead>
+                    <tr>
+                      <th class="col-section">Section</th>
+                      <th class="col-mps">MPS (%)</th>
+                      <th class="col-students">Students</th>
+                      <th class="col-score">Highest Score</th>
+                      <th class="col-score">Lowest Score</th>
+                      <th class="col-dist">Excellent</th>
+                      <th class="col-dist">Good</th>
+                      <th class="col-dist">Satisfactory</th>
+                      <th class="col-dist">Fair</th>
+                      <th class="col-dist">Poor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(section, index) in chunk" :key="index">
+                      <td class="section-name">{{ section.section }}</td>
+                      <td class="center highlight">{{ section.mps.toFixed(1) }}%</td>
+                      <td class="center">{{ section.studentCount }}</td>
+                      <td class="center">
+                        {{ section.highestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                        <br>
+                        <span class="score-percent">({{ section.highestPercentage?.toFixed(1) || 0 }}%)</span>
+                      </td>
+                      <td class="center">
+                        {{ section.lowestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                        <br>
+                        <span class="score-percent">({{ section.lowestPercentage?.toFixed(1) || 0 }}%)</span>
+                      </td>
+                      <td class="center excellent">{{ section.distribution.excellent }}</td>
+                      <td class="center good">{{ section.distribution.good }}</td>
+                      <td class="center satisfactory">{{ section.distribution.satisfactory }}</td>
+                      <td class="center fair">{{ section.distribution.fair }}</td>
+                      <td class="center poor">{{ section.distribution.poor }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-
-            <!-- Low Performers -->
-            <div v-if="mpsData.lowPerformers && mpsData.lowPerformers.length > 0" style="margin-top: 8px;">
-              <h4>Students Needing Support</h4>
-              <table class="performers-table">
-                <thead>
-                  <tr>
-                    <th>Rank</th>
-                    <th>Name</th>
-                    <th>Section</th>
-                    <th>Score</th>
-                    <th>Percentage</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(student, idx) in mpsData.lowPerformers" :key="'print-low-'+idx">
-                    <td class="center">{{ (mpsData.topPerformers?.length || 0) + idx + 1 }}</td>
-                    <td>{{ student.name }}</td>
-                    <td class="center">{{ student.gradeLevel }}-{{ student.section }}</td>
-                    <td class="center">{{ student.score }}/{{ student.total }}</td>
-                    <td class="center">{{ student.percentage.toFixed(1) }}%</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div 
+              v-else
+              class="page-break-wrapper"
+            >
+              <div class="print-details-page new-page">
+                <h3 class="section-title">Section Performance Details (Continued)</h3>
+                <div class="print-details">
+                  <table class="details-table">
+                    <thead>
+                      <tr>
+                        <th class="col-section">Section</th>
+                        <th class="col-mps">MPS (%)</th>
+                        <th class="col-students">Students</th>
+                        <th class="col-score">Highest Score</th>
+                        <th class="col-score">Lowest Score</th>
+                        <th class="col-dist">Excellent</th>
+                        <th class="col-dist">Good</th>
+                        <th class="col-dist">Satisfactory</th>
+                        <th class="col-dist">Fair</th>
+                        <th class="col-dist">Poor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(section, index) in chunk" :key="index">
+                        <td class="section-name">{{ section.section }}</td>
+                        <td class="center highlight">{{ section.mps.toFixed(1) }}%</td>
+                        <td class="center">{{ section.studentCount }}</td>
+                        <td class="center">
+                          {{ section.highestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                          <br>
+                          <span class="score-percent">({{ section.highestPercentage?.toFixed(1) || 0 }}%)</span>
+                        </td>
+                        <td class="center">
+                          {{ section.lowestScoreRaw || 0 }}/{{ section.totalPossible || 0 }}
+                          <br>
+                          <span class="score-percent">({{ section.lowestPercentage?.toFixed(1) || 0 }}%)</span>
+                        </td>
+                        <td class="center excellent">{{ section.distribution.excellent }}</td>
+                        <td class="center good">{{ section.distribution.good }}</td>
+                        <td class="center satisfactory">{{ section.distribution.satisfactory }}</td>
+                        <td class="center fair">{{ section.distribution.fair }}</td>
+                        <td class="center poor">{{ section.distribution.poor }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
+          </template>
+        </div>
 
-            <!-- Performance Insights (Print) -->
-            <div v-if="mpsData.topPerformers && mpsData.lowPerformers" style="margin-top: 8px;">
-              <h4>Performance Insights</h4>
-              <table class="stats-table">
-                <tbody>
-                  <tr>
-                    <td><strong>Top Performers:</strong></td>
-                    <td>{{ mpsData.topPerformers.length }} students</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Need Support:</strong></td>
-                    <td>{{ mpsData.lowPerformers.length }} students</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Score Gap:</strong></td>
-                    <td>{{ ((mpsData.topPerformers[0]?.percentage || 0) - (mpsData.lowPerformers[0]?.percentage || 0)).toFixed(1) }}%</td>
-                  </tr>
-                </tbody>
-              </table>
+        <!-- Data Analysis Section (for PDF/Print) -->
+        <div v-if="includeAnalysisInPDF && dataAnalysis" class="print-analysis-wrapper">
+          <div class="print-analysis">
+            <div class="print-analysis-header">
+              <h2>Data Analysis & Insights</h2>
+            </div>
+            <div class="print-analysis-content">
+              <!-- Overall Performance Summary -->
+              <div class="print-analysis-section">
+                <h3>Overall Performance Summary</h3>
+                <div class="section-content">
+                  <p>{{ dataAnalysis.summary }}</p>
+                </div>
+              </div>
+
+              <!-- Performance Insights -->
+              <div class="print-analysis-section" v-if="dataAnalysis.insights && dataAnalysis.insights.length > 0">
+                <h3>Key Insights</h3>
+                <div class="section-content">
+                  <ul>
+                    <li v-for="(insight, idx) in dataAnalysis.insights" :key="'print-insight-'+idx">
+                      {{ insight }}
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <!-- Section Comparison -->
+              <div class="print-analysis-section" v-if="dataAnalysis.sectionComparison">
+                <h3>Section Performance Comparison</h3>
+                <div class="section-content">
+                  <div class="comparison-item" v-if="dataAnalysis.sectionComparison.topSection">
+                    <p><strong>Top Performing Section:</strong> {{ dataAnalysis.sectionComparison.topSection.name }} 
+                    (MPS: {{ dataAnalysis.sectionComparison.topSection.mps.toFixed(1) }}%)</p>
+                  </div>
+                  <div class="comparison-item" v-if="dataAnalysis.sectionComparison.bottomSection">
+                    <p><strong>Needs Improvement:</strong> {{ dataAnalysis.sectionComparison.bottomSection.name }} 
+                    (MPS: {{ dataAnalysis.sectionComparison.bottomSection.mps.toFixed(1) }}%)</p>
+                  </div>
+                  <div class="comparison-item" v-if="dataAnalysis.sectionComparison.gap">
+                    <p><strong>Performance Gap:</strong> {{ dataAnalysis.sectionComparison.gap.toFixed(1) }}% 
+                    between highest and lowest performing sections</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Score Distribution Analysis -->
+              <div class="print-analysis-section" v-if="dataAnalysis.distributionAnalysis">
+                <h3>Score Distribution Analysis</h3>
+                <div class="section-content">
+                  <p>{{ dataAnalysis.distributionAnalysis }}</p>
+                </div>
+              </div>
+
+              <!-- Recommendations -->
+              <div class="print-analysis-section" v-if="dataAnalysis.recommendations && dataAnalysis.recommendations.length > 0">
+                <h3>Recommendations</h3>
+                <div class="section-content">
+                  <ol>
+                    <li v-for="(rec, idx) in dataAnalysis.recommendations" :key="'print-rec-'+idx">
+                      {{ rec }}
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Signature Section -->
+        <div class="print-signatures">
+          <div class="signature-section">
+            <div class="signature-box signature-left">
+              <div class="signature-line"></div>
+              <div class="signature-label">Prepared by:</div>
+              <div class="signature-name">{{ mpsData.exam.teacher && mpsData.exam.teacher.name ? mpsData.exam.teacher.name : '___________________' }}</div>
+              <div class="signature-role">Teacher</div>
+            </div>
+            <div class="signature-box signature-right">
+              <div class="signature-line"></div>
+              <div class="signature-label">Noted by:</div>
+              <div class="signature-name">___________________</div>
+              <div class="signature-role">Principal</div>
             </div>
           </div>
         </div>
       </div>
 
+      <!-- Footer Section -->
       <div class="print-footer">
-        <p>Report Generated: {{ new Date().toLocaleString() }}</p>
-        <p>New Cabalan National High School - Examination Analysis System</p>
+        <div class="footer-content">
+          <p class="footer-text">Report Generated: {{ new Date().toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) }}</p>
+          <p class="footer-text">New Cabalan National High School - Examination Analysis System</p>
+        </div>
       </div>
     </div>
   </div>
@@ -1152,6 +1170,7 @@ const viewMode = ref('chart');
 // Data Analysis related refs (Non-AI)
 const showDataAnalysis = ref(false);
 const includeAnalysisInPrint = ref(true); // Default to include in print/PDF
+const includeAnalysisInPDF = ref(true); // Default to include in PDF
 const dataAnalysis = ref(null);
 
 // AI Analysis related refs
@@ -1185,6 +1204,25 @@ const examId = ref(route.params.examId);
 const totalStudents = computed(() => {
   if (!mpsData.value) return 0;
   return mpsData.value.totalStudents;
+});
+
+// Split sections into chunks: first page 7, subsequent pages 14 (to leave room for signatures)
+const sectionChunks = computed(() => {
+  if (!mpsData.value || !mpsData.value.sectionMPS) return [];
+  const sections = mpsData.value.sectionMPS;
+  const chunks = [];
+  
+  // First chunk: 7 sections
+  if (sections.length > 0) {
+    chunks.push(sections.slice(0, 7));
+  }
+  
+  // Remaining chunks: 14 sections each (to leave room for signatures at bottom)
+  for (let i = 7; i < sections.length; i += 14) {
+    chunks.push(sections.slice(i, i + 14));
+  }
+  
+  return chunks;
 });
 
 // Calculate distribution percentage for progress bars
@@ -1991,208 +2029,562 @@ const downloadPDF = () => {
     // Use a small delay to ensure styles are applied
     setTimeout(() => {
       try {
-        // A4 landscape: 297mm x 210mm (approximately 1123px x 794px at 96dpi)
+        // A4 landscape: 297mm x 210mm
+        // At 96 DPI: 1123px x 794px
+        // Account for reduced margins: 5mm on each side = 10mm total = ~38px
         const a4LandscapeWidth = 1123; // pixels for A4 landscape width
+        const contentWidth = a4LandscapeWidth - 40; // Account for reduced padding
+        
+        // Get the print-only element
+        const printElement = document.querySelector('.print-only');
+        if (!printElement) {
+          console.error('Print element not found');
+          viewMode.value = originalView;
+          return;
+        }
         
         // Create a clone of the print view to work with
         const element = document.createElement('div');
-        element.innerHTML = document.querySelector('.print-only').innerHTML;
+        element.innerHTML = printElement.innerHTML;
         element.classList.add('pdf-container');
+        
+        // Ensure logo images are properly loaded
+        const logoImages = element.querySelectorAll('.school-logo, .deped-logo');
+        logoImages.forEach(img => {
+          if (img.classList.contains('school-logo') && img.src && !img.src.startsWith('data:')) {
+            img.src = schoolLogoBase64.value || NcnhsLogo;
+          }
+        });
+        
+        // Apply wrapper styling
+        const wrapper = element.querySelector('.print-wrapper');
+        if (wrapper) {
+          wrapper.style.cssText = `
+            width: ${contentWidth}px;
+            max-width: ${contentWidth}px;
+            padding: 8mm 5mm !important;
+            margin: 0 auto !important;
+            box-sizing: border-box !important;
+            background: white;
+          `;
+        }
+        
+        // Ensure header content is properly styled
+        const headerContents = element.querySelectorAll('.header-content');
+        headerContents.forEach(header => {
+          header.style.cssText = `
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin-bottom: 4px !important;
+          `;
+        });
+        
+        const logoContainers = element.querySelectorAll('.logo-container');
+        logoContainers.forEach(container => {
+          container.style.cssText = `
+            width: 50px !important;
+            height: 50px !important;
+            margin-right: 10px !important;
+            flex-shrink: 0 !important;
+          `;
+        });
+        
+        const schoolLogos = element.querySelectorAll('.school-logo');
+        schoolLogos.forEach(logo => {
+          logo.style.cssText = `
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+            display: block !important;
+          `;
+        });
         
         // Apply professional styling to the cloned element
         element.style.cssText = `
           font-family: Arial, Helvetica, sans-serif;
-          font-size: 8pt;
-          line-height: 1.2;
+          font-size: 9pt;
+          line-height: 1.4;
           color: #000;
           background: white;
           width: ${a4LandscapeWidth}px;
           max-width: ${a4LandscapeWidth}px;
-          padding: 10px;
+          padding: 0;
           box-sizing: border-box;
-          overflow: hidden;
-          page-break-inside: avoid;
+          overflow: visible;
           margin: 0 auto;
         `;
         
-        // Fix potential HTML issues - ensure all tables have proper structure
+        // Ensure all tables fit properly
         const tables = element.querySelectorAll('table');
         tables.forEach(table => {
-          // Determine if this is the details table (has many columns)
-          const isDetailsTable = table.classList.contains('details-table') || 
-                                 table.querySelector('th')?.textContent?.includes('Section');
+          const isDetailsTable = table.classList.contains('details-table');
           
-          // Apply professional table styling with fixed layout
+          // Different page break handling for details table vs others
+          const pageBreakStyle = isDetailsTable 
+            ? 'page-break-inside: auto !important;' 
+            : 'page-break-inside: avoid !important;';
+          
           table.style.cssText = `
-            width: 100%;
-            max-width: 100%;
-            border-collapse: collapse;
-            font-size: 7.5pt;
-            margin-bottom: 10px;
-            border: 2px solid #000;
-            table-layout: fixed;
-            page-break-inside: avoid;
+            width: 100% !important;
+            max-width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 8.5pt !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 2px solid #000 !important;
+            table-layout: fixed !important;
+            ${pageBreakStyle}
           `;
           
-          // Set column widths for details table to prevent overflow
+          // For details table, prevent breaks within table
           if (isDetailsTable) {
-            const headerCells = table.querySelectorAll('thead th');
-            const totalCols = headerCells.length;
-            if (totalCols > 0) {
-              // Calculate widths: Section gets more space, others share evenly
-              headerCells.forEach((th, index) => {
-                let width = '';
-                if (index === 0) {
-                  // Section column - wider
-                  width = '12%';
-                } else if (index === 1) {
-                  // MPS column
-                  width = '8%';
-                } else if (index === 2) {
-                  // Students column
-                  width = '7%';
-                } else if (index === 3 || index === 4) {
-                  // Highest/Lowest Score columns
-                  width = '10%';
-                } else {
-                  // Distribution columns (Excellent, Good, etc.)
-                  width = `${Math.floor(53 / (totalCols - 5))}%`;
-                }
-                th.style.width = width;
+            const thead = table.querySelector('thead');
+            if (thead) {
+              thead.style.cssText = `
+                display: table-header-group !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+                break-after: avoid !important;
+                break-inside: avoid !important;
+              `;
+            }
+            
+            // Keep each row intact - no breaks within rows
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach((row) => {
+              row.style.cssText = `
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                page-break-after: auto !important;
+                page-break-before: auto !important;
+                display: table-row !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              `;
+              
+              // Ensure all cells in the row stay together
+              const cells = row.querySelectorAll('td');
+              cells.forEach(cell => {
+                cell.style.cssText = `
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  display: table-cell !important;
+                `;
               });
+            });
+            
+            // Table should not break inside
+            table.style.cssText = `
+              width: 100% !important;
+              max-width: 100% !important;
+              border-collapse: collapse !important;
+              font-size: 8.5pt !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              border: 2px solid #000 !important;
+              table-layout: fixed !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            `;
+            
+            // Ensure tbody doesn't break
+            const tbody = table.querySelector('tbody');
+            if (tbody) {
+              tbody.style.cssText = `
+                display: table-row-group !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              `;
             }
           }
           
-          // Style table headers
-          const headers = table.querySelectorAll('th');
-          headers.forEach(th => {
-            th.style.cssText = `
-              border: 1px solid #000;
-              padding: 4px 2px;
-              text-align: center;
-              vertical-align: middle;
-              background-color: #f0f0f0;
-              font-weight: bold;
-              font-size: 7.5pt;
-              color: #000;
-              word-wrap: break-word;
-              overflow: hidden;
-              white-space: normal;
+          // Handle page break wrappers
+          const pageBreakWrappers = element.querySelectorAll('.page-break-wrapper');
+          pageBreakWrappers.forEach((wrapper) => {
+            wrapper.style.cssText = `
+              page-break-before: always !important;
+              break-before: page !important;
+              margin: 0 !important;
+              padding-top: 25px !important;
+              padding-bottom: 0 !important;
+              padding-left: 0 !important;
+              padding-right: 0 !important;
+              display: block !important;
+              width: 100% !important;
+              clear: both !important;
             `;
           });
           
-          // Style table cells
-          const cells = table.querySelectorAll('td');
-          cells.forEach(td => {
-            td.style.cssText = `
-              border: 1px solid #000;
-              padding: 4px 2px;
-              text-align: center;
-              vertical-align: middle;
-              background-color: #fff;
-              color: #000;
-              word-wrap: break-word;
-              overflow: hidden;
-              font-size: 7.5pt;
-              white-space: normal;
+          // Handle print-details-page containers
+          const detailPages = element.querySelectorAll('.print-details-page');
+          detailPages.forEach((page) => {
+            page.style.cssText = `
+              display: block !important;
+              width: 100% !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
             `;
+            
+            // Ensure tables inside don't break
+            const tables = page.querySelectorAll('.details-table');
+            tables.forEach(table => {
+              table.style.cssText = `
+                width: 100% !important;
+                max-width: 100% !important;
+                border-collapse: collapse !important;
+                font-size: 8.5pt !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 2px solid #000 !important;
+                table-layout: fixed !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              `;
+            });
           });
           
-          // Style section names
-          const sectionNames = table.querySelectorAll('.section-name');
-          sectionNames.forEach(td => {
-            td.style.cssText = `
-              border: 1px solid #000;
-              padding: 4px 2px;
-              text-align: left;
-              vertical-align: middle;
-              background-color: #f8f8f8;
-              color: #000;
-              font-weight: bold;
-              word-wrap: break-word;
-              overflow: hidden;
-              font-size: 7.5pt;
-              white-space: normal;
+          // Ensure table cells don't overflow
+          const allCells = table.querySelectorAll('th, td');
+          allCells.forEach(cell => {
+            cell.style.cssText = `
+              word-wrap: break-word !important;
+              overflow-wrap: break-word !important;
+              hyphens: auto !important;
+              padding: 6px 4px !important;
+              font-size: 8.5pt !important;
+              line-height: 1.3 !important;
+              page-break-inside: avoid !important;
             `;
           });
         });
         
-        // Style signature section
-        const signatureSection = element.querySelector('.print-signatures');
-        if (signatureSection) {
-          signatureSection.style.cssText = `
-            margin-top: 30px;
-            margin-bottom: 20px;
-            page-break-inside: avoid;
+        // Style analysis wrapper for PDF
+        const analysisWrappers = element.querySelectorAll('.print-analysis-wrapper');
+        analysisWrappers.forEach(wrapper => {
+          wrapper.style.cssText = `
+            margin: 30px 0 0 0 !important;
+            padding: 60px 0 0 0 !important;
+            page-break-before: auto !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            display: block !important;
+            width: 100% !important;
+          `;
+        });
+        
+        // Style analysis sections for PDF
+        const analysisSections = element.querySelectorAll('.print-analysis-section');
+        analysisSections.forEach((section, index) => {
+          // Check if this section contains stats-table
+          const hasStatsTable = section.querySelector('.stats-table');
+          
+          // Check if next section has stats-table (for reducing margin-bottom on previous section)
+          const nextSection = analysisSections[index + 1];
+          const nextHasStatsTable = nextSection ? nextSection.querySelector('.stats-table') : false;
+          
+          // Check if this is the last section (before signatures)
+          const isLastSection = index === analysisSections.length - 1;
+          
+          // Reduce margin-bottom for sections with stats-table
+          // Also reduce margin-bottom for sections followed by stats-table (like Recommendations)
+          let marginBottom = '20px';
+          let marginTop = '0px';
+          
+          if (hasStatsTable) {
+            marginBottom = '0px'; // No bottom margin for section containing stats-table
+            marginTop = '25px'; // Add more space above Statistical Highlights section
+          } else if (nextHasStatsTable) {
+            marginBottom = '4px'; // Reduced margin when followed by stats-table
+          } else if (isLastSection) {
+            marginBottom = '8px'; // Reduced margin for last section before signatures
+          }
+          
+          section.style.cssText = `
+            margin: ${marginTop} 0 ${marginBottom} 0 !important;
+            padding: 0 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            min-height: 40px !important;
+          `;
+        });
+        
+        // Also reduce margin on stats-table itself
+        const statsTables = element.querySelectorAll('.stats-table');
+        statsTables.forEach(table => {
+          table.style.cssText = `
+            width: 100% !important;
+            max-width: 100% !important;
+            border-collapse: collapse !important;
+            margin: 0 !important;
+            font-size: 9.5pt !important;
+            border: 2px solid #000 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            table-layout: fixed !important;
           `;
           
-          const signatureBoxes = signatureSection.querySelectorAll('.signature-box');
-          signatureBoxes.forEach(box => {
-            box.style.cssText = `
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              min-width: 200px;
-              text-align: center;
+          // Style table header
+          const thead = table.querySelector('thead');
+          if (thead) {
+            thead.style.cssText = `
+              background-color: #2c3e50 !important;
+              color: #fff !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            `;
+          }
+          
+          // Style table header cells
+          const thCells = table.querySelectorAll('thead th');
+          thCells.forEach(th => {
+            th.style.cssText = `
+              border: 1px solid #000 !important;
+              padding: 8px 12px !important;
+              text-align: left !important;
+              font-weight: bold !important;
+              font-size: 9.5pt !important;
+              color: #fff !important;
+              background-color: #2c3e50 !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            `;
+          });
+          
+          // Style table body rows with alternating colors
+          const tbodyRows = table.querySelectorAll('tbody tr');
+          tbodyRows.forEach((row, index) => {
+            const bgColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+            row.style.cssText = `
+              background-color: ${bgColor} !important;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             `;
             
-            const signatureLine = box.querySelector('.signature-line');
-            if (signatureLine) {
-              signatureLine.style.cssText = `
-                width: 200px;
-                height: 0;
-                border-top: 2px solid #000;
-                margin-bottom: 50px;
-                margin-top: 0;
-              `;
-            }
-            
-            const signatureLabel = box.querySelector('.signature-label');
-            if (signatureLabel) {
-              signatureLabel.style.cssText = `
-                font-size: 10pt;
-                font-weight: bold;
-                margin-bottom: 5px;
-                color: #000;
-              `;
-            }
-            
-            const signatureName = box.querySelector('.signature-name');
-            if (signatureName) {
-              signatureName.style.cssText = `
-                font-size: 11pt;
-                font-weight: 600;
-                margin-bottom: 5px;
-                color: #000;
-                min-height: 20px;
-              `;
-            }
-            
-            const signatureRole = box.querySelector('.signature-role');
-            if (signatureRole) {
-              signatureRole.style.cssText = `
-                font-size: 9pt;
-                color: #000;
-                font-style: italic;
-              `;
-            }
+            // Style cells in each row
+            const cells = row.querySelectorAll('td');
+            cells.forEach((cell, cellIndex) => {
+              if (cellIndex === 0) {
+                cell.style.cssText = `
+                  padding: 8px 12px !important;
+                  border: 1px solid #ddd !important;
+                  font-weight: 600 !important;
+                  background-color: ${bgColor} !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                `;
+              } else {
+                cell.style.cssText = `
+                  padding: 8px 12px !important;
+                  border: 1px solid #ddd !important;
+                  text-align: right !important;
+                  font-weight: 600 !important;
+                  color: #2c3e50 !important;
+                  background-color: ${bgColor} !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                `;
+              }
+            });
           });
-        }
+        });
+        
+        // Style recommendations list for PDF
+        const recommendationsLists = element.querySelectorAll('.print-analysis-section ol');
+        recommendationsLists.forEach(ol => {
+          ol.style.cssText = `
+            margin: 0 !important;
+            padding: 8px 0 8px 24px !important;
+            border-left: 3px solid #3498db !important;
+            background-color: #f8f9fa !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          `;
+          
+          // Style list items
+          const listItems = ol.querySelectorAll('li');
+          listItems.forEach(li => {
+            li.style.cssText = `
+              padding: 6px 0 !important;
+              margin: 0 !important;
+              line-height: 1.5 !important;
+              color: #333 !important;
+            `;
+          });
+        });
+        
+        // Style section-content for recommendations
+        const sectionContents = element.querySelectorAll('.print-analysis-section .section-content');
+        sectionContents.forEach(content => {
+          const hasOl = content.querySelector('ol');
+          if (hasOl) {
+            content.style.cssText = `
+              margin: 0 !important;
+              padding: 0 !important;
+            `;
+          }
+        });
+        
+        // Style signature section for PDF
+        const signatureSections = element.querySelectorAll('.signature-section');
+        signatureSections.forEach(section => {
+          section.style.cssText = `
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-end !important;
+            width: 100% !important;
+            min-height: 60px !important;
+            margin: 0 !important;
+            padding: 0 40px !important;
+            position: relative !important;
+          `;
+        });
+        
+        const signatureBoxes = element.querySelectorAll('.signature-box');
+        signatureBoxes.forEach(box => {
+          box.style.cssText = `
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            min-width: 160px !important;
+            max-width: 200px !important;
+            text-align: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            flex: 0 0 auto !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        });
+        
+        const printSignatures = element.querySelectorAll('.print-signatures');
+        printSignatures.forEach(sig => {
+          sig.style.cssText = `
+            margin: 15px 0 10px 0 !important;
+            padding: 0 !important;
+            page-break-inside: avoid !important;
+            page-break-before: auto !important;
+            break-inside: avoid !important;
+            break-before: auto !important;
+            position: relative !important;
+            width: 100% !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        });
+        
+        // Style signature elements
+        const signatureLines = element.querySelectorAll('.signature-line');
+        signatureLines.forEach(line => {
+          line.style.cssText = `
+            width: 180px !important;
+            height: 0 !important;
+            border-top: 1.5px solid #000 !important;
+            margin: 0 0 8px 0 !important;
+            display: block !important;
+          `;
+        });
+        
+        const signatureLabels = element.querySelectorAll('.signature-label');
+        signatureLabels.forEach(label => {
+          label.style.cssText = `
+            font-size: 8pt !important;
+            font-weight: 600 !important;
+            margin: 0 0 3px 0 !important;
+            padding: 0 !important;
+            color: #000 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.3px !important;
+            display: block !important;
+          `;
+        });
+        
+        const signatureNames = element.querySelectorAll('.signature-name');
+        signatureNames.forEach(name => {
+          name.style.cssText = `
+            font-size: 9pt !important;
+            font-weight: 600 !important;
+            margin: 0 0 3px 0 !important;
+            padding: 0 0 2px 0 !important;
+            color: #000 !important;
+            min-height: 14px !important;
+            border-bottom: 1px solid #000 !important;
+            display: block !important;
+            width: 180px !important;
+            text-align: center !important;
+          `;
+        });
+        
+        const signatureRoles = element.querySelectorAll('.signature-role');
+        signatureRoles.forEach(role => {
+          role.style.cssText = `
+            font-size: 8pt !important;
+            color: #555 !important;
+            font-style: italic !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          `;
+        });
+        
+        // Style footer for PDF
+        const printFooters = element.querySelectorAll('.print-footer');
+        printFooters.forEach(footer => {
+          footer.style.cssText = `
+            margin: 25px 0 0 0 !important;
+            padding: 12px 0 8px 0 !important;
+            border-top: 2px solid #2c3e50 !important;
+            background-color: #f8f9fa !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            font-size: 8pt !important;
+            color: #555 !important;
+            text-align: center !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            width: 100% !important;
+            display: block !important;
+          `;
+        });
+        
+        const footerContents = element.querySelectorAll('.footer-content');
+        footerContents.forEach(content => {
+          content.style.cssText = `
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+          `;
+        });
+        
+        const footerTexts = element.querySelectorAll('.footer-text');
+        footerTexts.forEach((text, index) => {
+          text.style.cssText = `
+            margin: ${index === 0 ? '0 0 4px 0' : '0'} !important;
+            padding: 0 !important;
+            line-height: 1.4 !important;
+            font-size: 8pt !important;
+            color: #555 !important;
+            display: block !important;
+          `;
+        });
         
         document.body.appendChild(element);
         
-        // Wait a bit for styles to apply and calculate dimensions
+        // Wait for styles to apply and calculate dimensions
         setTimeout(() => {
           const elementWidth = a4LandscapeWidth;
           const elementHeight = element.scrollHeight || element.offsetHeight;
       
-          // Setup PDF options for landscape with better margins
+          // Setup PDF options for landscape with reduced margins
           const options = {
-            margin: [8, 8, 12, 8], // [top, left, bottom, right] - optimized margins
+            margin: [5, 5, 5, 5], // [top, left, bottom, right] in mm - reduced margins
             filename: `MPS_Report_${mpsData.value.exam.testCode}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { 
-              scale: 0.95, // Slightly reduced to ensure fit
+              scale: 2, // Higher scale for better quality
               useCORS: true, 
               logging: false,
               backgroundColor: '#ffffff',
@@ -2201,7 +2593,11 @@ const downloadPDF = () => {
               windowWidth: elementWidth,
               windowHeight: elementHeight,
               x: 0,
-              y: 0
+              y: 0,
+              scrollX: 0,
+              scrollY: 0,
+              allowTaint: false,
+              letterRendering: true
             },
             jsPDF: { 
               unit: 'mm', 
@@ -2209,7 +2605,11 @@ const downloadPDF = () => {
               orientation: 'landscape',
               compress: true
             },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            pagebreak: { 
+              mode: ['css'],
+              avoid: ['.summary-table', '.distribution-table', '.print-header', '.section-title', '.print-details-page', '.details-table', '.print-analysis-section', '.stats-table', '.print-analysis-header', '.print-analysis-wrapper', '.print-signatures', '.signature-section', '.print-footer', '.footer-content'],
+              before: ['.print-analysis-wrapper']
+            }
           };
           
           // Generate PDF
@@ -2219,7 +2619,9 @@ const downloadPDF = () => {
             .save()
             .then(() => {
               // Cleanup - remove the cloned element
-              document.body.removeChild(element);
+              if (document.body.contains(element)) {
+                document.body.removeChild(element);
+              }
               // Reset view mode
               viewMode.value = originalView;
             })
@@ -2231,7 +2633,7 @@ const downloadPDF = () => {
               }
               viewMode.value = originalView;
             });
-        }, 200);
+        }, 300);
       } catch (error) {
         console.error('Error preparing PDF:', error);
         viewMode.value = originalView;
@@ -2663,8 +3065,43 @@ const useUniqueColors = ref(true); // Enabled by default
 .header-actions {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pdf-options-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-left: 1px solid #e0e0e0;
+  border-right: 1px solid #e0e0e0;
+}
+
+.include-pdf-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #666;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.include-pdf-label:hover {
+  background-color: #f5f5f5;
+}
+
+.include-pdf-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3f51b5;
+  cursor: pointer;
 }
 
 .action-btn {
@@ -3152,18 +3589,12 @@ th {
     box-sizing: border-box !important;
   }
   
-  /* Remove all default spacing from print-only children */
-  .print-only > * {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  
-  .print-only > *:first-child {
-    margin-top: 0 !important;
-  }
-  
-  .print-only > *:last-child {
-    margin-bottom: 0 !important;
+  .print-wrapper {
+    width: 100%;
+    max-width: 100%;
+    padding: 8mm 5mm !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
   }
   
   * {
@@ -3176,94 +3607,137 @@ th {
     font-family: 'Arial', 'Helvetica', sans-serif;
     background: white;
     color: #000;
+    font-size: 9pt;
+    line-height: 1.4;
+  }
+  
+  /* Page setup for landscape - reduced margins */
+  @page {
+    size: A4 landscape;
+    margin: 5mm;
+  }
+  
+  /* Header Section - Horizontal Layout like ExamPaperPreview */
+  .print-header {
+    margin: 0 0 12px 0 !important;
+    padding: 0 !important;
+    page-break-after: avoid;
+    page-break-inside: avoid;
+  }
+  
+  .header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px !important;
+  }
+  
+  .logo-container {
+    width: 50px;
+    height: 50px;
+    margin-right: 10px;
+    flex-shrink: 0;
+  }
+  
+  .school-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  
+  .school-info {
+    text-align: center;
+  }
+  
+  .republic, .department, .region, .division {
     font-size: 8pt;
-    line-height: 1.2;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.1;
+    color: #000;
   }
   
-  /* Remove ALL default margins and padding from print elements */
-  .print-only * {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
+  .school-name {
+    font-size: 14pt;
+    font-weight: bold;
+    margin: 2px 0 !important;
+    padding: 0 !important;
+    letter-spacing: 0.3px;
+    color: #000;
+    text-transform: uppercase;
   }
   
-  /* Remove spacing from div containers */
-  .print-summary,
-  .print-distribution,
-  .print-details {
+  .report-title {
+    font-size: 10pt;
+    font-weight: 600;
+    margin: 2px 0 0 0 !important;
+    padding: 0 !important;
+    color: #000;
+    text-transform: uppercase;
+  }
+  
+  .line-break {
+    height: 1px;
+    background: #000;
+    margin: 4px 0 !important;
+  }
+  
+  .header-exam-info {
+    margin: 8px 0 0 0 !important;
+    padding: 0 !important;
+  }
+  
+  .exam-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px 20px;
+    font-size: 9pt;
     margin: 0 !important;
     padding: 0 !important;
   }
   
-  /* Only add minimal spacing between major sections */
-  .print-distribution {
-    margin-top: 2px !important;
+  .exam-info-item {
+    display: flex;
+    gap: 8px;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
-  .print-details {
-    margin-top: 2px !important;
+  .exam-label {
+    font-weight: 600;
+    color: #000;
+    min-width: 100px;
   }
   
-  .print-signatures {
-    margin-top: 4px !important;
+  .exam-value {
+    color: #333;
+    flex: 1;
   }
   
-  .print-footer {
-    margin-top: 4px !important;
+  /* Section Styling */
+  .print-section {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: auto;
   }
   
-  /* Page setup for landscape */
-  @page {
-    size: A4 landscape;
-    margin: 0.5cm;
-  }
-  
-  .print-header {
-    text-align: center;
-    margin: 0 0 4px 0 !important;
-    padding: 0 0 4px 0 !important;
-    border-bottom: 2px solid #000;
+  .section-details-wrapper {
+    margin-bottom: 20px !important;
     page-break-after: avoid;
   }
   
-  .print-title {
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-  
-  .print-title h1 {
-    font-size: 14pt;
+  .section-title {
+    font-size: 11pt;
     font-weight: bold;
-    margin: 0 0 2px 0 !important;
-    padding: 0 !important;
+    margin: 0 0 8px 0 !important;
+    padding: 0 0 4px 0 !important;
     color: #000;
+    border-bottom: 2px solid #333;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-  }
-  
-  .print-title h2 {
-    font-size: 11pt;
-    font-weight: normal;
-    margin: 0 0 3px 0 !important;
-    padding: 0 !important;
-    color: #000;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-  
-  .print-exam-info {
-    display: flex;
-    justify-content: center;
-    font-size: 9pt;
-    gap: 20px;
-    margin: 2px 0 0 0 !important;
-    padding: 0 !important;
-    flex-wrap: wrap;
-  }
-  
-  .print-exam-info p {
-    margin: 0 !important;
-    padding: 0 !important;
-    color: #000;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
   
   .print-summary, .print-distribution {
@@ -3275,62 +3749,126 @@ th {
   .print-details {
     margin: 0 !important;
     padding: 0 !important;
-    page-break-inside: auto; /* Allow table to break if needed */
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible;
   }
   
-  /* Prevent page break between summary and distribution */
-  .print-summary {
-    page-break-after: avoid;
+  /* Each details page is a separate page block */
+  .print-details-page {
+    display: block;
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: visible;
+    min-height: 0;
   }
   
-  .print-distribution {
-    page-break-after: avoid;
+  .page-break-wrapper {
+    page-break-before: always !important;
+    break-before: page !important;
+    margin: 0 !important;
+    padding-top: 25px !important;
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    display: block !important;
+    width: 100% !important;
+    clear: both !important;
+  }
+  
+  /* Force new page for subsequent pages */
+  .print-details-page.new-page {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    clear: both !important;
+    display: block !important;
+  }
+  
+  /* First page should not break before */
+  .print-details-page:first-child {
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+  
+  .print-details-page .section-title {
+    margin-bottom: 8px !important;
+    margin-top: 0 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  
+  .print-details-page .print-details {
+    margin: 0 !important;
+    padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  .print-details-page .details-table {
+    margin-bottom: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
   
   /* Professional table styling */
-  .summary-table, .distribution-table, .details-table {
+  .summary-table, .distribution-table {
     width: 100%;
     max-width: 100%;
     border-collapse: collapse;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
     margin: 0 !important;
     padding: 0 !important;
     border: 2px solid #000;
     table-layout: fixed;
+    page-break-inside: avoid;
+  }
+  
+  .details-table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    font-size: 8.5pt;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 2px solid #000;
+    table-layout: fixed;
+    page-break-inside: auto;
   }
   
   .summary-table th, .summary-table td,
   .distribution-table th, .distribution-table td,
   .details-table th, .details-table td {
-    border: 1px solid #000;
-    padding: 4px 2px;
+    border: 1px solid #333;
+    padding: 6px 4px;
     text-align: center;
     vertical-align: middle;
     word-wrap: break-word;
     overflow: hidden;
     white-space: normal;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
+    line-height: 1.3;
   }
   
   /* Set column widths for details table */
-  .details-table th:nth-child(1) { width: 12%; } /* Section */
-  .details-table th:nth-child(2) { width: 8%; }  /* MPS */
-  .details-table th:nth-child(3) { width: 7%; }   /* Students */
-  .details-table th:nth-child(4) { width: 10%; } /* Highest */
-  .details-table th:nth-child(5) { width: 10%; }  /* Lowest */
-  .details-table th:nth-child(6),
-  .details-table th:nth-child(7),
-  .details-table th:nth-child(8),
-  .details-table th:nth-child(9),
-  .details-table th:nth-child(10) { width: 10.6%; } /* Distribution columns */
+  .details-table .col-section { width: 14%; } /* Section */
+  .details-table .col-mps { width: 9%; }  /* MPS */
+  .details-table .col-students { width: 8%; }   /* Students */
+  .details-table .col-score { width: 11%; } /* Highest/Lowest */
+  .details-table .col-dist { width: 9.6%; } /* Distribution columns */
   
   .summary-table th, .distribution-table th, .details-table th {
-    background-color: #f0f0f0 !important;
+    background-color: #2c3e50 !important;
+    color: #fff !important;
     font-weight: bold;
-    font-size: 7.5pt !important;
-    color: #000;
+    font-size: 9pt !important;
+    padding: 8px 4px !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
   
   .summary-table td, .distribution-table td, .details-table td {
@@ -3343,9 +3881,10 @@ th {
   /* Section name styling */
   .section-name {
     text-align: left !important;
-    font-weight: bold;
-    background-color: #f8f8f8 !important;
-    font-size: 7.5pt !important;
+    font-weight: 600;
+    background-color: #ecf0f1 !important;
+    font-size: 8.5pt !important;
+    padding-left: 8px !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -3354,20 +3893,102 @@ th {
     text-align: center;
   }
   
-  /* Table headers repeat on page breaks */
-  .summary-table thead, .distribution-table thead, .details-table thead {
+  .highlight {
+    font-weight: 600;
+    color: #2c3e50;
+  }
+  
+  .score-percent {
+    font-size: 7.5pt;
+    color: #555;
+  }
+  
+  .range {
+    font-size: 7pt;
+    font-weight: normal;
+    color: #666;
+  }
+  
+  .excellent { background-color: #d5f4e6 !important; }
+  .good { background-color: #d4e6f1 !important; }
+  .satisfactory { background-color: #fff9e6 !important; }
+  .fair { background-color: #ffe6cc !important; }
+  .poor { background-color: #fadbd8 !important; }
+  
+  /* Table headers - only repeat for details table, not overlapping */
+  .summary-table thead, .distribution-table thead {
     display: table-header-group;
   }
   
-  .summary-table tbody, .distribution-table tbody, .details-table tbody {
+  .summary-table tbody, .distribution-table tbody {
     display: table-row-group;
   }
   
-  /* Prevent row breaks */
-  tr {
+  /* Prevent row breaks for summary and distribution */
+  .summary-table tr, .distribution-table tr {
     page-break-inside: avoid;
     margin: 0 !important;
     padding: 0 !important;
+  }
+  
+  /* Details table - prevent breaks within table, allow between pages */
+  .details-table {
+    page-break-after: auto;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+  }
+  
+  /* Details table header - show only at top, don't repeat */
+  .details-table thead {
+    display: table-header-group;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  .details-table thead tr {
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+    break-after: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  .details-table tbody {
+    display: table-row-group;
+  }
+  
+  /* Keep each row together - no breaks within rows */
+  .details-table tbody tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: auto;
+    page-break-before: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: table-row;
+  }
+  
+  /* Ensure table cells stay together within a row */
+  .details-table td, .details-table th {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: table-cell;
+  }
+  
+  /* Prevent rows from being split across pages */
+  .details-table tbody tr td {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Ensure proper color rendering */
+  .details-table {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   /* Remove spacing between table sections */
@@ -3380,23 +4001,23 @@ th {
   /* Ensure no extra spacing in table cells */
   th, td {
     margin: 0 !important;
-    padding: 4px 2px !important;
+    padding: 6px 4px !important;
   }
   
   /* Remove any spacing between table rows */
   tr {
     margin: 0 !important;
     padding: 0 !important;
-    line-height: 1.1 !important;
+    line-height: 1.3 !important;
   }
   
-  /* Ensure tables are directly adjacent with minimal spacing */
-  .print-summary + .print-distribution {
-    margin-top: 1px !important;
+  /* Ensure tables have proper spacing */
+  .print-summary {
+    margin-bottom: 12px !important;
   }
   
-  .print-distribution + .print-details {
-    margin-top: 1px !important;
+  .print-distribution {
+    margin-bottom: 12px !important;
   }
   
   /* Force remove any spacing from table containers */
@@ -3408,99 +4029,148 @@ th {
   
   /* Signature section styling */
   .print-signatures {
-    margin: 0 !important;
+    margin: 40px 0 0 0 !important;
     padding: 0 !important;
-    margin-top: 3px !important;
     page-break-inside: avoid;
+    page-break-before: avoid;
+    break-inside: avoid;
+    break-before: avoid;
+    position: relative;
+    width: 100%;
   }
   
   .signature-section {
     display: flex;
-    justify-content: space-around;
-    align-items: flex-start;
+    justify-content: space-between;
+    align-items: flex-end;
+    width: 100%;
+    min-height: 100px;
     margin: 0 !important;
-    padding: 0 20px;
+    padding: 0 40px 0 40px !important;
+    position: relative;
   }
   
   .signature-box {
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 180px;
+    min-width: 200px;
+    max-width: 250px;
     text-align: center;
     margin: 0 !important;
     padding: 0 !important;
+    flex: 0 0 auto;
+  }
+  
+  .signature-box.signature-left {
+    align-self: flex-start;
+  }
+  
+  .signature-box.signature-right {
+    align-self: flex-end;
   }
   
   .signature-line {
-    width: 180px;
+    width: 220px;
     height: 0;
     border-top: 2px solid #000;
-    margin: 0 0 20px 0 !important;
+    margin: 0 0 30px 0 !important;
   }
   
   .signature-label {
     font-size: 9pt;
-    font-weight: bold;
-    margin: 0 0 1px 0 !important;
+    font-weight: 600;
+    margin: 0 0 4px 0 !important;
     padding: 0 !important;
     color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
   
   .signature-name {
-    font-size: 10pt;
+    font-size: 11pt;
     font-weight: 600;
-    margin: 0 0 1px 0 !important;
+    margin: 0 0 4px 0 !important;
     padding: 0 !important;
     color: #000;
-    min-height: 14px;
+    min-height: 18px;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px !important;
   }
   
   .signature-role {
-    font-size: 8pt;
-    color: #000;
+    font-size: 9pt;
+    color: #555;
     font-style: italic;
     margin: 0 !important;
     padding: 0 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
   
   /* Footer styling */
   .print-footer {
-    margin: 0 !important;
-    padding: 2px 0 0 0 !important;
-    border-top: 1px solid #000;
+    margin: 25px 0 0 0 !important;
+    padding: 12px 0 8px 0 !important;
+    border-top: 2px solid #2c3e50 !important;
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
     font-size: 8pt;
-    color: #000;
+    color: #555;
     text-align: center;
     page-break-inside: avoid;
+    break-inside: avoid;
+    width: 100%;
   }
   
-  .print-footer p {
+  .footer-content {
     margin: 0 !important;
     padding: 0 !important;
+  }
+  
+  .footer-text {
+    margin: 0 0 4px 0 !important;
+    padding: 0 !important;
+    line-height: 1.4;
+    font-size: 8pt;
+    color: #555;
+  }
+  
+  .footer-text:last-child {
+    margin-bottom: 0 !important;
   }
   
   /* Print Analysis Section */
+  .print-analysis-wrapper {
+    margin: 30px 0 0 0 !important;
+    padding: 60px 0 0 0 !important;
+    page-break-before: auto;
+    page-break-after: avoid;
+  }
+  
   .print-analysis {
     margin: 0 !important;
     padding: 0 !important;
-    margin-top: 4px !important;
     page-break-inside: avoid;
   }
   
   .print-analysis-header {
-    margin: 0 0 4px 0 !important;
-    padding: 0 0 2px 0 !important;
-    border-bottom: 2px solid #000;
+    margin: 0 0 20px 0 !important;
+    padding: 0 0 12px 0 !important;
+    border-bottom: 3px solid #000;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
   
   .print-analysis-header h2 {
-    font-size: 11pt;
+    font-size: 14pt;
     font-weight: bold;
     margin: 0 !important;
     padding: 0 !important;
     color: #000;
     text-transform: uppercase;
+    letter-spacing: 0.8px;
   }
   
   .print-analysis-content {
@@ -3509,109 +4179,195 @@ th {
   }
   
   .print-analysis-section {
-    margin: 0 0 8px 0 !important;
-    padding: 4px 0 !important;
+    margin: 0 0 20px 0 !important;
+    padding: 0 !important;
     page-break-inside: avoid;
+    break-inside: avoid;
+    min-height: 40px;
+  }
+  
+  /* Reduce spacing for sections containing stats-table (before recommendations) */
+  .print-analysis-section:has(.stats-table) {
+    margin-bottom: 8px !important;
+  }
+  
+  .print-analysis-section:last-child {
+    margin-bottom: 0 !important;
   }
   
   .print-analysis-section h3 {
-    font-size: 9pt;
+    font-size: 11.5pt;
     font-weight: bold;
-    margin: 0 0 4px 0 !important;
-    padding: 0 !important;
+    margin: 0 0 12px 0 !important;
+    padding: 0 0 8px 0 !important;
     color: #000;
-    border-bottom: 1px solid #000;
-    padding-bottom: 2px !important;
+    border-bottom: 2px solid #333;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  
+  .section-content {
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   .print-analysis-section p {
-    margin: 0 0 4px 0 !important;
+    margin: 0 0 10px 0 !important;
     padding: 0 !important;
-    font-size: 8pt;
-    line-height: 1.3;
+    font-size: 10pt;
+    line-height: 1.7;
     color: #000;
     text-align: justify;
   }
   
+  .print-analysis-section p:last-child {
+    margin-bottom: 0 !important;
+  }
+  
   .print-analysis-section ul,
   .print-analysis-section ol {
-    margin: 0 0 4px 0 !important;
-    padding-left: 20px !important;
-    font-size: 8pt;
-    line-height: 1.3;
+    margin: 0 0 10px 0 !important;
+    padding-left: 30px !important;
+    font-size: 10pt;
+    line-height: 1.7;
   }
   
   .print-analysis-section li {
-    margin: 0 0 2px 0 !important;
+    margin: 0 0 8px 0 !important;
     padding: 0 !important;
     color: #000;
   }
   
-  .print-analysis-section div {
-    margin: 0 0 4px 0 !important;
+  .print-analysis-section li:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  .comparison-item {
+    margin: 0 0 8px 0 !important;
     padding: 0 !important;
-    font-size: 8pt;
-    line-height: 1.3;
-    color: #000;
+  }
+  
+  .comparison-item:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  .comparison-item p {
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   .stats-table {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
-    margin: 4px 0 !important;
-    font-size: 8pt;
+    margin: 12px 0 0 0 !important;
+    font-size: 9.5pt;
+    border: 2px solid #000;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    table-layout: fixed;
+  }
+  
+  .stats-table thead {
+    background-color: #2c3e50 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    display: table-header-group;
+  }
+  
+  .stats-table th {
+    border: 1px solid #000;
+    padding: 10px 14px !important;
+    text-align: left;
+    font-weight: bold;
+    font-size: 10pt;
+    color: #fff !important;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  
+  .stats-table tbody {
+    display: table-row-group;
   }
   
   .stats-table tr {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #333;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  .stats-table tr:last-child {
+    border-bottom: none;
   }
   
   .stats-table td {
-    padding: 2px 4px !important;
+    padding: 10px 14px !important;
     text-align: left;
     color: #000;
+    border: 1px solid #333;
+    font-size: 10pt;
+    vertical-align: middle;
   }
   
   .stats-table td:first-child {
-    width: 60%;
+    width: 70%;
+    font-weight: 600;
+    background-color: #f8f9fa !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .stats-table td:last-child {
+    text-align: right;
+    font-weight: 600;
+    color: #2c3e50;
   }
   
   .print-analysis-section h4 {
-    font-size: 8.5pt;
+    font-size: 10.5pt;
     font-weight: bold;
-    margin: 4px 0 2px 0 !important;
+    margin: 8px 0 8px 0 !important;
     padding: 0 !important;
     color: #000;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
   }
   
   .performers-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 4px 0 !important;
-    font-size: 7.5pt;
-    border: 1px solid #000;
+    margin: 6px 0 !important;
+    font-size: 8.5pt;
+    border: 2px solid #000;
+    table-layout: fixed;
   }
   
   .performers-table thead {
-    background-color: #f0f0f0 !important;
+    background-color: #2c3e50 !important;
+    color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   
   .performers-table th {
     border: 1px solid #000;
-    padding: 3px 2px !important;
+    padding: 6px 4px !important;
     text-align: center;
     font-weight: bold;
-    font-size: 7.5pt;
-    color: #000;
+    font-size: 8.5pt;
+    color: #fff !important;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
   
   .performers-table td {
-    border: 1px solid #000;
-    padding: 3px 2px !important;
+    border: 1px solid #333;
+    padding: 6px 4px !important;
     text-align: left;
-    font-size: 7.5pt;
+    font-size: 8.5pt;
     color: #000;
   }
   
@@ -3622,59 +4378,409 @@ th {
 
 .print-only {
   display: none;
-  padding: 20px;
+}
+
+.print-wrapper {
+  width: 100%;
+  max-width: 100%;
+  padding: 8mm 5mm;
+  margin: 0 auto;
+  box-sizing: border-box;
+  background: white;
+}
+
+.print-only .header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.print-only .logo-container {
+  width: 50px;
+  height: 50px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.print-only .school-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.print-only .school-info {
+  text-align: center;
+}
+
+.print-only .republic, 
+.print-only .department, 
+.print-only .region, 
+.print-only .division {
+  font-size: 8pt;
+  margin: 0;
+  padding: 0;
+  line-height: 1.1;
+  color: #000;
+}
+
+.print-only .school-name {
+  font-size: 14pt;
+  font-weight: bold;
+  margin: 2px 0;
+  letter-spacing: 0.3px;
+  color: #000;
+  text-transform: uppercase;
+}
+
+.print-only .report-title {
+  font-size: 10pt;
+  font-weight: 600;
+  margin: 2px 0 0 0;
+  padding: 0;
+  color: #000;
+  text-transform: uppercase;
+}
+
+.print-only .line-break {
+  height: 1px;
+  background: #000;
+  margin: 4px 0;
+}
+
+.print-only .header-exam-info {
+  margin: 8px 0 0 0;
+  padding: 0;
+}
+
+.print-only .exam-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 20px;
+  font-size: 9pt;
+}
+
+.print-only .exam-info-item {
+  display: flex;
+  gap: 8px;
+}
+
+.print-only .exam-label {
+  font-weight: 600;
+  min-width: 100px;
+}
+
+.print-only .exam-value {
+  flex: 1;
 }
 
 /* Signature section styles for print-only */
 .print-only .print-signatures {
-  margin-top: 30px;
-  margin-bottom: 20px;
+  margin: 15px 0 10px 0;
+  padding: 0;
   page-break-inside: avoid;
+  page-break-before: auto;
+  break-inside: avoid;
+  break-before: auto;
+  position: relative;
+  width: 100%;
 }
 
 .print-only .signature-section {
   display: flex;
-  justify-content: space-around;
-  align-items: flex-start;
-  margin-top: 40px;
-  padding: 0 20px;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 60px;
+  margin: 0;
+  padding: 0 40px;
+  position: relative;
 }
 
 .print-only .signature-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  min-width: 200px;
+  min-width: 160px;
+  max-width: 200px;
   text-align: center;
+  flex: 0 0 auto;
+}
+
+.print-only .signature-box.signature-left {
+  align-self: flex-start;
+}
+
+.print-only .signature-box.signature-right {
+  align-self: flex-end;
 }
 
 .print-only .signature-line {
-  width: 200px;
+  width: 180px;
   height: 0;
-  border-top: 2px solid #000;
-  margin-bottom: 50px;
-  margin-top: 0;
+  border-top: 1.5px solid #000;
+  margin: 0 0 8px 0;
 }
 
 .print-only .signature-label {
-  font-size: 10pt;
-  font-weight: bold;
-  margin-bottom: 5px;
+  font-size: 8pt;
+  font-weight: 600;
+  margin: 0 0 3px 0;
   color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .print-only .signature-name {
-  font-size: 11pt;
+  font-size: 9pt;
   font-weight: 600;
-  margin-bottom: 5px;
+  margin: 0 0 3px 0;
+  padding: 0 0 2px 0;
   color: #000;
-  min-height: 20px;
+  min-height: 14px;
+  border-bottom: 1px solid #000;
+  width: 180px;
+  text-align: center;
 }
 
 .print-only .signature-role {
-  font-size: 9pt;
-  color: #000;
+  font-size: 8pt;
+  color: #555;
   font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Print Analysis Section Styles (for PDF) */
+.print-only .print-analysis-wrapper {
+  margin: 30px 0 0 0;
+  padding: 60px 0 0 0;
+  page-break-before: auto;
+  page-break-after: avoid;
+}
+
+.print-only .print-analysis {
+  margin: 0;
+  padding: 0;
+  page-break-inside: avoid;
+}
+
+.print-only .print-analysis-header {
+  margin: 0 0 20px 0;
+  padding: 0 0 12px 0;
+  border-bottom: 3px solid #000;
+  page-break-after: avoid;
+  page-break-inside: avoid;
+}
+
+.print-only .print-analysis-header h2 {
+  font-size: 14pt;
+  font-weight: bold;
+  margin: 0;
+  padding: 0;
+  color: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.print-only .print-analysis-content {
+  margin: 0;
+  padding: 0;
+}
+
+.print-only .print-analysis-section {
+  margin: 0 0 20px 0;
+  padding: 0;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  min-height: 40px;
+}
+
+.print-only .print-analysis-section:last-child {
+  margin-bottom: 8px;
+}
+
+.print-only .print-analysis-section h3 {
+  font-size: 11.5pt;
+  font-weight: bold;
+  margin: 0 0 12px 0;
+  padding: 0 0 8px 0;
+  color: #000;
+  border-bottom: 2px solid #333;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+.print-only .section-content {
+  margin: 0;
+  padding: 0;
+}
+
+.print-only .print-analysis-section p {
+  margin: 0 0 10px 0;
+  padding: 0;
+  font-size: 10pt;
+  line-height: 1.7;
+  color: #000;
+  text-align: justify;
+}
+
+.print-only .print-analysis-section p:last-child {
+  margin-bottom: 0;
+}
+
+.print-only .print-analysis-section ul,
+.print-only .print-analysis-section ol {
+  margin: 0 0 10px 0;
+  padding: 8px 0 8px 24px;
+  font-size: 10pt;
+  line-height: 1.7;
+  border-left: 3px solid #3498db;
+  background-color: #f8f9fa;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-only .print-analysis-section li {
+  margin: 0 0 6px 0;
+  padding: 0;
+  color: #333;
+  line-height: 1.5;
+}
+
+.print-only .print-analysis-section li:last-child {
+  margin-bottom: 0;
+}
+
+.print-only .comparison-item {
+  margin: 0 0 8px 0;
+  padding: 0;
+}
+
+.print-only .comparison-item:last-child {
+  margin-bottom: 0;
+}
+
+.print-only .comparison-item p {
+  margin: 0;
+  padding: 0;
+}
+
+.print-only .stats-table {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 0;
+  font-size: 9.5pt;
+  border: 2px solid #000;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  table-layout: fixed;
+}
+
+.print-only .stats-table thead {
+  background-color: #2c3e50;
+  color: #fff;
+  display: table-header-group;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-only .stats-table th {
+  border: 1px solid #000;
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: bold;
+  font-size: 9.5pt;
+  color: #fff;
+  background-color: #2c3e50;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.print-only .stats-table tbody {
+  display: table-row-group;
+}
+
+.print-only .stats-table tr {
+  border-bottom: 1px solid #333;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+.print-only .stats-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-only .stats-table tr:nth-child(odd) {
+  background-color: #ffffff;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.print-only .stats-table tr:last-child {
+  border-bottom: none;
+}
+
+.print-only .stats-table td {
+  padding: 8px 12px;
+  text-align: left;
+  color: #000;
+  border: 1px solid #ddd;
+  font-size: 9.5pt;
+  vertical-align: middle;
+  page-break-inside: avoid;
+}
+
+.print-only .stats-table td:first-child {
+  width: 70%;
+  font-weight: 600;
+}
+
+.print-only .stats-table td:last-child {
+  text-align: right;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Footer styling for print-only */
+.print-only .print-footer {
+  margin: 25px 0 0 0;
+  padding: 12px 0 8px 0;
+  border-top: 2px solid #2c3e50;
+  background-color: #f8f9fa;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  font-size: 8pt;
+  color: #555;
+  text-align: center;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  width: 100%;
+}
+
+.print-only .footer-content {
+  margin: 0;
+  padding: 0;
+}
+
+.print-only .footer-text {
+  margin: 0 0 4px 0;
+  padding: 0;
+  line-height: 1.4;
+  font-size: 8pt;
+  color: #555;
+}
+
+.print-only .footer-text:last-child {
+  margin-bottom: 0;
 }
 
 /* High DPI and Zoom levels (125%, 150%) for laptops */
@@ -4556,6 +5662,19 @@ th {
   .header-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+  
+  .pdf-options-group {
+    border-left: none;
+    border-right: none;
+    padding: 8px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .include-pdf-label {
+    font-size: 0.9rem;
   }
   
   .data-analysis-panel .card-header {

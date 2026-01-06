@@ -3363,8 +3363,82 @@ const exportToCSV = () => {
   }
 };
 
+// Helper function to get column letter from number
+const getColumnLetter = (colNum) => {
+  let result = '';
+  while (colNum > 0) {
+    colNum--;
+    result = String.fromCharCode(65 + (colNum % 26)) + result;
+    colNum = Math.floor(colNum / 26);
+  }
+  return result;
+};
+
+// Helper function to add template header to worksheet
+const addTemplateHeader = (worksheet, columnCount) => {
+  // Add official DepEd header section
+  const republicRow = worksheet.getRow(1);
+  republicRow.height = 15;
+  const republicCell = republicRow.getCell(1);
+  republicCell.value = 'Republic of the Philippines';
+  republicCell.font = { size: 10, bold: true, name: 'Arial' };
+  republicCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A1:${getColumnLetter(columnCount)}1`);
+  
+  const deptRow = worksheet.getRow(2);
+  deptRow.height = 15;
+  const deptCell = deptRow.getCell(1);
+  deptCell.value = 'Department of Education';
+  deptCell.font = { size: 10, bold: true, name: 'Arial' };
+  deptCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A2:${getColumnLetter(columnCount)}2`);
+  
+  const regionRow = worksheet.getRow(3);
+  regionRow.height = 15;
+  const regionCell = regionRow.getCell(1);
+  regionCell.value = 'Region III - Central Luzon';
+  regionCell.font = { size: 10, bold: true, name: 'Arial' };
+  regionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A3:${getColumnLetter(columnCount)}3`);
+  
+  const divisionRow = worksheet.getRow(4);
+  divisionRow.height = 15;
+  const divisionCell = divisionRow.getCell(1);
+  divisionCell.value = 'Schools Division of Olongapo City';
+  divisionCell.font = { size: 10, bold: true, name: 'Arial' };
+  divisionCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A4:${getColumnLetter(columnCount)}4`);
+  
+  const schoolRow = worksheet.getRow(5);
+  schoolRow.height = 20;
+  const schoolCell = schoolRow.getCell(1);
+  schoolCell.value = 'NEW CABALAN NATIONAL HIGH SCHOOL';
+  schoolCell.font = { size: 14, bold: true, name: 'Arial' };
+  schoolCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A5:${getColumnLetter(columnCount)}5`);
+  
+  const addressRow = worksheet.getRow(6);
+  addressRow.height = 15;
+  const addressCell = addressRow.getCell(1);
+  addressCell.value = 'New Cabalan, Olongapo City';
+  addressCell.font = { size: 10, italic: true, name: 'Arial' };
+  addressCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A6:${getColumnLetter(columnCount)}6`);
+  
+  // Add line break
+  const lineRow = worksheet.getRow(7);
+  lineRow.height = 5;
+  const lineCell = lineRow.getCell(1);
+  lineCell.value = '_________________________________________________';
+  lineCell.font = { size: 8, name: 'Arial' };
+  lineCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  worksheet.mergeCells(`A7:${getColumnLetter(columnCount)}7`);
+  
+  return 8; // Return the next row number
+};
+
 // Export to Excel
-const exportToExcel = () => {
+const exportToExcel = async () => {
   try {
     const { headers, data } = getExportData();
     
@@ -3377,16 +3451,121 @@ const exportToExcel = () => {
       return;
     }
     
-    // Create worksheet with custom headers
-    const worksheet = XLSX.utils.json_to_sheet(data, { header: headers });
+    // Import ExcelJS
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(activeTab.value.toUpperCase());
     
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, activeTab.value.toUpperCase());
+    const columnCount = headers.length;
+    const startRow = addTemplateHeader(worksheet, columnCount);
+    
+    // Add title
+    const titleRow = worksheet.getRow(startRow);
+    titleRow.height = 25;
+    const titleCell = titleRow.getCell(1);
+    const titleText = activeTab.value === 'students' 
+      ? 'STUDENT DATA EXPORT'
+      : activeTab.value === 'teachers'
+      ? 'TEACHER DATA EXPORT'
+      : activeTab.value === 'admins'
+      ? 'ADMIN DATA EXPORT'
+      : 'DATA EXPORT';
+    titleCell.value = titleText;
+    titleCell.font = { size: 16, bold: true, name: 'Arial' };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells(`A${startRow}:${getColumnLetter(columnCount)}${startRow}`);
+    
+    // Add empty row
+    const spacingRow = worksheet.getRow(startRow + 1);
+    spacingRow.height = 10;
+    
+    // Set column headers and widths
+    const columnWidths = {
+      'firstName': 20,
+      'lastName': 20,
+      'email': 30,
+      'lrn': 15,
+      'gradeLevel': 12,
+      'section': 15,
+      'address': 40,
+      'department': 20,
+      'domain': 20,
+      'phoneNumber': 15
+    };
+    
+    headers.forEach((header, index) => {
+      worksheet.getColumn(index + 1).width = columnWidths[header] || 15;
+    });
+    
+    // Add header row with styling
+    const headerRow = worksheet.getRow(startRow + 2);
+    headerRow.height = 25;
+    headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    
+    headers.forEach((header, index) => {
+      const cell = headerRow.getCell(index + 1);
+      cell.value = header.charAt(0).toUpperCase() + header.slice(1).replace(/([A-Z])/g, ' $1').trim();
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4CAF50' }
+      };
+    });
+    
+    // Add data rows
+    const dataStartRow = startRow + 3;
+    data.forEach((row, rowIndex) => {
+      const excelRow = worksheet.getRow(dataStartRow + rowIndex);
+      excelRow.height = 20;
+      excelRow.alignment = { vertical: 'middle' };
+      
+      headers.forEach((header, colIndex) => {
+        const cell = excelRow.getCell(colIndex + 1);
+        cell.value = row[header] || '';
+        cell.border = {
+          top: { style: 'thin', color: { argb: '4CAF50' } },
+          left: { style: 'thin', color: { argb: '4CAF50' } },
+          bottom: { style: 'thin', color: { argb: '4CAF50' } },
+          right: { style: 'thin', color: { argb: '4CAF50' } }
+        };
+      });
+    });
+    
+    // Add borders to header row
+    headers.forEach((header, colIndex) => {
+      const cell = headerRow.getCell(colIndex + 1);
+      cell.border = {
+        top: { style: 'thin', color: { argb: '4CAF50' } },
+        left: { style: 'thin', color: { argb: '4CAF50' } },
+        bottom: { style: 'thin', color: { argb: '4CAF50' } },
+        right: { style: 'thin', color: { argb: '4CAF50' } }
+      };
+    });
+    
+    // Add footer
+    const footerRow = worksheet.getRow(dataStartRow + data.length);
+    footerRow.height = 20;
+    const footerCell = footerRow.getCell(1);
+    footerCell.value = `Generated on: ${new Date().toLocaleDateString()} | NCNHS Exam System`;
+    footerCell.font = { 
+      size: 9, 
+      color: { argb: '999999' },
+      italic: true
+    };
+    footerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.mergeCells(`A${dataStartRow + data.length}:${getColumnLetter(columnCount)}${dataStartRow + data.length}`);
     
     // Generate Excel file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
     const fileName = `NCNHS_${activeTab.value}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
     
     // Hide export options after export
     showExportOptions.value = false;

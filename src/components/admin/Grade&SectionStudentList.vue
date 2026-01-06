@@ -154,41 +154,186 @@ export default {
     }
     
     
-    const exportStudents = () => {
+    const exportStudents = async () => {
       try {
-        const dataToExport = filteredStudents.value.map((student, index) => ({
-          '#': index + 1,
-          'First Name': student.firstName || '',
-          'Last Name': student.lastName || '',
-          'LRN': student.lrn || 'N/A',
-          'Email': student.email || 'N/A',
-          'Phone': student.phoneNumber || 'N/A',
-          'Address': student.address || 'N/A'
-        }))
-
-        // Convert to CSV
-        const headers = Object.keys(dataToExport[0])
-        const csvContent = [
-          headers.join(','),
-          ...dataToExport.map(row => 
-            headers.map(header => {
-              const value = row[header] || ''
-              // Escape commas and quotes in CSV
-              return `"${value.toString().replace(/"/g, '""')}"`
-            }).join(',')
-          )
-        ].join('\n')
-
-        // Create and download file
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-        const link = document.createElement('a')
+        if (filteredStudents.value.length === 0) {
+          alert('No students to export.')
+          return
+        }
+        
+        // Import ExcelJS
+        const ExcelJS = await import('exceljs')
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Students')
+        
+        const headers = ['First Name', 'Last Name', 'LRN', 'Email', 'Phone', 'Address']
+        const columnCount = headers.length
+        
+        // Helper function to get column letter from number
+        const getColumnLetter = (colNum) => {
+          let result = ''
+          while (colNum > 0) {
+            colNum--
+            result = String.fromCharCode(65 + (colNum % 26)) + result
+            colNum = Math.floor(colNum / 26)
+          }
+          return result
+        }
+        
+        // Add official DepEd header section
+        const republicRow = worksheet.getRow(1)
+        republicRow.height = 15
+        const republicCell = republicRow.getCell(1)
+        republicCell.value = 'Republic of the Philippines'
+        republicCell.font = { size: 10, bold: true, name: 'Arial' }
+        republicCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A1:${getColumnLetter(columnCount)}1`)
+        
+        const deptRow = worksheet.getRow(2)
+        deptRow.height = 15
+        const deptCell = deptRow.getCell(1)
+        deptCell.value = 'Department of Education'
+        deptCell.font = { size: 10, bold: true, name: 'Arial' }
+        deptCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A2:${getColumnLetter(columnCount)}2`)
+        
+        const regionRow = worksheet.getRow(3)
+        regionRow.height = 15
+        const regionCell = regionRow.getCell(1)
+        regionCell.value = 'Region III - Central Luzon'
+        regionCell.font = { size: 10, bold: true, name: 'Arial' }
+        regionCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A3:${getColumnLetter(columnCount)}3`)
+        
+        const divisionRow = worksheet.getRow(4)
+        divisionRow.height = 15
+        const divisionCell = divisionRow.getCell(1)
+        divisionCell.value = 'Schools Division of Olongapo City'
+        divisionCell.font = { size: 10, bold: true, name: 'Arial' }
+        divisionCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A4:${getColumnLetter(columnCount)}4`)
+        
+        const schoolRow = worksheet.getRow(5)
+        schoolRow.height = 20
+        const schoolCell = schoolRow.getCell(1)
+        schoolCell.value = 'NEW CABALAN NATIONAL HIGH SCHOOL'
+        schoolCell.font = { size: 14, bold: true, name: 'Arial' }
+        schoolCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A5:${getColumnLetter(columnCount)}5`)
+        
+        const addressRow = worksheet.getRow(6)
+        addressRow.height = 15
+        const addressCell = addressRow.getCell(1)
+        addressCell.value = 'New Cabalan, Olongapo City'
+        addressCell.font = { size: 10, italic: true, name: 'Arial' }
+        addressCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A6:${getColumnLetter(columnCount)}6`)
+        
+        // Add line break
+        const lineRow = worksheet.getRow(7)
+        lineRow.height = 5
+        const lineCell = lineRow.getCell(1)
+        lineCell.value = '_________________________________________________'
+        lineCell.font = { size: 8, name: 'Arial' }
+        lineCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A7:${getColumnLetter(columnCount)}7`)
+        
+        // Add title
+        const titleRow = worksheet.getRow(8)
+        titleRow.height = 25
+        const titleCell = titleRow.getCell(1)
+        titleCell.value = `GRADE ${grade.value} - SECTION ${section.value} STUDENT LIST`
+        titleCell.font = { size: 16, bold: true, name: 'Arial' }
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A8:${getColumnLetter(columnCount)}8`)
+        
+        // Add empty row
+        const spacingRow = worksheet.getRow(9)
+        spacingRow.height = 10
+        
+        // Set column widths
+        worksheet.getColumn(1).width = 20 // First Name
+        worksheet.getColumn(2).width = 20 // Last Name
+        worksheet.getColumn(3).width = 15 // LRN
+        worksheet.getColumn(4).width = 30 // Email
+        worksheet.getColumn(5).width = 15 // Phone
+        worksheet.getColumn(6).width = 40 // Address
+        
+        // Add header row with styling
+        const headerRow = worksheet.getRow(10)
+        headerRow.height = 25
+        headerRow.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11 }
+        headerRow.alignment = { horizontal: 'center', vertical: 'middle' }
+        
+        headers.forEach((header, index) => {
+          const cell = headerRow.getCell(index + 1)
+          cell.value = header
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: '4CAF50' }
+          }
+          cell.border = {
+            top: { style: 'thin', color: { argb: '4CAF50' } },
+            left: { style: 'thin', color: { argb: '4CAF50' } },
+            bottom: { style: 'thin', color: { argb: '4CAF50' } },
+            right: { style: 'thin', color: { argb: '4CAF50' } }
+          }
+        })
+        
+        // Add data rows
+        const dataStartRow = 11
+        filteredStudents.value.forEach((student, rowIndex) => {
+          const excelRow = worksheet.getRow(dataStartRow + rowIndex)
+          excelRow.height = 20
+          excelRow.alignment = { vertical: 'middle' }
+          
+          const rowData = [
+            student.firstName || '',
+            student.lastName || '',
+            student.lrn || 'N/A',
+            student.email || 'N/A',
+            student.phoneNumber || 'N/A',
+            student.address || 'N/A'
+          ]
+          
+          rowData.forEach((value, colIndex) => {
+            const cell = excelRow.getCell(colIndex + 1)
+            cell.value = value
+            cell.border = {
+              top: { style: 'thin', color: { argb: '4CAF50' } },
+              left: { style: 'thin', color: { argb: '4CAF50' } },
+              bottom: { style: 'thin', color: { argb: '4CAF50' } },
+              right: { style: 'thin', color: { argb: '4CAF50' } }
+            }
+          })
+        })
+        
+        // Add footer
+        const footerRow = worksheet.getRow(dataStartRow + filteredStudents.value.length)
+        footerRow.height = 20
+        const footerCell = footerRow.getCell(1)
+        footerCell.value = `Generated on: ${new Date().toLocaleDateString()} | NCNHS Exam System | Total: ${filteredStudents.value.length} student(s)`
+        footerCell.font = { 
+          size: 9, 
+          color: { argb: '999999' },
+          italic: true
+        }
+        footerCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        worksheet.mergeCells(`A${dataStartRow + filteredStudents.value.length}:${getColumnLetter(columnCount)}${dataStartRow + filteredStudents.value.length}`)
+        
+        // Generate Excel file
+        const buffer = await workbook.xlsx.writeBuffer()
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
         const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
         link.setAttribute('href', url)
-        link.setAttribute('download', `Grade_${grade.value}_Section_${section.value}_Students.csv`)
+        link.setAttribute('download', `Grade_${grade.value}_Section_${section.value}_Students_${new Date().toISOString().slice(0, 10)}.xlsx`)
         link.style.visibility = 'hidden'
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
+        URL.revokeObjectURL(url)
       } catch (error) {
         console.error('Error exporting students:', error)
         alert('Error exporting students. Please try again.')

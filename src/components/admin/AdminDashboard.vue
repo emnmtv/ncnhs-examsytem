@@ -880,14 +880,8 @@ export default {
     };
 
     onMounted(() => {
-      // Set default date range to current month
-      const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      
-      filters.value.startDate = firstDay.toISOString().split('T')[0];
-      filters.value.endDate = lastDay.toISOString().split('T')[0];
-      
+      // Don't set default dates - show all data by default
+      // Users can optionally filter by date if needed
       fetchAnalytics();
       
       // Add window resize listener to re-render charts
