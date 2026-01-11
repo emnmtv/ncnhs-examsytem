@@ -4,20 +4,32 @@
     <div class="dashboard-header">
       <h1>Admin Dashboard</h1>
       <div class="header-actions">
-        <div class="date-filters">
-          <input 
-            type="date" 
-            v-model="filters.startDate" 
-            @change="fetchAnalytics"
-            class="date-input"
-          >
-          <span>to</span>
-          <input 
-            type="date" 
-            v-model="filters.endDate" 
-            @change="fetchAnalytics"
-            class="date-input"
-          >
+        <div class="date-filters-wrapper">
+          <div class="date-filters">
+            <input 
+              type="date" 
+              v-model="filters.startDate" 
+              @change="handleDateChange"
+              :max="filters.endDate || undefined"
+              class="date-input"
+              :class="{ 'error': dateValidationError }"
+            >
+            <span>to</span>
+            <input 
+              type="date" 
+              v-model="filters.endDate" 
+              @change="handleDateChange"
+              :min="filters.startDate || undefined"
+              class="date-input"
+              :class="{ 'error': dateValidationError }"
+            >
+            <button @click="clearDates" class="clear-dates-btn" title="Clear date filters">
+              <span class="material-icons">clear</span>
+            </button>
+          </div>
+          <div v-if="dateValidationError" class="date-error-message">
+            {{ dateValidationError }}
+          </div>
         </div>
         <button @click="fetchAnalytics" class="refresh-btn">
           <span class="material-icons">refresh</span>
@@ -539,6 +551,7 @@ export default {
     const analytics = ref(null);
     const loading = ref(true);
     const error = ref(null);
+    const dateValidationError = ref('');
     const filters = ref({
       startDate: '',
       endDate: ''
@@ -554,12 +567,61 @@ export default {
     let sectionChartInstance = null;
     let trendsChartInstance = null;
 
+    // Validate dates
+    const validateDates = () => {
+      dateValidationError.value = '';
+      
+      const { startDate, endDate } = filters.value;
+      
+      // If both dates are empty, that's valid (show all data)
+      if (!startDate && !endDate) {
+        return true;
+      }
+      
+      // If only one date is set, that's invalid
+      if ((startDate && !endDate) || (!startDate && endDate)) {
+        dateValidationError.value = 'Please select both start and end dates, or leave both empty';
+        return false;
+      }
+      
+      // Validate date format and range
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      // Check if dates are valid
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        dateValidationError.value = 'Please enter valid dates';
+        return false;
+      }
+      
+      // Check if start date is before or equal to end date
+      if (start > end) {
+        dateValidationError.value = 'Start date must be before or equal to end date';
+        return false;
+      }
+      
+      return true;
+    };
+
     const fetchAnalytics = async () => {
+      // Validate dates before making API call
+      if (!validateDates()) {
+        return;
+      }
+      
       try {
         loading.value = true;
         error.value = null;
+        dateValidationError.value = '';
         
-        const response = await getAdminAnalytics(filters.value);
+        // Only send dates if both are provided
+        const filterParams = {};
+        if (filters.value.startDate && filters.value.endDate) {
+          filterParams.startDate = filters.value.startDate;
+          filterParams.endDate = filters.value.endDate;
+        }
+        
+        const response = await getAdminAnalytics(filterParams);
         analytics.value = response.data;
         
         // Wait for DOM update then render charts
@@ -879,6 +941,21 @@ export default {
       }
     };
 
+    const handleDateChange = () => {
+      // Validate dates when they change
+      if (validateDates()) {
+        // Only fetch if validation passes
+        fetchAnalytics();
+      }
+    };
+
+    const clearDates = () => {
+      filters.value.startDate = '';
+      filters.value.endDate = '';
+      dateValidationError.value = '';
+      fetchAnalytics();
+    };
+
     onMounted(() => {
       // Don't set default dates - show all data by default
       // Users can optionally filter by date if needed
@@ -911,6 +988,7 @@ export default {
       analytics,
       loading,
       error,
+      dateValidationError,
       filters,
       gradeChart,
       sectionChart,
@@ -918,7 +996,9 @@ export default {
       fetchAnalytics,
       formatDate,
       getPerformanceClass,
-      getTrendLabel
+      getTrendLabel,
+      handleDateChange,
+      clearDates
     };
   }
 };
@@ -950,8 +1030,14 @@ export default {
 
 .header-actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 20px;
+}
+
+.date-filters-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .date-filters {
@@ -965,6 +1051,51 @@ export default {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.date-input.error {
+  border-color: #d32f2f;
+  background-color: #ffebee;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #2196F3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.date-error-message {
+  color: #d32f2f;
+  font-size: 12px;
+  padding: 5px 10px;
+  background-color: #ffebee;
+  border-radius: 4px;
+  border-left: 3px solid #d32f2f;
+  white-space: nowrap;
+}
+
+.clear-dates-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.3s, color 0.3s;
+  margin-left: 5px;
+}
+
+.clear-dates-btn:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.clear-dates-btn .material-icons {
+  font-size: 18px;
 }
 
 .refresh-btn {
@@ -2554,6 +2685,10 @@ td {
   .header-actions {
     flex-direction: column;
     gap: 10px;
+    width: 100%;
+  }
+  
+  .date-filters-wrapper {
     width: 100%;
   }
   
