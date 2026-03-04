@@ -31,13 +31,13 @@
 
     <form @submit.prevent="handleSubmit" class="exam-form">
       <!-- Exam Details Card -->
-      <div class="card exam-details-card">
+      <div class="card exam-details-card" :class="{ 'highlight-card': highlightRequired }">
         <div class="card-header">
           <h2><i class="fas fa-info-circle"></i> Exam Details</h2>
         </div>
         <div class="card-body">
           <div class="form-row">
-            <div class="form-group">
+          <div class="form-group">
               <label for="testCode">Test Code *</label>
               <div class="input-with-button">
                 <input 
@@ -45,7 +45,7 @@
                   type="text" 
                   id="testCode" 
                   required
-                  :class="{ 'error': error && !examData.testCode }"
+                  :class="{ 'error': error && !examData.testCode, 'highlight-required': highlightRequired }"
                 />
                 <button 
                   type="button" 
@@ -91,7 +91,7 @@
               id="examTitle" 
               placeholder="e.g., MIDTERM EXAMINATION IN MATHEMATICS" 
               required 
-              class="uppercase-input"
+              :class="['uppercase-input', { 'highlight-required': highlightRequired }]"
             />
             <small>Descriptive title that appears on the exam (automatically uppercase)</small>
           </div>
@@ -323,6 +323,7 @@
               v-for="(question, index) in questions" 
               :key="index" 
               class="question-item"
+              :id="`question-${index}`"
             >
               <div class="question-header">
                 <span class="question-number">Question {{ index + 1 }}</span>
@@ -688,6 +689,16 @@
           </button>
           
           <button 
+            v-if="isEditing" 
+            type="button" 
+            class="draft-button" 
+            @click="saveAsNewExam"
+          >
+            <span class="material-icons-round">content_copy</span>
+            Save As New Exam
+          </button>
+          
+          <button 
             type="submit" 
             class="publish-button"
             :disabled="!questions.length"
@@ -1020,7 +1031,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { createExam, fetchTeacherExams, updateExam, uploadImage, getFullImageUrl, getQuestionBankItems, getTeacherAssignedSubjects } from '../../services/authService';
 import aiService from '../../services/aiService';
@@ -1057,6 +1068,8 @@ export default {
     };
     const questions = ref([]);
     const parts = ref([]);
+    const saveAsMode = ref(false);
+    const highlightRequired = ref(false);
     const loading = ref(false);
     const error = ref(null);
     const showQuestionBankModal = ref(false);
@@ -1673,6 +1686,38 @@ export default {
       question.imageUrl = null;
     };
 
+    const saveAsNewExam = async () => {
+      // Mark that the next publish should create a new exam, not update
+      saveAsMode.value = true;
+
+      // Clear fields that must be re-filled for the cloned exam
+      examData.value.testCode = '';
+
+      // Briefly highlight required fields and show a toast
+      highlightRequired.value = true;
+      setTimeout(() => {
+        highlightRequired.value = false;
+      }, 1600);
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Enter a new Test Code and Exam Title for this copy.',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true
+      });
+
+      // Wait for DOM to reflect changes, then scroll to the first required field
+      await nextTick();
+      const testCodeInput = document.getElementById('testCode');
+      if (testCodeInput) {
+        testCodeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        testCodeInput.focus();
+      }
+    };
+
     const handleSubmit = async () => {
       await submitExam(false);
     };
@@ -1691,9 +1736,38 @@ export default {
           throw new Error('Please fill in all required fields');
         }
 
-        // Validate questions
+        // Validate questions and locate the first with missing correctAnswer
         if (!questions.value.length) {
           throw new Error('Please add at least one question');
+        }
+
+        let firstInvalidIndex = -1;
+        let missingCorrectAnswerIndex = -1;
+        for (let i = 0; i < questions.value.length; i++) {
+          const q = questions.value[i];
+          if (missingCorrectAnswerIndex === -1 && q.type !== 'essay' && !q.correctAnswer) {
+            missingCorrectAnswerIndex = i;
+          }
+          if (!validateQuestion(q)) {
+            firstInvalidIndex = i;
+            break;
+          }
+        }
+
+        if (firstInvalidIndex !== -1) {
+          const targetIndex = missingCorrectAnswerIndex !== -1 ? missingCorrectAnswerIndex : firstInvalidIndex;
+          const el = document.getElementById(`question-${targetIndex}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('question-error-highlight');
+            setTimeout(() => el.classList.remove('question-error-highlight'), 1600);
+          }
+          
+          if (missingCorrectAnswerIndex !== -1) {
+            throw new Error('A question is missing a correct answer. Please set the correct answer for the highlighted question.');
+          }
+
+          throw new Error('Some questions are incomplete. Please review the highlighted question and fill in the missing details.');
         }
 
         // Format questions
@@ -1710,7 +1784,7 @@ export default {
           wordLimit: q.wordLimit || null // Include wordLimit for essay questions
         }));
 
-        if (isEditing.value) {
+        if (isEditing.value && !saveAsMode.value) {
           // Get classCode from selected subject if available
           let classCode = null;
           if (selectedSubjectId.value) {
@@ -1764,6 +1838,9 @@ export default {
 
         // Clear saved progress after successful submission
         clearLocalStorageProgress();
+
+        // Reset save-as mode flag after a successful create
+        saveAsMode.value = false;
 
         // Show success message
         Swal.fire({
@@ -2737,6 +2814,7 @@ export default {
       setQuestionType,
       handleSubmit,
       saveAsDraft,
+      saveAsNewExam,
       resetForm,
       handleQuestionTypeChange,
       handleImageUpload,
@@ -2769,6 +2847,7 @@ export default {
       detectOptionsWithAI,
       activeSettingsTab,
       toggleSettingsTab,
+      highlightRequired,
       error,
       parts,
       addPart,
@@ -3056,6 +3135,27 @@ small {
 .question-item:hover {
   transform: translateY(-5px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.question-error-highlight {
+  animation: question-error-pulse 1.4s ease-out;
+  box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.8);
+  border: 1px solid #f44336;
+}
+
+@keyframes question-error-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.9);
+    transform: scale(1);
+  }
+  40% {
+    box-shadow: 0 0 0 12px rgba(244, 67, 54, 0.35);
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+    transform: scale(1);
+  }
 }
 
 .question-header {
@@ -7506,6 +7606,52 @@ small {
   .cognitive-level-card.selected .level-details {
     opacity: 1 !important;
     max-height: 200px !important;
+  }
+}
+
+.highlight-required {
+  animation: highlight-bloom 1.2s ease-out;
+  box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+  border-color: #ffc107 !important;
+}
+
+.highlight-card {
+  animation: card-bloom 1.5s ease-out;
+  box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.65);
+  border-color: #4caf50 !important;
+}
+
+@keyframes highlight-bloom {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.9);
+    transform: scale(1);
+  }
+  40% {
+    box-shadow: 0 0 0 6px rgba(255, 193, 7, 0.4);
+    transform: scale(1.01);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    transform: scale(1);
+  }
+}
+
+@keyframes card-bloom {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.9);
+    transform: scale(1);
+  }
+  30% {
+    box-shadow: 0 0 0 10px rgba(76, 175, 80, 0.25);
+    transform: scale(1.01);
+  }
+  60% {
+    box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15);
+    transform: scale(1.005);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    transform: scale(1);
   }
 }
 

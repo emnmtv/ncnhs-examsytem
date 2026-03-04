@@ -2,7 +2,34 @@
   <div class="exam-session">
     <!-- Exam Header -->
     <div class="exam-header">
-      <h2 v-if="exam">{{ exam.examTitle }}</h2>
+      <div class="exam-header-top">
+        <h2 v-if="exam">{{ exam.examTitle }}</h2>
+        <!-- Font accessibility controls -->
+        <div class="font-resizer" v-if="exam && exam.questions && currentQuestionIndex !== null">
+          <button type="button" class="font-btn" @click="decreaseFont" :disabled="currentFontScale <= 0.8">
+            A-
+          </button>
+          <button type="button" class="font-btn" @click="resetFont">
+            A
+          </button>
+          <button type="button" class="font-btn" @click="increaseFont" :disabled="currentFontScale >= 1.4">
+            A+
+          </button>
+          <button 
+            type="button" 
+            class="font-btn font-btn-bold" 
+            :class="{ active: isBoldText }" 
+            @click="toggleBold"
+          >
+            B
+          </button>
+          <select v-model="currentFontFamily" class="font-select">
+            <option value="default">Default</option>
+            <option value="serif">Serif</option>
+            <option value="dyslexic">Dyslexia-friendly</option>
+          </select>
+        </div>
+      </div>
       <div v-if="exam && exam.questions && currentQuestionIndex !== null" class="progress-container">
         <div class="progress-bar">
           <div class="progress-fill" :style="{ width: `${progressPercentage}%` }"></div>
@@ -77,7 +104,15 @@
     </div>
     
     <!-- Question Display -->
-    <div v-else-if="exam && exam.questions && currentQuestionIndex !== null && !scoreResult" class="question-container">
+    <div 
+      v-else-if="exam && exam.questions && currentQuestionIndex !== null && !scoreResult" 
+      class="question-container"
+      :style="{
+        '--font-scale': currentFontScale,
+        '--font-weight': isBoldText ? '600' : '400',
+        '--reader-font-family': readerFontFamily
+      }"
+    >
       <div class="question-card">
         <div class="question-text">
           <h3>{{ currentQuestionIndex + 1 }}. {{ currentQuestion.questionText }}</h3>
@@ -267,6 +302,9 @@ export default {
       enforceFullscreen: true,
       lastVisibilityViolationAt: null,
       tabSwitchCount: 0,
+      currentFontScale: 1,
+      isBoldText: false,
+      currentFontFamily: 'default'
     };
   },
   computed: {
@@ -283,6 +321,15 @@ export default {
     allQuestionsAnswered() {
       if (!this.shuffledQuestions.length) return false;
       return this.shuffledQuestions.every(q => !!this.answers[q.questionId]);
+    },
+    readerFontFamily() {
+      if (this.currentFontFamily === 'serif') {
+        return '"Georgia", "Times New Roman", serif';
+      }
+      if (this.currentFontFamily === 'dyslexic') {
+        return '"OpenDyslexic", "Arial", sans-serif';
+      }
+      return '"Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     }
   },
   created() {
@@ -954,6 +1001,22 @@ export default {
     getImageUrl(imageUrl) {
       return getFullImageUrl(imageUrl);
     },
+    increaseFont() {
+      if (this.currentFontScale < 1.4) {
+        this.currentFontScale = parseFloat((this.currentFontScale + 0.1).toFixed(2));
+      }
+    },
+    decreaseFont() {
+      if (this.currentFontScale > 0.8) {
+        this.currentFontScale = parseFloat((this.currentFontScale - 0.1).toFixed(2));
+      }
+    },
+    resetFont() {
+      this.currentFontScale = 1;
+    },
+    toggleBold() {
+      this.isBoldText = !this.isBoldText;
+    },
 
     handleAnswerInput(questionId) {
       // Check if the answer exists and convert it to uppercase
@@ -1114,8 +1177,14 @@ export default {
 }
 
 .exam-header {
-  text-align: center;
   margin-bottom: 20px;
+}
+
+.exam-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
 }
 
 .exam-header h2 {
@@ -1123,6 +1192,65 @@ export default {
   color: #333;
   font-size: 1.6rem;
   font-weight: 600;
+}
+
+.font-resizer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.font-btn {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.font-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+}
+
+.font-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.font-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
+.font-btn-bold {
+  font-weight: 700;
+}
+
+.font-btn-bold.active {
+  background: #4CAF50;
+  color: #fff;
+  border-color: #4CAF50;
+}
+
+.font-select {
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #ccc;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  background: #fff;
+  cursor: pointer;
 }
 
 .progress-container {
@@ -1206,6 +1334,7 @@ export default {
 
 .question-container {
   margin: 20px 0;
+  font-family: var(--reader-font-family, 'Roboto', sans-serif);
 }
 
 .question-card {
@@ -1219,8 +1348,8 @@ export default {
 .question-text h3 {
   margin-top: 0;
   color: #333;
-  font-size: 1.2rem;
-  font-weight: 500;
+  font-size: calc(1.2rem * var(--font-scale, 1));
+  font-weight: var(--font-weight, 500);
   line-height: 1.4;
 }
 
@@ -1289,8 +1418,9 @@ export default {
 }
 
 .option-text {
-  font-size: 1rem;
+  font-size: calc(1rem * var(--font-scale, 1));
   color: #333;
+  font-weight: var(--font-weight, 400);
 }
 
 .text-answer-container {
@@ -1302,9 +1432,10 @@ export default {
   padding: 12px;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--font-scale, 1));
   color: #333;
   transition: border-color 0.2s;
+  font-weight: var(--font-weight, 400);
 }
 
 .text-answer-input:focus {
@@ -1683,9 +1814,10 @@ export default {
   padding: 15px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: calc(1rem * var(--font-scale, 1));
   color: #333;
   font-family: inherit;
+  font-weight: var(--font-weight, 400);
   line-height: 1.5;
   resize: vertical;
   min-height: 200px;

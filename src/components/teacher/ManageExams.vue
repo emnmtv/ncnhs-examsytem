@@ -172,6 +172,13 @@
                   <i class="fas fa-file-alt"></i> Paper
                 </button>
                 <button 
+                  @click="openCopyModal(exam); closeAllDropdowns()" 
+                  class="dropdown-item"
+                  title="Create a copy of this exam"
+                >
+                  <i class="fas fa-copy"></i> Create Copy
+                </button>
+                <button 
                   v-if="activeTab === 'active' && exam.status !== 'started' && !exam.scores.length"
                   @click="confirmDelete(exam); closeAllDropdowns()" 
                   class="dropdown-item delete"
@@ -690,6 +697,104 @@
         </div>
       </div>
     </div>
+
+    <!-- Create Copy Modal -->
+    <div v-if="showCopyModal" class="modal-backdrop" @click.self="closeCopyModal">
+      <div class="settings-modal" :class="{ 'modal-closing': isCopyClosing }">
+        <div class="modal-handle"></div>
+        
+        <div class="modal-header">
+          <h2>
+            <span class="material-icons-round">content_copy</span>
+            Create Exam Copy
+          </h2>
+          <button @click="closeCopyModal" class="close-btn">
+            <span class="material-icons-round">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="settings-exam-info" v-if="copySourceExam">
+            <h3>Source: {{ copySourceExam.examTitle }}</h3>
+            <div class="exam-meta">
+              <span class="meta-item">
+                <span class="material-icons-round">code</span>
+                Original Test Code: {{ copySourceExam.testCode }}
+              </span>
+              <span class="meta-item">
+                <span class="material-icons-round">class</span>
+                Original Class: {{ copySourceExam.classCode || 'None' }}
+              </span>
+            </div>
+          </div>
+
+          <form @submit.prevent="confirmCreateCopy" class="settings-form">
+            <div class="form-section">
+              <h4>New Exam Details</h4>
+              <div class="form-group">
+                <label for="copyTestCode">Test Code *</label>
+                <input
+                  id="copyTestCode"
+                  v-model="copyForm.testCode"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter new test code"
+                  required
+                />
+                <button 
+                  type="button" 
+                  class="small-generate-btn" 
+                  @click="generateCopyTestCode"
+                >
+                  <span class="material-icons">autorenew</span>
+                  Generate
+                </button>
+              </div>
+              <div class="form-group">
+                <label for="copyTitle">Exam Title *</label>
+                <input
+                  id="copyTitle"
+                  v-model="copyForm.title"
+                  type="text"
+                  class="form-input"
+                  placeholder="Enter exam title"
+                  required
+                />
+                <small class="form-help">If a duplicate title exists, a prefix like "(copy)" or "(copy1)" will be added automatically.</small>
+              </div>
+              <div class="form-group">
+                <label for="copySubject">Subject (optional)</label>
+                <select
+                  id="copySubject"
+                  v-model="copyForm.subjectId"
+                  class="form-select"
+                >
+                  <option value="">Use original subject/class</option>
+                  <option
+                    v-for="subject in availableSubjects"
+                    :key="subject.id"
+                    :value="subject.id"
+                  >
+                    {{ getSubjectDisplayName(subject) }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button @click="closeCopyModal" class="cancel-btn">
+            <span class="material-icons-round">close</span>
+            Cancel
+          </button>
+          <button @click="confirmCreateCopy" class="save-btn">
+            <span class="material-icons-round">content_copy</span>
+            Create Copy
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -829,6 +934,26 @@ export default {
       studentExamHistory: false
     });
 
+    // Copy exam modal variables
+    const showCopyModal = ref(false);
+    const isCopyClosing = ref(false);
+    const copySourceExam = ref(null);
+    const copyForm = ref({
+      testCode: '',
+      title: '',
+      subjectId: ''
+    });
+
+    const generateCopyTestCode = () => {
+      const codeLength = Math.floor(Math.random() * 3) + 6; // 6–8 digits
+      let code = '';
+      code += Math.floor(Math.random() * 9) + 1; // first digit 1–9
+      for (let i = 1; i < codeLength; i++) {
+        code += Math.floor(Math.random() * 10);
+      }
+      copyForm.value.testCode = code;
+    };
+
     // Initialize socket connection
     onMounted(() => {
       socket.value = socketManager.getSocket();
@@ -936,6 +1061,132 @@ export default {
         archivedExams.value = []; // Ensure archivedExams is always an array
       } finally {
         loading.value = false;
+      }
+    };
+
+    const generateCopyTitle = (baseTitle) => {
+      if (!baseTitle) return '';
+      const allTitles = [
+        ...(exams.value || []),
+        ...(archivedExams.value || [])
+      ].map(e => (e.examTitle || '').toLowerCase());
+
+      const normalizedBase = baseTitle.toLowerCase();
+      if (!allTitles.includes(normalizedBase)) {
+        return baseTitle;
+      }
+
+      let candidate = `(copy) ${baseTitle}`;
+      let counter = 1;
+      while (allTitles.includes(candidate.toLowerCase())) {
+        candidate = `(copy${counter}) ${baseTitle}`;
+        counter += 1;
+      }
+      return candidate;
+    };
+
+    const openCopyModal = (exam) => {
+      copySourceExam.value = exam;
+      copyForm.value.testCode = '';
+      copyForm.value.title = generateCopyTitle(exam.examTitle || '');
+      copyForm.value.subjectId = exam.subjectId ? String(exam.subjectId) : '';
+      showCopyModal.value = true;
+      isCopyClosing.value = false;
+    };
+
+    const closeCopyModal = () => {
+      isCopyClosing.value = true;
+      setTimeout(() => {
+        showCopyModal.value = false;
+        isCopyClosing.value = false;
+        copySourceExam.value = null;
+      }, 300);
+    };
+
+    const confirmCreateCopy = async () => {
+      try {
+        if (!copySourceExam.value) {
+          return;
+        }
+
+        if (!copyForm.value.testCode || !copyForm.value.title) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Missing Information',
+            text: 'Please enter both a new test code and exam title.'
+          });
+          return;
+        }
+
+        const source = copySourceExam.value;
+
+        // Ensure title uniqueness with copy prefixes
+        const finalTitle = generateCopyTitle(copyForm.value.title.trim());
+
+        // Determine classCode based on chosen subject or original exam
+        let classCode = source.classCode || null;
+        if (copyForm.value.subjectId) {
+          const subjectIdNum = parseInt(copyForm.value.subjectId, 10);
+          const selectedSubject = availableSubjects.value.find(s => s.id === subjectIdNum);
+          if (selectedSubject) {
+            const subjectCode = selectedSubject.code || selectedSubject.subjectCode || selectedSubject.classCode;
+            const subjectName = selectedSubject.subjectName || selectedSubject.name || selectedSubject.title;
+            classCode = subjectCode || subjectName || classCode;
+          }
+        }
+
+        const questionsPayload = (source.questions || []).map((q) => ({
+          questionText: q.questionText,
+          questionType: q.questionType,
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: q.correctAnswer,
+          imageUrl: q.imageUrl || null,
+          points: q.points || 1,
+          partId: q.partId || null,
+          wordLimit: q.wordLimit || null
+        }));
+
+        const partsPayload = source.parts && Array.isArray(source.parts) && source.parts.length
+          ? source.parts.map((p, index) => ({
+              label: p.label,
+              description: p.description,
+              order: p.order || index + 1
+            }))
+          : null;
+
+        await createExam(
+          copyForm.value.testCode.trim(),
+          classCode,
+          finalTitle,
+          questionsPayload,
+          localStorage.getItem('userId'),
+          true, // isDraft
+          source.durationMinutes,
+          source.startDateTime ? new Date(source.startDateTime) : undefined,
+          source.endDateTime ? new Date(source.endDateTime) : undefined,
+          source.maxAttempts,
+          source.attemptSpacing,
+          source.studentExamHistory,
+          partsPayload
+        );
+
+        await loadExams();
+        closeCopyModal();
+
+        Swal.fire({
+          icon: 'success',
+          title: 'Exam Copy Created',
+          text: 'A new draft exam copy has been created.',
+          confirmButtonColor: '#4CAF50'
+        });
+      } catch (err) {
+        console.error('Error creating exam copy:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: err.message || 'Failed to create exam copy.',
+          confirmButtonColor: '#f44336'
+        });
       }
     };
 
@@ -1817,7 +2068,15 @@ export default {
       clearSearch,
       selectedSubjectFilter,
       applySubjectFilter,
-      clearSubjectFilter
+      clearSubjectFilter,
+      // Copy exam modal
+      showCopyModal,
+      openCopyModal,
+      closeCopyModal,
+      confirmCreateCopy,
+      copyForm,
+      copySourceExam,
+      generateCopyTestCode
     };
   }
 };
@@ -3075,6 +3334,37 @@ input:checked + .slider:before {
   background: #43A047;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.small-generate-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  border: none;
+  background: #4CAF50;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.small-generate-btn .material-icons {
+  font-size: 18px;
+}
+
+.small-generate-btn:hover {
+  background: #388E3C;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+}
+
+.small-generate-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Dropdown styles */
